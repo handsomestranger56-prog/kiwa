@@ -37,7 +37,6 @@ export default function RootLayout() {
         <DataProvider onReady={() => SplashScreen.hide()} renderError={(error) => <StartupError error={error} />}>
           <Stack screenOptions={{ headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="item/[id]" options={{ title: '' }} />
             <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
           </Stack>
         </DataProvider>

@@ -22,6 +22,13 @@ const glyphs = {
   trash: { ios: 'trash', material: 'delete' },
   restore: { ios: 'arrow.uturn.backward', material: 'restore_from_trash' },
   chevron: { ios: 'chevron.right', material: 'chevron_right' },
+  radioOn: { ios: 'largecircle.fill.circle', material: 'radio_button_checked' },
+  checkboxOff: { ios: 'square', material: 'check_box_outline_blank' },
+  checkboxOn: { ios: 'checkmark.square.fill', material: 'check_box' },
+  check: { ios: 'checkmark', material: 'check' },
+  hint: { ios: 'lightbulb', material: 'lightbulb' },
+  timer: { ios: 'timer', material: 'timer' },
+  play: { ios: 'play.fill', material: 'play_arrow' },
 } as const satisfies Record<string, Glyph>;
 
 export type IconName = keyof typeof glyphs;

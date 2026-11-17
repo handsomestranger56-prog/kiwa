@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 
+import { AttemptsRepository } from './attempts-repository';
 import { ChangeFeed } from './changes';
 import { createExpoDriver } from './expo-driver';
 import { LibraryRepository } from './library-repository';
@@ -20,6 +21,7 @@ const DATABASE_NAME = 'anki.db';
 
 export type AppData = {
   library: LibraryRepository;
+  attempts: AttemptsRepository;
   settings: SettingsRepository;
   changes: ChangeFeed;
 };
@@ -38,7 +40,7 @@ async function openAppData(): Promise<AppData> {
   const library = new LibraryRepository(driver, changes);
   const settings = new SettingsRepository(driver, changes);
   await seedSamples(library, settings);
-  return { library, settings, changes };
+  return { library, attempts: new AttemptsRepository(driver, changes), settings, changes };
 }
 
 // One database connection for the life of the app, even if the provider remounts.
