@@ -12,7 +12,7 @@ import { useItemActions } from '@/features/library/item-actions';
 import { ItemRow } from '@/features/library/item-row';
 import { Button, Chip, IconButton, TextField } from '@/ui/controls';
 import { Icon } from '@/ui/icon';
-import { EmptyState, Page, useTabScreenInsets } from '@/ui/layout';
+import { EmptyState, Loading, Page, useTabScreenInsets } from '@/ui/layout';
 import { Snackbar } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { MIN_TOUCH, spacing } from '@/ui/theme';
@@ -22,7 +22,7 @@ const FILTERS: FilterKey[] = ['all', 'course', 'quiz', 'deck', 'favorites'];
 
 export default function LibraryScreen() {
   const onboarding = useQuery('onboarding', ({ settings }) => settings.get('onboarding.done'));
-  if (onboarding.loading) return <Page />;
+  if (onboarding.loading) return <Loading />;
   // First launch: say hello before anything else.
   if (onboarding.data === null) return <Redirect href="/welcome" />;
   return <Library />;

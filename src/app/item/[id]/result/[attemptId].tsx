@@ -13,7 +13,7 @@ import { applyAttemptCompletion } from '@/features/study/completion';
 import { Feedback } from '@/features/study/feedback';
 import { QuestionView } from '@/features/study/question-views';
 import { Button, Tag } from '@/ui/controls';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { Markdown } from '@/ui/markdown';
 import { AppText } from '@/ui/text';
 import { radius, spacing, useTheme } from '@/ui/theme';
@@ -38,7 +38,7 @@ export default function ResultScreen() {
     return attempt && located && document ? { attempt, located, document } : null;
   });
 
-  if (loaded.loading) return <Page />;
+  if (loaded.loading) return <Loading />;
   if (!loaded.data) {
     return (
       <Page>

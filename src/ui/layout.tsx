@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { type ViewProps, Platform, StyleSheet, View } from 'react-native';
+import { type ReactNode, useEffect, useState } from 'react';
+import { type ViewProps, ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from './icon';
@@ -13,6 +13,25 @@ export function Page({ style, children, ...rest }: ViewProps) {
     <View style={[styles.page, { backgroundColor: colors.background }]} {...rest}>
       <View style={[styles.column, style]}>{children}</View>
     </View>
+  );
+}
+
+/**
+ * What a screen shows while it reads its data. Most reads finish in a few milliseconds, so the
+ * spinner only appears after a short wait: fast loads show a calm empty page instead of a flicker.
+ */
+export function Loading({ delay = 250 }: { delay?: number }) {
+  const { colors } = useTheme();
+  const [visible, setVisible] = useState(delay <= 0);
+  useEffect(() => {
+    if (delay <= 0) return;
+    const timer = setTimeout(() => setVisible(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+  return (
+    <Page style={styles.loading}>
+      {visible ? <ActivityIndicator size="large" color={colors.accent} accessibilityLabel="Loading" /> : null}
+    </Page>
   );
 }
 
@@ -56,5 +75,6 @@ const styles = StyleSheet.create({
   column: { flex: 1, width: '100%', maxWidth: MAX_CONTENT_WIDTH },
   empty: { alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xxl, paddingVertical: spacing.xxl * 2 },
   centered: { textAlign: 'center' },
+  loading: { alignItems: 'center', justifyContent: 'center' },
   divider: { height: StyleSheet.hairlineWidth, alignSelf: 'stretch' },
 });

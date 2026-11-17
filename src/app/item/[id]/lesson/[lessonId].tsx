@@ -13,7 +13,7 @@ import { LessonBlocks } from '@/features/study/blocks';
 import { completeLesson, nextLessonId } from '@/features/study/completion';
 import { shareTextFile } from '@/platform/files';
 import { Button, IconButton, Tag } from '@/ui/controls';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { ActionSheet } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { spacing, useTheme } from '@/ui/theme';
@@ -50,7 +50,7 @@ export default function LessonScreen() {
     data.library.setLastLesson(id, lessonId).catch(() => {});
   }, [data, id, lessonId]);
 
-  if (loaded.loading) return <Page />;
+  if (loaded.loading) return <Loading />;
   if (!loaded.data) {
     return (
       <Page>

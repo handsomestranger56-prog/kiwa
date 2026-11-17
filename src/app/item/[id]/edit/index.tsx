@@ -10,7 +10,7 @@ import { Field, SaveBar, StructureRow, useEditor } from '@/features/editor/parts
 import { QuestionList } from '@/features/editor/question-list';
 import { useApply } from '@/features/editor/use-apply';
 import { Button, Chip, TextField } from '@/ui/controls';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { PromptDialog, Snackbar } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { spacing } from '@/ui/theme';
@@ -23,7 +23,7 @@ export default function EditItemScreen() {
   return (
     <Page>
       <Stack.Screen options={{ title: t('editor.edit') }} />
-      {editor.loading ? null : editor.document ? (
+      {editor.loading ? <Loading /> : editor.document ? (
         <ItemEditor document={editor.document} save={editor.save} />
       ) : (
         <EmptyState icon="close" title={t('item.notFound')} body="" />

@@ -9,7 +9,7 @@ import { useData, useQuery } from '@/data/provider';
 import { Field, SaveBar } from '@/features/editor/parts';
 import { deleteApiKey, readApiKey, saveApiKey } from '@/platform/secrets';
 import { Button, Chip, IconButton, TextField } from '@/ui/controls';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { ConfirmDialog } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { radius, spacing, useTheme } from '@/ui/theme';
@@ -31,7 +31,7 @@ export default function ProviderScreen() {
   return (
     <Page>
       <Stack.Screen options={{ title: isNew ? t('providers.add') : t('providers.edit') }} />
-      {loaded.loading ? null : loaded.data ? (
+      {loaded.loading ? <Loading /> : loaded.data ? (
         // Keyed so the form starts from the stored values once, and keeps what is typed after.
         <ProviderForm key={loaded.data.provider?.id ?? 'new'} provider={loaded.data.provider} hasKey={loaded.data.hasKey} />
       ) : (

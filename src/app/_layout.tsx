@@ -49,11 +49,19 @@ export default function RootLayout() {
                 screenOptions={{
                   headerShadowVisible: false,
                   headerBackButtonDisplayMode: 'minimal',
+                  // Screens set their own titles once their data loads. Until then the header stays
+                  // empty rather than falling back to the route's file path.
+                  title: '',
                 }}
               >
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
-                <Stack.Screen name="provider/[id]" options={{ title: '' }} />
+                <Stack.Screen name="create" options={{ title: t('create.screenTitle') }} />
+                <Stack.Screen name="import" options={{ title: t('import.title') }} />
+                <Stack.Screen name="review-session" options={{ title: t('review.title') }} />
+                <Stack.Screen name="job/[id]" options={{ title: t('job.title') }} />
+                <Stack.Screen name="item/[id]/result/[attemptId]" options={{ title: t('result.title') }} />
+                <Stack.Screen name="item/[id]/edit/index" options={{ title: t('editor.edit') }} />
                 <Stack.Screen
                   name="welcome"
                   options={{ headerShown: false, gestureEnabled: false }}

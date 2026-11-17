@@ -16,7 +16,7 @@ import { QuestionView } from '@/features/study/question-views';
 import { usePlayer } from '@/features/study/use-player';
 import { Button } from '@/ui/controls';
 import { Icon } from '@/ui/icon';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { Markdown } from '@/ui/markdown';
 import { ConfirmDialog } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
@@ -52,7 +52,7 @@ export default function PlayScreen() {
 
   const remaining = useCountdown(deadline, finish);
 
-  if (player.status === 'loading') return <Page />;
+  if (player.status === 'loading') return <Loading />;
   if (player.status !== 'ready') {
     return (
       <Page>

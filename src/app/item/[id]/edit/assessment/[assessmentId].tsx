@@ -10,7 +10,7 @@ import { Field, SaveBar, useEditor } from '@/features/editor/parts';
 import { QuestionList } from '@/features/editor/question-list';
 import { useApply } from '@/features/editor/use-apply';
 import { Chip, Stepper, TextField } from '@/ui/controls';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { Snackbar } from '@/ui/overlays';
 import { spacing } from '@/ui/theme';
 
@@ -23,7 +23,7 @@ export default function EditAssessmentScreen() {
   return (
     <Page>
       <Stack.Screen options={{ title: t('editor.assessment.screen') }} />
-      {editor.loading ? null : editor.document && located ? (
+      {editor.loading ? <Loading /> : editor.document && located ? (
         <AssessmentEditor document={editor.document} assessment={located.assessment} save={editor.save} />
       ) : (
         <EmptyState icon="close" title={t('study.missing')} body="" />

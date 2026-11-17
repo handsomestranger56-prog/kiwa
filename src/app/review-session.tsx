@@ -13,7 +13,7 @@ import { useData } from '@/data/provider';
 import { Feedback } from '@/features/study/feedback';
 import { QuestionView } from '@/features/study/question-views';
 import { Button } from '@/ui/controls';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { Markdown } from '@/ui/markdown';
 import { AppText } from '@/ui/text';
 import { radius, spacing, useTheme } from '@/ui/theme';
@@ -61,7 +61,7 @@ export default function ReviewSessionScreen() {
     };
   }, [data]);
 
-  if (entries === null) return <Page />;
+  if (entries === null) return <Loading />;
 
   if (index >= entries.length) {
     return (
