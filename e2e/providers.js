@@ -96,13 +96,13 @@ const { mockAi, MOCK_OPENAI_URL } = require('./mock-ai');
     await shot('settings');
     await button('qwen3 · My server').click();
     await page.waitForFunction(
-      () => [...document.querySelectorAll('[role="button"][aria-selected="true"]')].some((node) => node.textContent === 'qwen3 · My server'),
+      () => [...document.querySelectorAll('[role="button"][aria-pressed="true"]')].some((node) => node.textContent === 'qwen3 · My server'),
       null,
       { timeout: 5000 },
     );
     await openSettings();
-    const selected = await page.getByRole('button', { name: 'qwen3 · My server', exact: true }).locator('visible=true').last().getAttribute('aria-selected');
-    if (selected !== 'true') throw new Error(`default not remembered (aria-selected=${selected})`);
+    const selected = await page.getByRole('button', { name: 'qwen3 · My server', exact: true }).locator('visible=true').last().getAttribute('aria-pressed');
+    if (selected !== 'true') throw new Error(`default not remembered (aria-pressed=${selected})`);
   });
 
   await step('a backup carries the providers but never a key', async () => {

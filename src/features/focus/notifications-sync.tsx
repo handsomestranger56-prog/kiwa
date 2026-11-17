@@ -34,7 +34,8 @@ function content(entry: Planned, streakLength: number): { title: string; body: s
 }
 
 /** Brings the device's pending notifications in line with the plan. */
-export async function syncNotifications(data: AppData, timer: { endsAt: number; phase: 'focus' | 'short' | 'long' } | null, reviewsDueAt: number | null): Promise<void> {
+export async function syncNotifications(data: AppData, timer: { endsAt: number; phase: 'focus' | 'short' | 'long' } | null): Promise<void> {
+  const reviewsDueAt = await data.reviews.nextDueAt();
   await prepareNotifications();
   const settings = await readReminders(data);
   const anyOn = settings.daily || settings.streak || settings.reviews || settings.timer;
@@ -65,14 +66,14 @@ export async function syncNotifications(data: AppData, timer: { endsAt: number; 
 }
 
 /** Re-plans notifications when the app opens, comes back to the front, or anything is saved. */
-export function NotificationsSync({ reviewsDueAt = null }: { reviewsDueAt?: number | null }) {
+export function NotificationsSync() {
   const data = useData();
   const { timer } = useFocus();
   const timerKey = timer.status === 'running' && timer.endsAt ? `${timer.phase}:${timer.endsAt}` : 'none';
 
   const run = useEffectEvent(() => {
     const running = timer.status === 'running' && timer.endsAt ? { endsAt: timer.endsAt, phase: timer.phase } : null;
-    syncNotifications(data, running, reviewsDueAt).catch(() => {});
+    syncNotifications(data, running).catch(() => {});
   });
 
   useEffect(() => {
@@ -92,7 +93,7 @@ export function NotificationsSync({ reviewsDueAt = null }: { reviewsDueAt?: numb
       unsubscribe();
       subscription.remove();
     };
-  }, [data, timerKey, reviewsDueAt]);
+  }, [data, timerKey]);
 
   return null;
 }

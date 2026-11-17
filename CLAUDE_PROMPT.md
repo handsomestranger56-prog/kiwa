@@ -5,8 +5,9 @@ work where it stopped. It is written to the assistant picking the work up.
 
 ---
 
-You are continuing the build of a mobile app in this repository. Eight of nine planned steps are
-done and pushed. Read this file fully, then `README.md` and `AGENTS.md`, before changing anything.
+You are continuing the build of a mobile app in this repository. All nine planned steps are
+built and pushed. What is left is testing on real phones and the store decisions listed under
+"What remains". Read this file fully, then `README.md` and `AGENTS.md`, before changing anything.
 
 ## The plan and where it lives
 
@@ -79,7 +80,8 @@ All on branch `claude/quirky-cori-s17bdd`.
 | 5 Editor and drag-and-drop types | `19d1e0a` | Editing of details, lessons, blocks, assessments and every question type, with reorder and undo on removal; matching, ordering and sort-into-groups with drag and a tap alternative |
 | 6 Settings and providers | `1053fd1` | Provider list, keys in the secure store, test and detect models, model checkboxes, default model, adapters for Claude (official SDK), Gemini and OpenAI-compatible with a base URL; providers travel in backups without keys |
 | 7 Generate, Check, Explain deeper | `45e27ce` | Generate on the create form with a model picker; course outline the user edits before lessons are written; lessons two at a time; every step saved and resumed on app start; one repair request per bad reply; review before adding; Check with AI for essays and short answers, its score counts and is marked; Explain deeper; tokens shown after every AI action |
-| 8 Focus, Pomodoro, notifications | see `git log` | Focus tab with a Pomodoro timer stored as an end time, sessions logged with interruptions, streak; focus view on lessons with the header hidden and the screen kept awake; reminders in Settings; one planner reconciles local notifications; a notice when generation finishes in the background |
+| 8 Focus, Pomodoro, notifications | `65e6264` | Focus tab with a Pomodoro timer stored as an end time, sessions logged with interruptions, streak; focus view on lessons with the header hidden and the screen kept awake; reminders in Settings; one planner reconciles local notifications; a notice when generation finishes in the background |
+| 9 Review, stats, release | see `git log` | Review queue fed by missed questions and studied flashcards, with gaps of about a day, three, a week and longer; Review tab with due counts, streak, last 7 days and quiz averages; first-run welcome; axe accessibility audit of every main screen with its problems fixed; EAS build profiles and release notes |
 
 Question types today: `single_choice`, `multiple_choice`, `true_false`, `short_answer`, `cloze`,
 `essay`, `flashcard`, `matching`, `ordering`, `categorize`.
@@ -166,7 +168,7 @@ Work one step at a time, in this order.
 - Done when a timer started before the app is closed still rings on time, and reminders stop on
   days already studied.
 
-### Step 9: Review, stats and release
+### Step 9: Review, stats and release (built)
 
 - Review queue: missed questions join flashcards and return after growing gaps. Flashcard ratings
   are already recorded in attempts and only need scheduling. Add the Review tab.
@@ -223,6 +225,19 @@ Work one step at a time, in this order.
   report trigger times back reliably. On the web the schedule is kept in `globalThis.__notifications`.
 - On the web, hidden tabs stay mounted, so text from the Focus tab can match in other screens.
   Narrow browser lookups with `.locator('visible=true')`.
+
+## What remains
+
+The plan is complete. Before a store release, the user has to decide, and has not yet:
+
+1. The app's name. `app.json` says "Anki", which is an existing flashcard app. Ask before changing.
+2. `ios.bundleIdentifier` and `android.package`. Do not invent them: they are permanent.
+3. Icons and splash art. The files in `assets/` are Expo placeholders.
+4. A privacy policy, because text goes to the AI providers the user adds.
+
+Then, on real phones (nothing native has run yet): tab bar spacing, keyboard behaviour, drag and drop,
+the file picker and share sheet, secure storage of keys, notification permission and delivery, keeping
+the screen awake, and a real Generate run with each provider.
 
 ## Things that will trip you up
 

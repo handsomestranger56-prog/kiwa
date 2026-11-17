@@ -12,10 +12,14 @@ export default function TabsLayout() {
       backgroundColor={colors.surface}
       indicatorColor={colors.accentSoft}
       tintColor={colors.accent}
-      labelStyle={{ selected: { color: colors.text } }}>
+      labelStyle={{ default: { color: colors.textSecondary }, selected: { color: colors.text } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{t('tabs.library')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'books.vertical', selected: 'books.vertical.fill' }} md="local_library" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="review">
+        <NativeTabs.Trigger.Label>{t('tabs.review')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'arrow.trianglehead.2.clockwise', selected: 'arrow.trianglehead.2.clockwise' }} md="autorenew" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="focus">
         <NativeTabs.Trigger.Label>{t('tabs.focus')}</NativeTabs.Trigger.Label>

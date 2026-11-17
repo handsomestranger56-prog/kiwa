@@ -18,6 +18,7 @@ import { FocusRepository } from './focus-repository';
 import { JobsRepository } from './jobs-repository';
 import { migrate } from './migrations';
 import { ProvidersRepository } from './providers-repository';
+import { ReviewsRepository } from './reviews-repository';
 import { seedSamples } from './seed';
 import { SettingsRepository } from './settings-repository';
 
@@ -30,6 +31,7 @@ export type AppData = {
   providers: ProvidersRepository;
   jobs: JobsRepository;
   focus: FocusRepository;
+  reviews: ReviewsRepository;
   settings: SettingsRepository;
   changes: ChangeFeed;
 };
@@ -56,6 +58,7 @@ async function openAppData(): Promise<AppData> {
     providers,
     jobs: new JobsRepository(driver, changes),
     focus: new FocusRepository(driver, changes),
+    reviews: new ReviewsRepository(driver, changes),
     settings,
     changes,
   };

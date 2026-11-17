@@ -8,7 +8,8 @@ export type SettingKey =
   | 'focus.settings'
   | 'focus.timer'
   | 'notify.settings'
-  | 'notify.scheduled';
+  | 'notify.scheduled'
+  | 'onboarding.done';
 
 /** Small non-secret values. API keys never go here. They belong in the device's secure store. */
 export class SettingsRepository {

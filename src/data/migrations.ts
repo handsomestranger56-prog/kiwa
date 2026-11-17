@@ -111,6 +111,21 @@ export const migrations: readonly string[] = [
   );
   CREATE INDEX focus_sessions_end ON focus_sessions (ended_at);
   `,
+  // 6: questions scheduled for review
+  `
+  CREATE TABLE review_cards (
+    item_id TEXT NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+    question_id TEXT NOT NULL,
+    due_at INTEGER NOT NULL,
+    interval REAL NOT NULL,
+    ease REAL NOT NULL,
+    streak INTEGER NOT NULL,
+    lapses INTEGER NOT NULL,
+    last_reviewed_at INTEGER,
+    PRIMARY KEY (item_id, question_id)
+  );
+  CREATE INDEX review_cards_due ON review_cards (due_at);
+  `,
 ];
 
 export const LATEST_VERSION = migrations.length;

@@ -43,12 +43,13 @@ export class FocusRepository {
   }
 
   /**
-   * Local days with any study: a finished quiz, test, exam or card round, or a finished focus session.
+   * Local days with any study: a finished quiz, test, exam or card round, a review, or a finished focus session.
    */
   async studyDays(offsetMinutes: number): Promise<Set<string>> {
     const rows = await this.db.all<{ at: number }>(
       `SELECT finished_at AS at FROM attempts WHERE finished_at IS NOT NULL
-       UNION ALL SELECT ended_at AS at FROM focus_sessions`,
+       UNION ALL SELECT ended_at AS at FROM focus_sessions
+       UNION ALL SELECT last_reviewed_at AS at FROM review_cards WHERE last_reviewed_at IS NOT NULL`,
     );
     return new Set(rows.map((row) => dayKey(row.at, offsetMinutes)));
   }

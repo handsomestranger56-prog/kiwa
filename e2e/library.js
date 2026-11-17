@@ -6,7 +6,7 @@ const { start } = require('./harness');
   const h = await start();
   const { page, base, out, step, browser } = h;
 
-  await page.goto(base + '/');
+  await h.home();
   await step('library shows the three samples', async () => {
     await page.getByText('How to study so it sticks').locator('visible=true').first().waitFor({ timeout: 20000 });
     await page.getByText('Git in ten minutes').locator('visible=true').first().waitFor();
@@ -104,6 +104,8 @@ const { start } = require('./harness');
   const dark = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark', deviceScaleFactor: 2 });
   const dpage = await dark.newPage();
   await dpage.goto(base + '/');
+  // A new browser context is a first launch again.
+  await dpage.getByRole('button', { name: 'Get started', exact: true }).click({ timeout: 20000 });
   await step('dark theme renders', async () => {
     await dpage.getByText('How to study so it sticks').locator('visible=true').first().waitFor({ timeout: 20000 });
     await dpage.waitForTimeout(800);

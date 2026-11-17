@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { AnswerOf } from '@/core/quiz/answers';
 import { stableShuffle } from '@/core/quiz/shuffle';
 import type { Question } from '@/core/schema';
-import { IconButton } from '@/ui/controls';
+import { IconButton, pressedState } from '@/ui/controls';
 import { DragArea, Draggable, DropZone } from '@/ui/drag';
 import { Icon } from '@/ui/icon';
 import { AppText } from '@/ui/text';
@@ -103,7 +103,7 @@ export function Matching({ question, answer, onChange, locked, revealed }: ViewP
                 disabled={locked}
                 onDrop={(zone) => place(Number(zone), right)}
                 onTap={() => setPicked(picked === right ? null : right)}>
-                <View accessibilityRole="button" accessibilityLabel={question.pairs[right].right} aria-selected={picked === right}>
+                <View accessibilityRole="button" accessibilityLabel={question.pairs[right].right} {...pressedState(picked === right)}>
                   <Piece label={question.pairs[right].right} selected={picked === right} />
                 </View>
               </Draggable>
@@ -200,7 +200,7 @@ export function Categorize({ question, answer, onChange, locked, revealed }: Vie
         disabled={locked}
         onDrop={(zone) => place(item, zone === 'pool' ? null : Number(zone))}
         onTap={() => setPicked(picked === item ? null : item)}>
-        <View accessibilityRole="button" accessibilityLabel={question.items[item].text} aria-selected={picked === item}>
+        <View accessibilityRole="button" accessibilityLabel={question.items[item].text} {...pressedState(picked === item)}>
           <Piece label={question.items[item].text} selected={picked === item} tone={revealed && placed ? (right ? 'right' : 'wrong') : 'idle'} />
           {revealed && placed && !right ? (
             <AppText variant="small" color="success">

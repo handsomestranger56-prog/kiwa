@@ -68,6 +68,20 @@ export const backupSchema = z.object({
   items: z.array(backupItemSchema),
   settings: z.record(z.string(), z.string()).default({}),
   /** Provider settings without their API keys. Keys never leave the device's secure store. */
+  reviewCards: z
+    .array(
+      z.object({
+        itemId: z.string(),
+        questionId: z.string(),
+        dueAt: z.number(),
+        interval: z.number(),
+        ease: z.number(),
+        streak: z.number().int(),
+        lapses: z.number().int(),
+        lastReviewedAt: z.number().nullable(),
+      }),
+    )
+    .default([]),
   focusSessions: z
     .array(
       z.object({

@@ -22,7 +22,7 @@ type AttemptRow = {
 };
 
 /** Settings that describe this install and should not travel to another device. */
-const LOCAL_SETTINGS = new Set(['samples.seeded', 'focus.timer', 'notify.scheduled']);
+const LOCAL_SETTINGS = new Set(['samples.seeded', 'focus.timer', 'notify.scheduled', 'onboarding.done']);
 
 /**
  * Copies everything on the device into one file and back: content, marks, results and settings.
@@ -97,6 +97,11 @@ export class BackupService {
       items,
       settings,
       providers,
+      reviewCards: (
+        await this.db.all<{ item_id: string; question_id: string; due_at: number; interval: number; ease: number; streak: number; lapses: number; last_reviewed_at: number | null }>(
+          'SELECT * FROM review_cards ORDER BY item_id, question_id',
+        )
+      ).map((row) => ({ itemId: row.item_id, questionId: row.question_id, dueAt: row.due_at, interval: row.interval, ease: row.ease, streak: row.streak, lapses: row.lapses, lastReviewedAt: row.last_reviewed_at })),
       focusSessions: focusSessions.map((row) => ({ id: row.id, itemId: row.item_id, startedAt: row.started_at, endedAt: row.ended_at, minutes: row.minutes, interruptions: row.interruptions })),
     };
   }
@@ -155,6 +160,15 @@ export class BackupService {
             ],
           );
         }
+      }
+
+      for (const card of backup.reviewCards) {
+        // A card is only kept when its item is on the device.
+        await this.db.run(
+          `INSERT OR REPLACE INTO review_cards (item_id, question_id, due_at, interval, ease, streak, lapses, last_reviewed_at)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM items WHERE id = ?)`,
+          [card.itemId, card.questionId, card.dueAt, card.interval, card.ease, card.streak, card.lapses, card.lastReviewedAt, card.itemId],
+        );
       }
 
       for (const session of backup.focusSessions) {

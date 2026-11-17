@@ -6,6 +6,15 @@ import { type IconName, Icon } from './icon';
 import { AppText } from './text';
 import { type ColorName, MIN_TOUCH, radius, spacing, useTheme } from './theme';
 
+/**
+ * The on or off state of a toggle button. The web needs `aria-pressed`, which is valid on a button;
+ * iOS and Android read the selected state.
+ */
+export function pressedState(on: boolean | undefined): object {
+  if (on === undefined) return {};
+  return Platform.OS === 'web' ? { 'aria-pressed': on } : { accessibilityState: { selected: on } };
+}
+
 type ButtonProps = {
   label: string;
   onPress: () => void;
@@ -56,7 +65,7 @@ export function IconButton({ icon, label, onPress, color = 'textSecondary', sele
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      aria-selected={selected}
+      {...pressedState(selected)}
       hitSlop={4}
       onPress={onPress}
       style={({ pressed }) => [styles.iconButton, pressed && styles.dimmed]}>
@@ -72,7 +81,7 @@ export function Chip({ label, selected, onPress }: ChipProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      aria-selected={selected}
+      {...pressedState(selected)}
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,

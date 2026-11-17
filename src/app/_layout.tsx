@@ -54,6 +54,10 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
                 <Stack.Screen name="provider/[id]" options={{ title: '' }} />
+                <Stack.Screen
+                  name="welcome"
+                  options={{ headerShown: false, gestureEnabled: false }}
+                />
               </Stack>
             </FocusProvider>
           </JobRunnerProvider>

@@ -56,6 +56,21 @@ export function findAssessment(document: LibraryDocument, assessmentId: string):
   }
 }
 
+/** Finds a question anywhere in a document by its id. */
+export function findQuestion(document: LibraryDocument, questionId: string): Question | null {
+  const assessments =
+    document.format === COURSE_FORMAT
+      ? [...document.lessons.flatMap((lesson) => lesson.assessments), ...(document.finalExam ? [document.finalExam] : [])]
+      : document.format === QUIZ_FORMAT
+        ? [document.assessment]
+        : [{ questions: document.cards }];
+  for (const assessment of assessments) {
+    const found = assessment.questions.find((question) => question.id === questionId);
+    if (found) return found;
+  }
+  return null;
+}
+
 /** Starts an attempt. With `sampleSize`, a random subset in random order. Otherwise every question in order. */
 export function createSession(assessment: Assessment, random: () => number = Math.random): SessionState {
   let ids = assessment.questions.map((question) => question.id);

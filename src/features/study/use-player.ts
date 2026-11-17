@@ -17,7 +17,7 @@ import type { LibraryDocument, Question } from '@/core/schema';
 import type { Attempt } from '@/data/attempts-repository';
 import { useData } from '@/data/provider';
 
-import { applyAttemptCompletion } from './completion';
+import { applyAttemptCompletion, scheduleReviews } from './completion';
 
 type Loaded = { document: LibraryDocument; located: LocatedAssessment; attempt: Attempt; questions: Question[] };
 
@@ -129,6 +129,7 @@ export function usePlayer(itemId: string, assessmentId: string): Player {
       const passed = hasPassed(located.assessment.mode, located.assessment.passMark, summary);
       await data.attempts.finish(attempt.id, session, { earned: summary.earned, total: summary.total, passed });
       await applyAttemptCompletion(data, document, located, passed);
+      await scheduleReviews(data, document.id, questions, session, summary.results).catch(() => {});
       return attempt.id;
     },
   };

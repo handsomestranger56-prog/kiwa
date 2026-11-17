@@ -9,7 +9,7 @@ const { start } = require('./harness');
   const text = (value) => page.getByText(value, { exact: false }).last();
   const seen = (value) => text(value).waitFor();
 
-  await page.goto(base + '/');
+  await h.home();
   await page.getByText('How to study so it sticks').first().waitFor({ timeout: 20000 });
 
   await step('course: start opens lesson 1 with formatted content', async () => {

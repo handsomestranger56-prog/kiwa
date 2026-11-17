@@ -114,7 +114,12 @@ async function start({ permissions = [], colorScheme = 'light' } = {}) {
   /** Opens the library and waits until the bundled samples are listed. */
   const home = async () => {
     await page.goto(`${base}/`);
-    await page.getByText('How to study so it sticks').first().waitFor({ timeout: 20000 });
+    // A fresh browser is a first launch, which shows the welcome screen once.
+    const welcome = page.getByRole('button', { name: 'Get started', exact: true });
+    const library = page.getByText('How to study so it sticks').first();
+    await Promise.race([welcome.waitFor({ timeout: 20000 }), library.waitFor({ timeout: 20000 })]).catch(() => {});
+    if (await welcome.isVisible().catch(() => false)) await welcome.click();
+    await library.waitFor({ timeout: 20000 });
     // The router finishes restoring its state a moment after the first paint. A tap before that is undone.
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
