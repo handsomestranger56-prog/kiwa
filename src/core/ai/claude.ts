@@ -1,99 +1,89 @@
-import Anthropic, {
-  APIConnectionError,
-  APIError,
-  AuthenticationError,
-  BadRequestError,
-  NotFoundError,
-  PermissionDeniedError,
-  RateLimitError,
-} from '@anthropic-ai/sdk';
+import { requestJson, trimSlash } from './http';
+import { type Adapter, type Connection, type FetchLike, type GenerateRequest, AiError, DEFAULT_MAX_TOKENS } from './types';
 
-import { type Adapter, type Connection, type FetchLike, type GenerateRequest, AiError, DEFAULT_MAX_TOKENS, kindForStatus } from './types';
+/**
+ * Claude over plain HTTP. The official SDK does not load under React Native's bundler (a circular
+ * import between its own modules leaves an export undefined), so the app calls the API directly.
+ */
 
 export const CLAUDE_BASE_URL = 'https://api.anthropic.com';
+const API_VERSION = '2026-10-21';
 
-function client(connection: Connection, fetchImpl: FetchLike): Anthropic {
-  return new Anthropic({
-    apiKey: connection.apiKey,
-    // Explicit, so no environment variable can send requests elsewhere.
-    baseURL: connection.baseUrl?.trim() || CLAUDE_BASE_URL,
-    // The key belongs to the person holding the phone and never leaves it except to Anthropic.
-    dangerouslyAllowBrowser: true,
-    fetch: fetchImpl,
-    maxRetries: 2,
-    timeout: 10 * 60 * 1000,
-  });
-}
+const base = (connection: Connection) => trimSlash(connection.baseUrl || CLAUDE_BASE_URL);
 
-/** Turns an SDK error into one the screens know how to explain. Most specific first. */
-function toAiError(error: unknown): AiError {
-  if (error instanceof AiError) return error;
-  if (error instanceof AuthenticationError || error instanceof PermissionDeniedError) return new AiError('auth', error.message);
-  if (error instanceof NotFoundError) return new AiError('notFound', error.message);
-  if (error instanceof RateLimitError) return new AiError('rate', error.message);
-  if (error instanceof BadRequestError) return new AiError('badRequest', error.message);
-  if (error instanceof APIConnectionError) return new AiError('network', error.message);
-  if (error instanceof APIError) return new AiError(error.status ? kindForStatus(error.status) : 'server', error.message);
-  return new AiError('network', error instanceof Error ? error.message : String(error));
-}
+const headers = (connection: Connection): Record<string, string> => ({
+  'x-api-key': connection.apiKey,
+  'anthropic-version': API_VERSION,
+  // Needed for the browser build, where the request comes from a web page. Ignored elsewhere.
+  'anthropic-dangerous-direct-browser-access': 'true',
+});
+
+type ModelPage = { data?: { id?: string; display_name?: string }[]; has_more?: boolean; last_id?: string | null };
+
+type MessageReply = {
+  content?: { type: string; text?: string }[];
+  stop_reason?: string | null;
+  stop_details?: { explanation?: string | null } | null;
+  usage?: { input_tokens?: number; output_tokens?: number };
+};
 
 export const claudeAdapter: Adapter = {
   async listModels(connection, fetchImpl) {
-    try {
-      const models = [];
-      // Iterating the page fetches every following page.
-      for await (const model of client(connection, fetchImpl).models.list({ limit: 100 })) {
-        models.push({ id: model.id, label: model.display_name || model.id });
+    const models: { id: string; label: string }[] = [];
+    let after: string | null = null;
+    for (let page = 0; page < 20; page += 1) {
+      const query: string = `limit=100${after ? `&after_id=${encodeURIComponent(after)}` : ''}`;
+      const data = (await requestJson(fetchImpl, `${base(connection)}/v1/models?${query}`, { headers: headers(connection) })) as ModelPage;
+      for (const model of data.data ?? []) {
+        if (typeof model.id === 'string') models.push({ id: model.id, label: model.display_name || model.id });
       }
-      return models;
-    } catch (error) {
-      throw toAiError(error);
+      if (!data.has_more || !data.last_id) break;
+      after = data.last_id;
     }
+    return models;
   },
 
   async generate(connection, request, fetchImpl) {
-    const anthropic = client(connection, fetchImpl);
     try {
-      return await send(anthropic, request, true);
+      return await send(connection, request, fetchImpl, true);
     } catch (error) {
       // Some models, or a schema too large for them, reject structured output. The prompt already
       // asks for JSON and the reply is validated on import, so try once more without it.
-      if (request.schema && error instanceof BadRequestError) {
-        try {
-          return await send(anthropic, request, false);
-        } catch (retryError) {
-          throw toAiError(retryError);
-        }
+      if (request.schema && error instanceof AiError && error.kind === 'badRequest') {
+        return send(connection, request, fetchImpl, false);
       }
-      throw toAiError(error);
+      throw error;
     }
   },
 };
 
-async function send(anthropic: Anthropic, request: GenerateRequest, structured: boolean) {
+async function send(connection: Connection, request: GenerateRequest, fetchImpl: FetchLike, structured: boolean) {
   // No `thinking` parameter: current models choose how much to think, and older ones run without.
-  const response = await anthropic.messages.create({
-    model: request.model,
-    max_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
-    ...(request.system ? { system: request.system } : {}),
-    messages: [{ role: 'user', content: request.prompt }],
-    ...(structured && request.schema ? { output_config: { format: { type: 'json_schema', schema: request.schema } } } : {}),
-  });
+  const data = (await requestJson(fetchImpl, `${base(connection)}/v1/messages`, {
+    method: 'POST',
+    headers: headers(connection),
+    body: {
+      model: request.model,
+      max_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
+      ...(request.system ? { system: request.system } : {}),
+      messages: [{ role: 'user', content: request.prompt }],
+      ...(structured && request.schema ? { output_config: { format: { type: 'json_schema', schema: request.schema } } } : {}),
+    },
+  })) as MessageReply;
 
-  const usage = { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens };
+  const usage = { inputTokens: data.usage?.input_tokens ?? 0, outputTokens: data.usage?.output_tokens ?? 0 };
 
   // Check why the model stopped before reading what it wrote.
-  if (response.stop_reason === 'refusal') {
-    const reason = response.stop_details?.explanation ?? 'The model declined this request.';
-    throw new AiError('refusal', reason, usage);
+  if (data.stop_reason === 'refusal') {
+    throw new AiError('refusal', data.stop_details?.explanation || 'The model declined this request.', usage);
   }
-  if (response.stop_reason === 'max_tokens' || response.stop_reason === 'model_context_window_exceeded') {
+  if (data.stop_reason === 'max_tokens' || data.stop_reason === 'model_context_window_exceeded') {
     throw new AiError('length', 'The reply was cut off before it finished.', usage);
   }
 
-  const text = response.content
+  const text = (data.content ?? [])
     .filter((block) => block.type === 'text')
-    .map((block) => block.text)
+    .map((block) => block.text ?? '')
     .join('');
   return { text, usage };
 }

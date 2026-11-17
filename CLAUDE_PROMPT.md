@@ -198,9 +198,11 @@ Work one step at a time, in this order.
 - `src/core/ai`: one adapter per kind behind `listModels` and `generate`, each taking an injectable
   `fetch`. Errors become `AiError` with a kind the screens explain. `strictSchema` strips JSON Schema
   features strict structured output rejects.
-- Claude uses `@anthropic-ai/sdk` pinned at 1.9.0, with the base URL set explicitly so the SDK cannot
-  pick one up from the environment. SDK 1.x sends the key as `Authorization: Bearer` and API version
-  2026-10-21. Requests are not streamed: React Native's fetch cannot read a streamed body.
+- Claude is called over plain HTTP (`x-api-key`, `anthropic-version: 2026-10-21`), like the other two
+  providers. Do not bring back `@anthropic-ai/sdk`: it crashed the app on a phone at start-up with
+  "Cannot read property 'BetaToolRunner' of undefined", a circular import inside the SDK that the web
+  build and Jest do not reproduce. Requests are not streamed: React Native's fetch cannot read a
+  streamed body.
 - Keys: `src/platform/secrets.ts`. On the web build they sit in local storage, development only.
 - `e2e/mock-ai.js` stands in for all three providers in browser checks. Set `state.reply` to control
   what generation returns.
