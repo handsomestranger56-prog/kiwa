@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# end-to-end check output
+e2e/.output/

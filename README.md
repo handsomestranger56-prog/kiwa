@@ -25,6 +25,17 @@ npm run check
 
 This runs the linter, the type checker and the tests. CI runs the same three on every pull request.
 
+## End-to-end checks
+
+`e2e/` holds browser checks that walk through the app as a user would, against the web build.
+They need Playwright with Chromium available to Node, which is not a dependency of this project.
+
+```bash
+npm run e2e
+```
+
+Screenshots and downloaded files land in `e2e/.output/`.
+
 ## How the code is organised
 
 | Folder | What lives there | May import |

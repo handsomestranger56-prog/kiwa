@@ -207,9 +207,8 @@ Besides `npm run check`, each step was driven end to end in a headless browser:
 3. A Playwright script at phone size walks through the flows and asserts on what is shown, on
    downloads, on the clipboard and on data surviving a reload.
 
-43 such checks passed after step 4: 13 for the library, 14 for studying, 16 for import and export.
-The scripts were kept in a temporary folder and are NOT in this repository. Write new ones for
-each step you build. Two things to know when you do: screens underneath the current one stay
+The scripts are in `e2e/`, on a shared harness in `e2e/harness.js`. Run them all with
+`npm run e2e`. Add a new file there for each step you build. Two things to know when you do: screens underneath the current one stay
 mounted on the web, so pick the button that is actually on top, and match accessible names
 exactly because several labels share words.
 
