@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import type { AiCheck, AiExplanation } from '@/core/quiz/ai-feedback';
 import type { Answer } from '@/core/quiz/answers';
 import { hasPassed, summarize } from '@/core/quiz/grading';
 import {
@@ -16,7 +17,7 @@ import type { LibraryDocument, Question } from '@/core/schema';
 import type { Attempt } from '@/data/attempts-repository';
 import { useData } from '@/data/provider';
 
-import { applyAttemptCompletion } from './completion';
+import { applyAttemptCompletion, scheduleReviews } from './completion';
 
 type Loaded = { document: LibraryDocument; located: LocatedAssessment; attempt: Attempt; questions: Question[] };
 
@@ -32,6 +33,8 @@ export type Player =
       /** True when the most recent answer could not be written to the device. */
       saveFailed: boolean;
       answer: (questionId: string, answer: Answer) => void;
+      /** Saves AI feedback for a question, and the answer it implies when there is one. */
+      saveAi: (questionId: string, changes: { check?: AiCheck; explanation?: AiExplanation; answer?: Answer }) => void;
       check: (questionId: string) => void;
       move: (index: number) => void;
       /** Grades and closes the attempt. Resolves to its id. */
@@ -113,12 +116,20 @@ export function usePlayer(itemId: string, assessmentId: string): Player {
     saveFailed,
     answer: (questionId, answer) => update(setAnswer(session, questionId, answer)),
     check: (questionId) => update(markChecked(session, questionId)),
+    saveAi: (questionId, changes) =>
+      update({
+        ...session,
+        answers: changes.answer ? { ...session.answers, [questionId]: changes.answer } : session.answers,
+        ai: changes.check ? { ...session.ai, [questionId]: changes.check } : session.ai,
+        explanations: changes.explanation ? { ...session.explanations, [questionId]: changes.explanation } : session.explanations,
+      }),
     move: (index) => update(goTo(session, index)),
     finish: async () => {
-      const summary = summarize(questions, session.answers);
+      const summary = summarize(questions, session.answers, session.ai ?? {});
       const passed = hasPassed(located.assessment.mode, located.assessment.passMark, summary);
       await data.attempts.finish(attempt.id, session, { earned: summary.earned, total: summary.total, passed });
       await applyAttemptCompletion(data, document, located, passed);
+      await scheduleReviews(data, document.id, questions, session, summary.results).catch(() => {});
       return attempt.id;
     },
   };

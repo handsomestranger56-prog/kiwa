@@ -72,6 +72,60 @@ export const migrations: readonly string[] = [
     updated_at INTEGER NOT NULL
   );
   `,
+  // 3: AI providers. Their API keys are kept in the device's secure store, not here.
+  `
+  CREATE TABLE providers (
+    id TEXT PRIMARY KEY NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('claude', 'gemini', 'openai')),
+    label TEXT NOT NULL,
+    base_url TEXT,
+    models TEXT NOT NULL DEFAULT '[]',
+    enabled TEXT NOT NULL DEFAULT '[]',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  `,
+  // 4: generation runs, saved step by step
+  `
+  CREATE TABLE jobs (
+    id TEXT PRIMARY KEY NOT NULL,
+    request TEXT NOT NULL,
+    model TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('running', 'outline', 'ready', 'saved', 'failed', 'cancelled')),
+    state TEXT NOT NULL,
+    error TEXT,
+    saved_item_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  `,
+  // 5: finished focus sessions
+  `
+  CREATE TABLE focus_sessions (
+    id TEXT PRIMARY KEY NOT NULL,
+    item_id TEXT,
+    started_at INTEGER NOT NULL,
+    ended_at INTEGER NOT NULL,
+    minutes INTEGER NOT NULL,
+    interruptions INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX focus_sessions_end ON focus_sessions (ended_at);
+  `,
+  // 6: questions scheduled for review
+  `
+  CREATE TABLE review_cards (
+    item_id TEXT NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+    question_id TEXT NOT NULL,
+    due_at INTEGER NOT NULL,
+    interval REAL NOT NULL,
+    ease REAL NOT NULL,
+    streak INTEGER NOT NULL,
+    lapses INTEGER NOT NULL,
+    last_reviewed_at INTEGER,
+    PRIMARY KEY (item_id, question_id)
+  );
+  CREATE INDEX review_cards_due ON review_cards (due_at);
+  `,
 ];
 
 export const LATEST_VERSION = migrations.length;

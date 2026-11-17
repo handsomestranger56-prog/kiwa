@@ -20,7 +20,11 @@ export function matchesAccepted(accepted: readonly string[], text: string): bool
   return given !== '' && accepted.some((candidate) => normalizeText(candidate) === given);
 }
 
-export function grade(question: Question, stored: Answer | undefined): Grade {
+/**
+ * Grades one answer. An AI check of a written answer, when there is one, decides the score.
+ */
+export function grade(question: Question, stored: Answer | undefined, check?: { score: number }): Grade {
+  if (check && (question.type === 'essay' || question.type === 'short_answer')) return toGrade(check.score);
   return toGrade(scoreOf(question, answerFor(question, stored)));
 }
 
@@ -60,6 +64,29 @@ function scoreOf(question: Question, answer: Answer): number {
 
     case 'flashcard':
       return answer.type === 'flashcard' && answer.rating ? FLASHCARD_SCORE[answer.rating] : 0;
+
+    case 'matching': {
+      if (answer.type !== 'matching') return 0;
+      // Compared by text, so two pairs that share a right side are interchangeable.
+      const right = question.pairs.filter((pair, index) => {
+        const chosen = answer.matches[index];
+        return typeof chosen === 'number' && question.pairs[chosen]?.right === pair.right;
+      }).length;
+      return right / question.pairs.length;
+    }
+
+    case 'ordering': {
+      if (answer.type !== 'ordering' || !answer.order) return 0;
+      const order = answer.order;
+      const right = question.items.filter((item, position) => question.items[order[position]] === item).length;
+      return right / question.items.length;
+    }
+
+    case 'categorize': {
+      if (answer.type !== 'categorize') return 0;
+      const right = question.items.filter((item, index) => answer.placements[index] === item.category).length;
+      return right / question.items.length;
+    }
   }
 }
 
@@ -80,13 +107,17 @@ export type Summary = {
   counts: Record<Outcome, number>;
 };
 
-export function summarize(questions: readonly Question[], answers: Record<string, Answer>): Summary {
+export function summarize(
+  questions: readonly Question[],
+  answers: Record<string, Answer>,
+  checks: Record<string, { score: number }> = {},
+): Summary {
   const counts: Record<Outcome, number> = { correct: 0, partial: 0, incorrect: 0 };
   let earned = 0;
   let total = 0;
 
   const results = questions.map((question) => {
-    const result = grade(question, answers[question.id]);
+    const result = grade(question, answers[question.id], checks[question.id]);
     counts[result.outcome] += 1;
     total += question.points;
     earned += question.points * result.score;

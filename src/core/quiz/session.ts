@@ -6,6 +6,7 @@ import {
   DECK_FORMAT,
   QUIZ_FORMAT,
 } from '../schema';
+import type { AiCheck, AiExplanation } from './ai-feedback';
 import { type Answer, isAnswered, isSelfGraded } from './answers';
 
 /** Everything needed to put an attempt back exactly where it was left. */
@@ -16,6 +17,10 @@ export type SessionState = {
   answers: Record<string, Answer>;
   /** Practice only: questions whose feedback has been shown. Their answers are locked. */
   checked: string[];
+  /** AI grading of written answers, by question id. Its score replaces the app's own. */
+  ai?: Record<string, AiCheck>;
+  /** Longer explanations asked for, by question id. */
+  explanations?: Record<string, AiExplanation>;
 };
 
 /** The id under which a deck's cards are studied. Decks have no assessment of their own. */
@@ -49,6 +54,21 @@ export function findAssessment(document: LibraryDocument, assessmentId: string):
           }
         : null;
   }
+}
+
+/** Finds a question anywhere in a document by its id. */
+export function findQuestion(document: LibraryDocument, questionId: string): Question | null {
+  const assessments =
+    document.format === COURSE_FORMAT
+      ? [...document.lessons.flatMap((lesson) => lesson.assessments), ...(document.finalExam ? [document.finalExam] : [])]
+      : document.format === QUIZ_FORMAT
+        ? [document.assessment]
+        : [{ questions: document.cards }];
+  for (const assessment of assessments) {
+    const found = assessment.questions.find((question) => question.id === questionId);
+    if (found) return found;
+  }
+  return null;
 }
 
 /** Starts an attempt. With `sampleSize`, a random subset in random order. Otherwise every question in order. */

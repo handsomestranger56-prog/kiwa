@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COURSE_FORMAT } from '@/core/schema';
 import { lessonFile } from '@/core/transfer/files';
 import { useData, useQuery } from '@/data/provider';
+import { FocusBar } from '@/features/focus/focus-bar';
 import { AssessmentCard } from '@/features/study/assessment-card';
 import { LessonBlocks } from '@/features/study/blocks';
 import { completeLesson, nextLessonId } from '@/features/study/completion';
@@ -18,7 +19,8 @@ import { AppText } from '@/ui/text';
 import { spacing, useTheme } from '@/ui/theme';
 
 export default function LessonScreen() {
-  const { id, lessonId } = useLocalSearchParams<{ id: string; lessonId: string }>();
+  const { id, lessonId, focus: focusParam } = useLocalSearchParams<{ id: string; lessonId: string; focus?: string }>();
+  const focusView = focusParam === '1';
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -88,8 +90,11 @@ export default function LessonScreen() {
 
   return (
     <Page>
+      {focusView ? <FocusBar onExit={() => router.setParams({ focus: undefined })} /> : null}
       <Stack.Screen
         options={{
+          // Focus view hides the navigation so only the lesson is on screen.
+          headerShown: !focusView,
           title: t('lesson.number', { current: number, total: course.lessons.length }),
           headerRight: () => (
             <View style={styles.headerButtons}>
@@ -157,6 +162,19 @@ export default function LessonScreen() {
         title={lesson.title}
         onClose={() => setMenuOpen(false)}
         actions={[
+          {
+            key: 'focus',
+            icon: 'timer',
+            label: t('focus.view'),
+            hint: t('focus.viewHint'),
+            onPress: () => router.setParams({ focus: '1' }),
+          },
+          {
+            key: 'edit',
+            icon: 'edit',
+            label: t('editor.lesson.screen'),
+            onPress: () => router.push({ pathname: '/item/[id]/edit/lesson/[lessonId]', params: { id, lessonId: lesson.id } }),
+          },
           {
             key: 'quiz',
             icon: 'quiz',

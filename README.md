@@ -25,6 +25,17 @@ npm run check
 
 This runs the linter, the type checker and the tests. CI runs the same three on every pull request.
 
+## End-to-end checks
+
+`e2e/` holds browser checks that walk through the app as a user would, against the web build.
+They need Playwright with Chromium available to Node, which is not a dependency of this project.
+
+```bash
+npm run e2e
+```
+
+Screenshots and downloaded files land in `e2e/.output/`.
+
 ## How the code is organised
 
 | Folder | What lives there | May import |
@@ -77,6 +88,33 @@ Lesson text uses a small subset of Markdown, listed at the top of `src/core/mark
 Add a new entry to the end of `migrations` in `src/data/migrations.ts`. Never edit an entry that
 has shipped. The repository tests run against a real in-memory SQLite, so a migration and the
 queries that depend on it are checked together.
+
+## Release
+
+Builds run on EAS. `eas.json` has two profiles: `preview` for installing on test phones (an APK on
+Android) and `production` for the stores.
+
+```bash
+npx eas-cli@latest build --profile preview --platform android
+```
+
+Before a store build, decide and fill in:
+
+- **The app's name.** It is `Anki` in `app.json` today, taken from the repository. Anki is also the
+  name of an established flashcard app, so a store listing under that name is likely to be refused.
+- **Identifiers**: `ios.bundleIdentifier` and `android.package` in `app.json`, for example
+  `com.yourname.studyapp`. They cannot change after the first release.
+- **Icons and splash**: the files in `assets/` are Expo's placeholders.
+- **A privacy policy.** The app stores everything on the phone, but it sends text to the AI providers
+  the user adds. Both stores ask for a policy that says so.
+
+Everything the app uses is available in Expo Go, so a development build is not needed to try it.
+
+## Accessibility
+
+`e2e/a11y.js` runs the axe engine on every main screen and fails on serious or critical problems.
+Toggle buttons expose their state as `aria-pressed` on the web and as "selected" on phones, and
+every drag interaction has a tap alternative.
 
 ## Web
 

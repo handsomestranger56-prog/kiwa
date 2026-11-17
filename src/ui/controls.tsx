@@ -6,6 +6,15 @@ import { type IconName, Icon } from './icon';
 import { AppText } from './text';
 import { type ColorName, MIN_TOUCH, radius, spacing, useTheme } from './theme';
 
+/**
+ * The on or off state of a toggle button. The web needs `aria-pressed`, which is valid on a button;
+ * iOS and Android read the selected state.
+ */
+export function pressedState(on: boolean | undefined): object {
+  if (on === undefined) return {};
+  return Platform.OS === 'web' ? { 'aria-pressed': on } : { accessibilityState: { selected: on } };
+}
+
 type ButtonProps = {
   label: string;
   onPress: () => void;
@@ -56,7 +65,7 @@ export function IconButton({ icon, label, onPress, color = 'textSecondary', sele
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={selected === undefined ? undefined : { selected }}
+      {...pressedState(selected)}
       hitSlop={4}
       onPress={onPress}
       style={({ pressed }) => [styles.iconButton, pressed && styles.dimmed]}>
@@ -72,7 +81,7 @@ export function Chip({ label, selected, onPress }: ChipProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected }}
+      {...pressedState(selected)}
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,
@@ -108,10 +117,10 @@ export function Tag({ label, tone = 'neutral' }: TagProps) {
   );
 }
 
-type StepperProps = { label: string; value: number; min: number; max: number; onChange: (value: number) => void };
+type StepperProps = { label: string; value: number; min: number; max: number; step?: number; onChange: (value: number) => void };
 
 /** A number with minus and plus buttons, for small counts. */
-export function Stepper({ label, value, min, max, onChange }: StepperProps) {
+export function Stepper({ label, value, min, max, step = 1, onChange }: StepperProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   return (
@@ -122,7 +131,7 @@ export function Stepper({ label, value, min, max, onChange }: StepperProps) {
           icon="minus"
           label={t('common.fewer', { label })}
           color={value <= min ? 'border' : 'text'}
-          onPress={() => onChange(Math.max(min, value - 1))}
+          onPress={() => onChange(Math.max(min, value - step))}
         />
         <AppText variant="bodyStrong" style={styles.stepperValue} accessibilityLabel={`${label}: ${value}`}>
           {value}
@@ -131,7 +140,7 @@ export function Stepper({ label, value, min, max, onChange }: StepperProps) {
           icon="add"
           label={t('common.more', { label })}
           color={value >= max ? 'border' : 'text'}
-          onPress={() => onChange(Math.min(max, value + 1))}
+          onPress={() => onChange(Math.min(max, value + step))}
         />
       </View>
     </View>

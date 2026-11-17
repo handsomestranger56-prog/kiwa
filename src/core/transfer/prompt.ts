@@ -23,6 +23,9 @@ export const PROMPT_QUESTION_TYPES = [
   'short_answer',
   'cloze',
   'essay',
+  'matching',
+  'ordering',
+  'categorize',
 ] as const satisfies readonly QuestionType[];
 
 export type CreateRequest = {
@@ -69,6 +72,9 @@ const QUESTION_RULES: Record<QuestionType, string> = {
   cloze: '`cloze`: `text` is a sentence with gaps written as `{{1}}`, `{{2}}`. `gaps` lists each gap as `{ "id": "1", "accepted": ["..."] }`. Add `options` to a gap to let the learner pick instead of type. Every gap id appears in `text` exactly once.',
   essay: '`essay`: `modelAnswer` is what a strong answer says, `rubric` says how to score it, `minWords` is optional.',
   flashcard: '`flashcard`: `prompt` is the front of the card, `back` is the reverse. Keep both short.',
+  matching: '`matching`: `pairs` is 2 to 10 objects `{ "left": "...", "right": "..." }` that belong together. Every `left` is different. Keep both sides short.',
+  ordering: '`ordering`: `items` is 2 to 10 short strings written in the correct order. The app shuffles them.',
+  categorize: '`categorize`: `categories` is 2 to 6 group names, `items` is a list of `{ "text": "...", "category": 0 }` where `category` is the position of the right group, counting from 0. Every group gets at least one item.',
 };
 
 /** Builds the prompt a user pastes into any chatbot. The reply is a file the app can import. */

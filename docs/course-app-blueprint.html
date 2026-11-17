@@ -1,0 +1,664 @@
+<title>Course App Blueprint</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column for prose, diagrams and tables break out to the full page width. */
+:root {
+  --bg: #F2F4F7;
+  --surface: #FFFFFF;
+  --band: #E7ECF2;
+  --ink: #17212E;
+  --muted: #586475;
+  --line: #C9D2DD;
+  --accent: #0A6E7A;
+  --accent-soft: #D8EEF0;
+  --warm: #9A5200;
+  --warm-soft: #F6E8D3;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F141B; --surface: #171E28; --band: #1C2531; --ink: #E5EAF1; --muted: #98A4B5;
+    --line: #303C4C; --accent: #4CC3CF; --accent-soft: #12343A; --warm: #E7A552; --warm-soft: #3A2A12;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F141B; --surface: #171E28; --band: #1C2531; --ink: #E5EAF1; --muted: #98A4B5;
+  --line: #303C4C; --accent: #4CC3CF; --accent-soft: #12343A; --warm: #E7A552; --warm-soft: #3A2A12;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+}
+.page {
+  max-width: 1080px; margin: 0 auto; padding-block: 48px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 64px;
+}
+section, header { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.prose { max-width: 68ch; display: flex; flex-direction: column; gap: 14px; }
+p, ul, ol, h1, h2, h3, figure { margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 600; letter-spacing: -0.02em; }
+h2 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent);
+}
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 62ch; }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+code { background: var(--band); padding: 0.1em 0.35em; border-radius: 4px; }
+ul.plain { padding-left: 1.15em; display: flex; flex-direction: column; gap: 8px; }
+
+/* key decisions */
+.decisions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0; border-top: 2px solid var(--ink); }
+.decisions div { padding: 16px 20px 16px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.decisions p { color: var(--muted); font-size: 0.93rem; line-height: 1.5; }
+
+/* figures */
+figure { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.fig-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+.fig-scroll svg { display: block; width: 100%; min-width: 780px; height: auto; font-family: var(--font-body); }
+figcaption { color: var(--muted); font-size: 0.92rem; max-width: 72ch; }
+.d-band { fill: var(--band); }
+.d-boundary { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.d-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.d-key { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.6; }
+.d-ext { fill: var(--bg); stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.d-edge { fill: none; stroke: var(--ink); stroke-width: 1.3; }
+.d-dash { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-dasharray: 4 3; }
+.d-head { fill: var(--ink); }
+.d-t { fill: var(--ink); font-size: 12.5px; font-weight: 600; }
+.d-s { fill: var(--muted); font-size: 10.5px; }
+.d-l { fill: var(--muted); font-size: 11px; }
+.d-cap { fill: var(--muted); font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; }
+
+/* tables */
+.table-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 0.93rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 16px 10px 0; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--ink); }
+td:first-child { font-weight: 600; white-space: nowrap; }
+td { color: var(--ink); }
+td.dim { color: var(--muted); }
+
+.tag { display: inline-block; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 3px; background: var(--band); color: var(--muted); white-space: nowrap; }
+.tag.idea { background: var(--warm-soft); color: var(--warm); }
+.tag.size { background: var(--accent-soft); color: var(--accent); }
+
+pre { margin: 0; overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.55; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+@media (max-width: 800px) { .split { grid-template-columns: minmax(0, 1fr); } }
+
+/* plan */
+ol.plan { list-style: none; padding: 0; display: flex; flex-direction: column; counter-reset: step; border-top: 2px solid var(--ink); }
+ol.plan > li { counter-increment: step; display: grid; grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr); gap: 8px 24px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+ol.plan > li::before { content: counter(step, decimal-leading-zero); font-family: var(--font-mono); font-size: 1.1rem; color: var(--accent); }
+ol.plan .what { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+ol.plan .what p, ol.plan .done p { font-size: 0.93rem; }
+ol.plan .what p { color: var(--muted); }
+ol.plan .done { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+ol.plan .done span { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+ol.plan h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+@media (max-width: 720px) {
+  ol.plan > li { grid-template-columns: 40px minmax(0, 1fr); }
+  ol.plan .done { grid-column: 2; }
+}
+
+.ideas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 40px; border-top: 2px solid var(--ink); }
+.ideas div { padding: 16px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ideas p { color: var(--muted); font-size: 0.93rem; line-height: 1.5; }
+
+.ask { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 4px; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.ask ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 12px; max-width: 72ch; }
+.ask li strong { font-weight: 600; }
+</style>
+
+<div class="page">
+
+<header>
+  <span class="eyebrow">Architecture and build plan</span>
+  <h1>Course App Blueprint</h1>
+  <p class="lede">A mobile app for building, studying and sharing courses, with AI authoring through the user's own API keys. The repository is empty today, so this is a design for a first build, not a description of existing code.</p>
+
+  <div class="decisions">
+    <div><h3>Local first, no backend</h3><p>Everything lives on the phone. The only network calls go from the phone straight to the AI provider the user configured.</p></div>
+    <div><h3>One schema drives everything</h3><p>The same course definition validates imports, shapes AI output, fills the prompt file and types the code.</p></div>
+    <div><h3>Question types are plugins</h3><p>Each type brings its own player, editor and grader. Adding a type means adding one folder.</p></div>
+    <div><h3>Three provider adapters</h3><p>Claude, Gemini and one OpenAI-compatible adapter that covers OpenAI, Grok and most others.</p></div>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">System</span>
+  <h2>Architecture</h2>
+  <div class="prose">
+    <p>Three layers, each depending only on the one below. The middle layer is plain TypeScript with no screen or operating-system imports, so the schema, grading, import and generation logic can be tested on a laptop in milliseconds and reused if a web or desktop version ever follows.</p>
+  </div>
+
+  <figure>
+    <div class="fig-scroll">
+      <svg viewBox="0 0 1000 590" role="img" aria-label="Three layers on the device: screens call core logic, core logic reads and writes through a device layer. The device layer exchanges files with any chatbot and calls AI provider APIs with the user's own key.">
+        <defs>
+          <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="d-head"/></marker>
+        </defs>
+
+        <rect class="d-boundary" x="16" y="16" width="968" height="420" rx="8"/>
+        <text class="d-cap" x="36" y="42">ON THE DEVICE</text>
+
+        <!-- screens -->
+        <rect class="d-band" x="28" y="58" width="944" height="74" rx="4"/>
+        <text class="d-t" x="40" y="92">Screens</text>
+        <text class="d-s" x="40" y="108">React Native</text>
+        <g>
+          <rect class="d-box" x="170" y="70" width="123" height="50" rx="4"/><text class="d-t" x="231.5" y="99" text-anchor="middle">Library</text>
+          <rect class="d-box" x="303" y="70" width="123" height="50" rx="4"/><text class="d-t" x="364.5" y="99" text-anchor="middle">Lesson player</text>
+          <rect class="d-box" x="436" y="70" width="123" height="50" rx="4"/><text class="d-t" x="497.5" y="99" text-anchor="middle">Editor</text>
+          <rect class="d-box" x="569" y="70" width="123" height="50" rx="4"/><text class="d-t" x="630.5" y="99" text-anchor="middle">Create</text>
+          <rect class="d-box" x="702" y="70" width="123" height="50" rx="4"/><text class="d-t" x="763.5" y="99" text-anchor="middle">Focus timer</text>
+          <rect class="d-box" x="835" y="70" width="123" height="50" rx="4"/><text class="d-t" x="896.5" y="99" text-anchor="middle">Settings</text>
+        </g>
+        <line class="d-edge" x1="565" y1="132" x2="565" y2="161" marker-end="url(#ah1)"/>
+        <text class="d-l" x="577" y="151">calls use cases</text>
+
+        <!-- core -->
+        <rect class="d-band" x="28" y="162" width="944" height="142" rx="4"/>
+        <text class="d-t" x="40" y="228">Core logic</text>
+        <text class="d-s" x="40" y="244">plain TypeScript</text>
+        <g>
+          <rect class="d-key" x="170" y="174" width="190" height="50" rx="4"/>
+          <text class="d-t" x="265" y="195" text-anchor="middle">Course schema</text>
+          <text class="d-s" x="265" y="211" text-anchor="middle">one definition, versioned</text>
+
+          <rect class="d-box" x="370" y="174" width="190" height="50" rx="4"/>
+          <text class="d-t" x="465" y="195" text-anchor="middle">Question type registry</text>
+          <text class="d-s" x="465" y="211" text-anchor="middle">player, editor, grader per type</text>
+
+          <rect class="d-box" x="570" y="174" width="190" height="50" rx="4"/>
+          <text class="d-t" x="665" y="195" text-anchor="middle">Import and export</text>
+          <text class="d-s" x="665" y="211" text-anchor="middle">parse, validate, migrate</text>
+
+          <rect class="d-box" x="770" y="174" width="190" height="50" rx="4"/>
+          <text class="d-t" x="865" y="195" text-anchor="middle">Prompt builder</text>
+          <text class="d-s" x="865" y="211" text-anchor="middle">form + template + schema</text>
+
+          <rect class="d-box" x="170" y="242" width="150" height="50" rx="4"/>
+          <text class="d-t" x="245" y="263" text-anchor="middle">Generation pipeline</text>
+          <text class="d-s" x="245" y="279" text-anchor="middle">outline, lessons, repair</text>
+
+          <rect class="d-box" x="330" y="242" width="150" height="50" rx="4"/>
+          <text class="d-t" x="405" y="263" text-anchor="middle">AI feedback</text>
+          <text class="d-s" x="405" y="279" text-anchor="middle">check, explain deeper</text>
+
+          <rect class="d-box" x="490" y="242" width="150" height="50" rx="4"/>
+          <text class="d-t" x="565" y="263" text-anchor="middle">Pomodoro timer</text>
+          <text class="d-s" x="565" y="279" text-anchor="middle">runs on timestamps</text>
+
+          <rect class="d-box" x="650" y="242" width="150" height="50" rx="4"/>
+          <text class="d-t" x="725" y="263" text-anchor="middle">Review scheduler</text>
+          <text class="d-s" x="725" y="279" text-anchor="middle">what is due today</text>
+
+          <rect class="d-box" x="810" y="242" width="150" height="50" rx="4"/>
+          <text class="d-t" x="885" y="263" text-anchor="middle">Notification planner</text>
+          <text class="d-s" x="885" y="279" text-anchor="middle">wanted vs. scheduled</text>
+        </g>
+        <line class="d-edge" x1="565" y1="304" x2="565" y2="333" marker-end="url(#ah1)"/>
+        <text class="d-l" x="577" y="323">reads and writes through repositories</text>
+
+        <!-- device layer -->
+        <rect class="d-band" x="28" y="334" width="944" height="86" rx="4"/>
+        <text class="d-t" x="40" y="372">Device layer</text>
+        <text class="d-s" x="40" y="388">Expo modules</text>
+        <g>
+          <rect class="d-box" x="170" y="346" width="150" height="62" rx="4"/>
+          <text class="d-t" x="245" y="373" text-anchor="middle">SQLite database</text>
+          <text class="d-s" x="245" y="389" text-anchor="middle">courses, progress, jobs</text>
+
+          <rect class="d-box" x="330" y="346" width="150" height="62" rx="4"/>
+          <text class="d-t" x="405" y="373" text-anchor="middle">Secure key store</text>
+          <text class="d-s" x="405" y="389" text-anchor="middle">API keys only</text>
+
+          <rect class="d-box" x="490" y="346" width="150" height="62" rx="4"/>
+          <text class="d-t" x="565" y="373" text-anchor="middle">Files and sharing</text>
+          <text class="d-s" x="565" y="389" text-anchor="middle">import, export, backup</text>
+
+          <rect class="d-box" x="650" y="346" width="150" height="62" rx="4"/>
+          <text class="d-t" x="725" y="373" text-anchor="middle">Local notifications</text>
+          <text class="d-s" x="725" y="389" text-anchor="middle">reminders, timer end</text>
+
+          <rect class="d-box" x="810" y="346" width="150" height="62" rx="4"/>
+          <text class="d-t" x="885" y="373" text-anchor="middle">Provider adapters</text>
+          <text class="d-s" x="885" y="389" text-anchor="middle">one interface, 3 kinds</text>
+        </g>
+
+        <!-- outside -->
+        <line class="d-edge" x1="545" y1="408" x2="545" y2="509" marker-end="url(#ah1)"/>
+        <text class="d-l" x="537" y="478" text-anchor="end">prompt.md out</text>
+        <line class="d-edge" x1="585" y1="510" x2="585" y2="409" marker-end="url(#ah1)"/>
+        <text class="d-l" x="593" y="478">course.json in</text>
+        <rect class="d-ext" x="475" y="510" width="180" height="62" rx="4"/>
+        <text class="d-t" x="565" y="537" text-anchor="middle">Any chatbot</text>
+        <text class="d-s" x="565" y="553" text-anchor="middle">the user copies and pastes</text>
+
+        <line class="d-edge" x1="885" y1="408" x2="885" y2="509" marker-end="url(#ah1)"/>
+        <text class="d-l" x="877" y="478" text-anchor="end">HTTPS, user's own key</text>
+        <rect class="d-ext" x="765" y="510" width="215" height="62" rx="4"/>
+        <text class="d-t" x="872.5" y="537" text-anchor="middle">AI provider APIs</text>
+        <text class="d-s" x="872.5" y="553" text-anchor="middle">Claude · Gemini · OpenAI-compatible</text>
+      </svg>
+    </div>
+    <figcaption>The highlighted box is the one everything else depends on. Nothing leaves the device except a file the user chooses to share and requests to a provider the user added. There is no server of ours in the picture.</figcaption>
+  </figure>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Concern</th><th>Recommended</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>App framework</td><td>Expo (React Native) with TypeScript</td><td class="dim">One codebase for iOS and Android, and the course schema is written in the same language as the app.</td></tr>
+        <tr><td>Schema</td><td>Zod, exported to JSON Schema</td><td class="dim">Validates files at runtime and produces the schema that AI providers accept for structured output.</td></tr>
+        <tr><td>Database</td><td>SQLite, plain SQL behind a small driver interface</td><td class="dim">Versioned migrations, and the same queries run on the device and against a real in-memory SQLite in tests. Lesson bodies are stored as validated JSON so the stored shape matches the file shape.</td></tr>
+        <tr><td>API keys</td><td>Keychain on iOS, Keystore on Android</td><td class="dim">Keys never touch the database, exports, backups or logs.</td></tr>
+        <tr><td>Drag and drop</td><td>Gesture Handler with Reanimated</td><td class="dim">Runs on the UI thread, so dragging stays smooth on older phones.</td></tr>
+        <tr><td>Tests</td><td>Jest for core logic, Maestro for flows</td><td class="dim">Core logic is where the bugs that lose user data would live.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Content</span>
+  <h2>The course format</h2>
+  <div class="prose">
+    <p>"Template" in the brief becomes one versioned file format with three kinds of file: a course, a standalone quiz and a flashcard deck. Each can be created, generated, imported and exported on its own. A file holds content only. Everything personal sits in separate tables that point at content by id, so re-importing an improved course keeps the learner's progress, and a shared file never carries someone's answers.</p>
+  </div>
+
+  <figure>
+    <div class="fig-scroll">
+      <svg viewBox="0 0 1000 404" role="img" aria-label="Three kinds of shareable file. A course contains lessons in order, each with content blocks and assessments made of questions. A standalone quiz is one assessment. A flashcard deck is a set of flashcard questions. Progress, attempts, review cards and marks are stored separately on the device and refer to content by id.">
+        <defs>
+          <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="d-head"/></marker>
+        </defs>
+
+        <rect class="d-band" x="14" y="14" width="646" height="376" rx="6"/>
+        <text class="d-cap" x="30" y="36">FILES · SHAREABLE</text>
+
+        <rect class="d-key" x="30" y="50" width="160" height="54" rx="4"/>
+        <text class="d-t" x="110" y="73" text-anchor="middle">Course</text>
+        <text class="d-s" x="110" y="89" text-anchor="middle">title, level, language</text>
+
+        <rect class="d-box" x="250" y="50" width="160" height="54" rx="4"/>
+        <text class="d-t" x="330" y="73" text-anchor="middle">Lesson</text>
+        <text class="d-s" x="330" y="89" text-anchor="middle">summary, minutes</text>
+
+        <rect class="d-box" x="484" y="50" width="160" height="54" rx="4"/>
+        <text class="d-t" x="564" y="73" text-anchor="middle">Content block</text>
+        <text class="d-s" x="564" y="89" text-anchor="middle">text, code, image, callout</text>
+
+        <rect class="d-key" x="30" y="230" width="160" height="54" rx="4"/>
+        <text class="d-t" x="110" y="253" text-anchor="middle">Quiz</text>
+        <text class="d-s" x="110" y="269" text-anchor="middle">standalone, no course</text>
+
+        <rect class="d-box" x="250" y="230" width="160" height="54" rx="4"/>
+        <text class="d-t" x="330" y="253" text-anchor="middle">Assessment</text>
+        <text class="d-s" x="330" y="269" text-anchor="middle">practice · test · exam</text>
+
+        <rect class="d-box" x="484" y="230" width="160" height="54" rx="4"/>
+        <text class="d-t" x="564" y="253" text-anchor="middle">Question</text>
+        <text class="d-s" x="564" y="269" text-anchor="middle">type, payload, explanation</text>
+
+        <rect class="d-key" x="30" y="320" width="160" height="54" rx="4"/>
+        <text class="d-t" x="110" y="343" text-anchor="middle">Flashcard deck</text>
+        <text class="d-s" x="110" y="359" text-anchor="middle">standalone, no course</text>
+
+        <line class="d-edge" x1="190" y1="77" x2="249" y2="77" marker-end="url(#ah2)"/>
+        <text class="d-l" x="220" y="70" text-anchor="middle">lessons</text>
+        <line class="d-edge" x1="410" y1="77" x2="483" y2="77" marker-end="url(#ah2)"/>
+        <text class="d-l" x="447" y="70" text-anchor="middle">blocks</text>
+        <polyline class="d-edge" points="110,104 110,170 290,170 290,229" marker-end="url(#ah2)"/>
+        <text class="d-l" x="118" y="163">final exam, optional</text>
+        <line class="d-edge" x1="350" y1="104" x2="350" y2="229" marker-end="url(#ah2)"/>
+        <text class="d-l" x="358" y="171">quizzes and tests</text>
+        <line class="d-edge" x1="190" y1="257" x2="249" y2="257" marker-end="url(#ah2)"/>
+        <text class="d-l" x="220" y="250" text-anchor="middle">is one</text>
+        <line class="d-edge" x1="410" y1="257" x2="483" y2="257" marker-end="url(#ah2)"/>
+        <text class="d-l" x="447" y="250" text-anchor="middle">questions</text>
+        <polyline class="d-edge" points="190,347 564,347 564,285" marker-end="url(#ah2)"/>
+        <text class="d-l" x="200" y="340">cards are flashcard questions</text>
+
+        <rect class="d-band" x="740" y="14" width="246" height="376" rx="6"/>
+        <text class="d-cap" x="756" y="36">ON THIS DEVICE ONLY</text>
+
+        <rect class="d-box" x="752" y="60" width="222" height="50" rx="4"/>
+        <text class="d-t" x="863" y="81" text-anchor="middle">Progress</text>
+        <text class="d-s" x="863" y="97" text-anchor="middle">per lesson: status, last position</text>
+
+        <rect class="d-box" x="752" y="140" width="222" height="50" rx="4"/>
+        <text class="d-t" x="863" y="161" text-anchor="middle">Attempt</text>
+        <text class="d-s" x="863" y="177" text-anchor="middle">per assessment: answers, score</text>
+
+        <rect class="d-box" x="752" y="220" width="222" height="50" rx="4"/>
+        <text class="d-t" x="863" y="241" text-anchor="middle">Review card</text>
+        <text class="d-s" x="863" y="257" text-anchor="middle">per question: next due date</text>
+
+        <rect class="d-box" x="752" y="300" width="222" height="50" rx="4"/>
+        <text class="d-t" x="863" y="321" text-anchor="middle">Mark</text>
+        <text class="d-s" x="863" y="337" text-anchor="middle">favorite, bookmark, completed</text>
+
+        <line class="d-dash" x1="740" y1="200" x2="661" y2="200" marker-end="url(#ah2)"/>
+        <text class="d-l" x="700" y="190" text-anchor="middle">refers to</text>
+        <text class="d-l" x="700" y="218" text-anchor="middle">by stable id</text>
+      </svg>
+    </div>
+    <figcaption>The highlighted boxes are what the library lists. A standalone quiz is one assessment and a deck is a set of flashcard questions, so both reuse the player, editor and grading built for quizzes inside a course. Lessons can also be exported and imported on their own.</figcaption>
+  </figure>
+
+  <div class="split">
+    <div class="prose">
+      <h3>Three assessment modes, many question types</h3>
+      <p>The brief lists "questions, test, quiz, drag-and-drop". Those mix two different things, so the format separates them. A mode says how an assessment behaves. A type says how one question is answered.</p>
+      <ul class="plain">
+        <li><strong>Practice</strong> sits inside a lesson, gives feedback after every answer and allows unlimited retries.</li>
+        <li><strong>Test</strong> closes a lesson, shows the score at the end and has a pass mark.</li>
+        <li><strong>Exam</strong> belongs to the whole course, can be timed and can draw a random sample from a question pool.</li>
+      </ul>
+      <p>A standalone quiz uses the same modes. Removing a course, lesson, quiz or deck moves it to a trash with undo.</p>
+    </div>
+<pre>{
+  "format": "course/1",
+  "id": "c_7f3k",
+  "title": "Git basics",
+  "level": "beginner",
+  "lessons": [{
+    "id": "l_01",
+    "title": "Commits",
+    "blocks": [
+      { "type": "text",
+        "markdown": "A commit is a snapshot…" }
+    ],
+    "assessments": [{
+      "id": "a_01",
+      "mode": "practice",
+      "questions": [{
+        "id": "q_01",
+        "type": "single_choice",
+        "prompt": "What does a commit store?",
+        "options": ["A snapshot", "Only a diff"],
+        "answer": 0,
+        "explanation": "Git stores snapshots."
+      }]
+    }]
+  }]
+}</pre>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Question type</th><th>How it is answered</th><th>How it is graded</th><th>Arrives in</th></tr></thead>
+      <tbody>
+        <tr><td>Single choice</td><td>Tap one option</td><td class="dim">Exact</td><td><span class="tag">Step 3</span></td></tr>
+        <tr><td>Multiple choice</td><td>Tap several options</td><td class="dim">All correct, or partial credit per option</td><td><span class="tag">Step 3</span></td></tr>
+        <tr><td>True or false</td><td>Tap one of two</td><td class="dim">Exact</td><td><span class="tag">Step 3</span></td></tr>
+        <tr><td>Short answer</td><td>Type a word or phrase</td><td class="dim">List of accepted answers, ignoring case, spacing and punctuation. Check asks the model when the answer is not on the list</td><td><span class="tag">Step 3</span></td></tr>
+        <tr><td>Fill in the gaps</td><td>Type or pick for each gap</td><td class="dim">Per gap</td><td><span class="tag">Step 3</span></td></tr>
+        <tr><td>Matching pairs</td><td>Drag left items onto right items</td><td class="dim">Per pair</td><td><span class="tag">Step 5</span></td></tr>
+        <tr><td>Ordering</td><td>Drag items into sequence</td><td class="dim">Per position</td><td><span class="tag">Step 5</span></td></tr>
+        <tr><td>Sort into groups</td><td>Drag chips into labelled buckets</td><td class="dim">Per item</td><td><span class="tag">Step 5</span></td></tr>
+        <tr><td>Essay</td><td>Write a paragraph or more</td><td class="dim">Check: the chosen model scores the text against the author's rubric and model answer, and gives feedback. Without a key, the learner compares with the model answer and rates themselves</td><td><span class="tag">Step 3</span> <span class="tag">Check in step 7</span></td></tr>
+        <tr><td>Flashcard</td><td>Reveal, then rate how well you knew it</td><td class="dim">Self-rated, feeds the review queue</td><td><span class="tag">Step 3</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">AI authoring</span>
+  <h2>Two ways to create with AI, one way in</h2>
+  <div class="prose">
+    <p>The create form makes a course, a single lesson, a standalone quiz or a flashcard deck. "Prompt for AI" and "Generate" both start from that form and the same prompt builder. They differ only in who carries the prompt to a model. Both results enter the app through the same validation and preview, so a course behaves identically whether it was typed, pasted from a chatbot or generated in the app.</p>
+  </div>
+
+  <figure>
+    <div class="fig-scroll">
+      <svg viewBox="0 0 1000 350" role="img" aria-label="The create form feeds a prompt builder. Prompt for AI produces a prompt.md file the user pastes into any chatbot and brings back as course.json. Generate sends the prompt to the one model picked in the form and gets structured JSON back. Both paths pass through validation, then preview and save.">
+        <defs>
+          <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="d-head"/></marker>
+        </defs>
+
+        <rect class="d-box" x="20" y="150" width="130" height="50" rx="4"/>
+        <text class="d-t" x="85" y="171" text-anchor="middle">Create form</text>
+        <text class="d-s" x="85" y="187" text-anchor="middle">kind, topic, model</text>
+
+        <line class="d-edge" x1="150" y1="175" x2="189" y2="175" marker-end="url(#ah3)"/>
+
+        <rect class="d-box" x="190" y="150" width="140" height="50" rx="4"/>
+        <text class="d-t" x="260" y="171" text-anchor="middle">Prompt builder</text>
+        <text class="d-s" x="260" y="187" text-anchor="middle">template + schema</text>
+
+        <!-- path A -->
+        <polyline class="d-edge" points="260,150 260,65 359,65" marker-end="url(#ah3)"/>
+        <text class="d-l" x="268" y="58">Prompt for AI</text>
+        <rect class="d-box" x="360" y="40" width="120" height="50" rx="4"/>
+        <text class="d-t" x="420" y="61" text-anchor="middle">prompt.md</text>
+        <text class="d-s" x="420" y="77" text-anchor="middle">saved or shared</text>
+        <line class="d-edge" x1="480" y1="65" x2="579" y2="65" marker-end="url(#ah3)"/>
+        <text class="d-l" x="530" y="58" text-anchor="middle">user pastes it</text>
+        <rect class="d-ext" x="580" y="40" width="120" height="50" rx="4"/>
+        <text class="d-t" x="640" y="61" text-anchor="middle">Any chatbot</text>
+        <text class="d-s" x="640" y="77" text-anchor="middle">outside the app</text>
+        <polyline class="d-edge" points="700,65 790,65 790,149" marker-end="url(#ah3)"/>
+        <text class="d-l" x="708" y="58">course.json</text>
+
+        <!-- path B -->
+        <polyline class="d-edge" points="260,200 260,285 459,285" marker-end="url(#ah3)"/>
+        <text class="d-l" x="268" y="302">Generate</text>
+        <rect class="d-box" x="460" y="260" width="140" height="50" rx="4"/>
+        <text class="d-t" x="530" y="281" text-anchor="middle">Chosen model</text>
+        <text class="d-s" x="530" y="297" text-anchor="middle">one, picked in the form</text>
+        <polyline class="d-edge" points="600,285 790,285 790,201" marker-end="url(#ah3)"/>
+        <text class="d-l" x="608" y="302">structured JSON</text>
+
+        <!-- shared -->
+        <rect class="d-key" x="730" y="150" width="120" height="50" rx="4"/>
+        <text class="d-t" x="790" y="171" text-anchor="middle">Validate</text>
+        <text class="d-s" x="790" y="187" text-anchor="middle">against the schema</text>
+        <line class="d-edge" x1="850" y1="175" x2="874" y2="175" marker-end="url(#ah3)"/>
+        <rect class="d-key" x="875" y="150" width="110" height="50" rx="4"/>
+        <text class="d-t" x="930" y="171" text-anchor="middle">Preview</text>
+        <text class="d-s" x="930" y="187" text-anchor="middle">review, then save</text>
+      </svg>
+    </div>
+    <figcaption>The top path needs no API key at all, which is why it ships first. The highlighted steps are shared. When output fails validation, the API path sends one automatic repair request, and the file path offers a ready-made "fix this" prompt to paste back into the chatbot.</figcaption>
+  </figure>
+
+  <div class="split">
+    <div class="prose">
+      <h3>What the prompt file contains</h3>
+      <ul class="plain">
+        <li>The user's choices from the form: what to create, topic, audience, level, language, size, which question types to use, and any source notes.</li>
+        <li>Writing rules for a good course: short lessons, one idea each, every question with an explanation.</li>
+        <li>The JSON schema of the format, generated from the same definition the app validates with.</li>
+        <li>One small complete example, and an instruction to reply with JSON only.</li>
+      </ul>
+      <p>The importer tolerates the usual chatbot habits, such as wrapping JSON in a code fence or adding a sentence before it.</p>
+    </div>
+    <div class="prose">
+      <h3>How Generate works</h3>
+      <ul class="plain">
+        <li><strong>One model per run.</strong> If several models are checked in Settings, the form shows a picker with the default preselected. With one model there is nothing to pick.</li>
+        <li><strong>Small things in one request.</strong> A lesson, a quiz or a flashcard deck comes back from a single call.</li>
+        <li><strong>Courses start with an outline.</strong> A fast, cheap request returns the title and lesson list. The user can edit it before anything expensive runs.</li>
+        <li><strong>Then lesson by lesson.</strong> Each lesson is its own request, a few at a time, validated and retried on its own. One bad lesson never costs the whole course.</li>
+        <li><strong>Saved as a job.</strong> Each step is recorded in the database. If the phone suspends the app, generation resumes from the last finished lesson and a notification says when it is done.</li>      </ul>
+    </div>
+  </div>
+
+  <h3>AI inside a quiz</h3>
+  <div class="split">
+    <div class="prose">
+      <p><strong>Explain deeper</strong> appears on any answered question. It sends the question, the right answer, the learner's answer and the stored explanation to the model, and streams back a longer explanation aimed at the specific mistake.</p>
+    </div>
+    <div class="prose">
+      <p><strong>Check</strong> appears on written answers, which is what makes essay questions workable. It sends the question, the author's rubric and model answer, and the learner's text. The reply is structured: a score, what was right, what is missing and how to improve. The result is saved with the attempt, so reopening it costs nothing.</p>
+    </div>
+  </div>
+  <div class="prose">
+    <p>Both use the default model from Settings, with a picker when several are checked. Without a provider, the buttons explain how to add one, and essay questions fall back to showing the model answer for self-rating.</p>
+  </div>
+
+  <h3>Providers and model detection</h3>
+  <div class="prose">
+    <p>In Settings the user adds any number of providers. Each entry has a kind, a label, a key and, for the compatible kind, a base URL. "Test and detect" calls the provider's model list, filters out models that cannot write text, and shows the rest as checkboxes. Checked models are the ones offered in the create form and inside a quiz, and one of them is the default.</p>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Adapter</th><th>Covers</th><th>Model list</th><th>Structured output</th></tr></thead>
+      <tbody>
+        <tr><td>Claude</td><td>Anthropic</td><td class="dim mono">GET /v1/models</td><td class="dim">JSON schema in <code>output_config.format</code>, streamed</td></tr>
+        <tr><td>Gemini</td><td>Google</td><td class="dim">Models list endpoint, filtered by supported generation methods</td><td class="dim">Response schema in the generation config</td></tr>
+        <tr><td>OpenAI-compatible</td><td>OpenAI, Grok, OpenRouter, DeepSeek, Mistral, local servers such as Ollama</td><td class="dim mono">GET {base URL}/models</td><td class="dim">JSON schema response format where the server supports it, plain JSON mode plus validation where it does not</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <p>Every adapter implements the same four operations: check the key, list models, generate against a schema, and report token usage. Adapters also translate provider-specific endings, such as a refusal or a reply cut off at the length limit, into one shared set of errors the screens know how to explain.</p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Study tools</span>
+  <h2>Focus mode, Pomodoro and notifications</h2>
+  <div class="split">
+    <div class="prose">
+      <h3>Focus mode</h3>
+      <p>The lesson goes full screen, navigation hides, the screen stays awake and in-app banners are held back. Leaving the app during a session is recorded as an interruption, which the stats show honestly.</p>
+      <p>Focus mode stays inside the app. It does not touch the phone's Do Not Disturb setting.</p>
+      <h3>Pomodoro</h3>
+      <p>Focus, short break, and a long break after every fourth round. Lengths are adjustable. The timer stores the moment the phase ends instead of counting ticks, so it stays correct when the app is in the background or killed. A local notification is scheduled for that moment.</p>
+    </div>
+    <div class="prose">
+      <h3>Notifications</h3>
+      <p>All local, since there is no server to send them.</p>
+      <ul class="plain">
+        <li>Daily study reminder at a chosen time, skipped on days already studied.</li>
+        <li>Pomodoro phase finished.</li>
+        <li>Review questions are due.</li>
+        <li>Streak about to break.</li>
+        <li>Course generation finished.</li>
+      </ul>
+      <p>One planner owns all of them. It works out which notifications should exist from settings and current state, compares that with what is scheduled, and adds or cancels the difference. This matters because iOS keeps at most 64 pending local notifications per app, and Android 13 and later needs the user's permission before any are shown.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Build order</span>
+  <h2>Plan</h2>
+  <div class="prose">
+    <p>Nine steps, each leaving the app usable. The order follows the dependencies. The schema comes first because everything reads it. Import comes before Generate because Generate reuses its validation and preview. Sizes are relative: S is a few days of focused work, L is a few weeks.</p>
+  </div>
+
+  <ol class="plan">
+    <li>
+      <div class="what">
+        <h3>Foundation <span class="tag size">S</span> <span class="tag">Built</span></h3>
+        <p>Expo project with strict TypeScript, linting, tests and continuous integration. Tab navigation shell, light and dark theme, SQLite with migrations, translation scaffolding. Two short technical checks still open, because they need a real device: streamed HTTP responses and drag-and-drop.</p>
+      </div>
+      <div class="done"><span>Done when</span><p>The empty app runs on iOS and Android and every commit is checked automatically.</p></div>
+    </li>
+    <li>
+      <div class="what">
+        <h3>Course format and library <span class="tag size">M</span> <span class="tag">Built</span></h3>
+        <p>Schema version 1 for courses, lessons, standalone quizzes and flashcard decks, with the first seven question types. Blank templates and one bundled sample of each kind. Library listing all three kinds with search and filters, create, rename, mark as favorite or completed, remove to trash, restore.</p>
+      </div>
+      <div class="done"><span>Done when</span><p>The sample course, quiz and deck appear in the library and survive every create, mark, remove and restore action.</p></div>
+    </li>
+    <li>
+      <div class="what">
+        <h3>Lesson player and quiz engine <span class="tag size">L</span> <span class="tag">Built</span></h3>
+        <p>Rendering of lesson blocks. The question type registry with seven types, including flashcards and essays rated against a model answer. Practice, test and exam modes, attempts, scoring, results screen, progress and resume.</p>
+      </div>
+      <div class="done"><span>Done when</span><p>A learner can finish the sample course from first lesson to final exam and see a score, take the sample quiz and study the sample deck.</p></div>
+    </li>
+    <li>
+      <div class="what">
+        <h3>Import, export and Prompt for AI <span class="tag size">M</span> <span class="tag">Built</span></h3>
+        <p>File reading and writing for courses, single lessons, quizzes and decks. Import with preview, clear error messages, a choice to replace or duplicate when the item already exists, and a full backup. The create form for all four, the prompt builder and sharing of <code>prompt.md</code>.</p>
+      </div>
+      <div class="done"><span>Done when</span><p>A course written by an outside chatbot from the prompt file imports without hand editing.</p></div>
+    </li>
+    <li>
+      <div class="what">
+        <h3>Editor and drag-and-drop types <span class="tag size">L</span> <span class="tag">Built</span></h3>
+        <p>Editing of courses, lessons and blocks, with reordering. An editor for every question type. The three drag-based types: matching, ordering and sorting into groups.</p>
+      </div>
+      <div class="done"><span>Done when</span><p>A complete course using every question type can be built on the phone with no file involved.</p></div>
+    </li>
+    <li>
+      <div class="what">
+        <h3>Settings and providers <span class="tag size">M</span> <span class="tag">Built</span></h3>
+        <p>User name. Provider list with add, edit and remove. Keys in the secure store. "Test and detect" for models, checkbox selection and a default model.</p>
+      </div>
+      <div class="done"><span>Done when</span><p>Keys for three different providers are saved, each lists its models, and none of the keys appears in a backup file.</p></div>
+    </li>
+    <li>
+      <div class="what">
+        <h3>Generate, Check and Explain deeper <span class="tag size">L</span> <span class="tag">Built</span></h3>
+        <p>The three adapters. A model picker in the create form. One request for a lesson, quiz or deck, and outline then lessons for a course, with saved and resumable jobs. Check for written answers and Explain deeper in the quiz player. Token usage shown per run.</p>
+      </div>
+      <div class="done"><span>Done when</span><p>A course, a quiz and a deck are each generated with a model picked in the form, an interrupted course run finishes after reopening the app, and an essay answer comes back with a score and feedback.</p></div>
+    </li>
+    <li>
+      <div class="what">
+        <h3>Focus, Pomodoro and notifications <span class="tag size">M</span> <span class="tag">Built</span></h3>
+        <p>Focus view, the timer state machine, session log, the notification planner and the permission flows on both platforms.</p>
+      </div>
+      <div class="done"><span>Done when</span><p>A timer started before the app is closed still rings on time, and reminders stop on days already studied.</p></div>
+    </li>
+    <li>
+      <div class="what">
+        <h3>Review, stats and release <span class="tag size">M</span> <span class="tag">Built</span></h3>
+        <p>Review queue for missed questions and flashcards, streaks and study statistics, first-run walkthrough, accessibility pass, store builds.</p>
+      </div>
+      <div class="done"><span>Done when</span><p>Test builds are in the hands of real users on both stores. Built up to the store step: the name, identifiers, icons and privacy policy are still your decisions.</p></div>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <span class="eyebrow">Beyond the brief</span>
+  <h2>Suggestions</h2>
+  <div class="ideas">
+    <div><h3>Spaced review of what you got wrong</h3><p>Every missed question joins the flashcards in one daily queue and returns after a day, then three, then a week. It turns one-off quizzes into retention, and it suits a project named anki. Planned in step 9.</p></div>
+    <div><h3>Quiz or flashcards from a lesson</h3><p>One tap on any lesson generates a standalone quiz or deck from its text. It reuses the create form with the lesson filled in as source material.</p></div>
+    <div><h3>A "fix this" prompt for failed imports</h3><p>When a pasted course is invalid, the app writes a short prompt listing the exact problems. The user pastes it back to the chatbot and gets a corrected file.</p></div>
+    <div><h3>Custom base URL for providers</h3><p>One extra text field lets the same adapter reach OpenRouter, a company gateway or a model running on the user's own computer.</p></div>
+    <div><h3>Create from your own material</h3><p>Paste notes or an article into the form as source text, and the course is built from that instead of the model's general knowledge. Cheap to add once Generate works.</p></div>
+    <div><h3>Usage shown after every AI action</h3><p>Generate, Check and Explain deeper each show the tokens they used. People paying for their own key can see which habits cost money.</p></div>
+  </div>
+  <div class="prose">
+    <p><strong>Left out of the first version on purpose:</strong> accounts, cloud sync, a public course catalog, audio and video inside lessons, running several models at once to compare results, and anything that changes phone-wide settings during focus. Each can be added later without changing the file format.</p>
+  </div>
+</section>
+
+<section>
+  <div class="ask">
+    <h2>Decisions that are yours</h2>
+    <ol>
+      <li><strong>Framework.</strong> The plan assumes Expo with React Native. Flutter would also work, but the schema could no longer be shared directly with the app code. Say so if you prefer Flutter or fully native apps.</li>
+      <li><strong>Scores from Check.</strong> The plan lets a score given by the model count toward a test result, marked as AI-graded. Say if it should be advice only.</li>
+      <li><strong>Essays without a key.</strong> The plan shows the model answer and lets the learner rate themselves. Say if essay questions should be hidden instead.</li>
+      <li><strong>Media.</strong> The plan covers text, code and images in the first version, with no audio or video.</li>
+      <li><strong>Interface languages.</strong> English only at launch, or more.</li>
+    </ol>
+  </div>
+</section>
+
+</div>

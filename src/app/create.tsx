@@ -16,7 +16,10 @@ import {
   defaultRequest,
   promptFileName,
 } from '@/core/transfer/prompt';
+import type { ModelChoice } from '@/data/providers-repository';
 import { useData, useQuery } from '@/data/provider';
+import { useJobRunner } from '@/features/ai/job-runner';
+import { ModelPicker, NoProvider, useModelChoices } from '@/features/ai/model-picker';
 import i18n from '@/i18n';
 import { copyText, shareTextFile } from '@/platform/files';
 import { Button, Chip, Stepper, TextField } from '@/ui/controls';
@@ -66,7 +69,12 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { library } = useData();
+  const router = useRouter();
+  const { library, jobs } = useData();
+  const runner = useJobRunner();
+  const models = useModelChoices();
+  const [picked, setPicked] = useState<ModelChoice | null>(null);
+  const model = picked ?? models?.fallback ?? null;
   const [request, setRequest] = useState(initial);
   const [courseId, setCourseId] = useState(initialCourseId);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
@@ -76,15 +84,30 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
   const lessonNeedsCourse = request.kind === 'lesson' && !courseId;
   const ready = request.topic.trim() !== '' && !lessonNeedsCourse;
 
+  /** The request with the target course filled in when a lesson is asked for. */
+  const completeRequest = async (): Promise<CreateRequest> => {
+    if (request.kind !== 'lesson' || !courseId) return request;
+    const [item, lessons] = await Promise.all([library.get(courseId), library.lessons(courseId)]);
+    return item ? { ...request, course: { id: item.id, title: item.title, lessonTitles: lessons.map((lesson) => lesson.title) } } : request;
+  };
+
   const makePrompt = async () => {
     setFailed(false);
     try {
-      let complete = request;
-      if (request.kind === 'lesson' && courseId) {
-        const [item, lessons] = await Promise.all([library.get(courseId), library.lessons(courseId)]);
-        if (item) complete = { ...request, course: { id: item.id, title: item.title, lessonTitles: lessons.map((lesson) => lesson.title) } };
-      }
+      const complete = await completeRequest();
       setPrompt({ text: buildPrompt(complete), fileName: promptFileName(complete) });
+    } catch {
+      setFailed(true);
+    }
+  };
+
+  const startGenerating = async () => {
+    if (!model) return;
+    setFailed(false);
+    try {
+      const job = await jobs.create(await completeRequest(), { providerId: model.providerId, model: model.model, label: model.label });
+      runner.start(job.id);
+      router.replace({ pathname: '/job/[id]', params: { id: job.id } });
     } catch {
       setFailed(true);
     }
@@ -225,11 +248,23 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
           </AppText>
         </Field>
 
+        <Field label={t('ai.model')}>
+          {models && models.choices.length === 0 ? (
+            <NoProvider />
+          ) : models ? (
+            <>
+              <ModelPicker options={models} value={model} onChange={setPicked} />
+              {models.choices.length === 1 && model ? <AppText color="textSecondary">{model.label}</AppText> : null}
+            </>
+          ) : null}
+        </Field>
+
         {failed ? <AppText color="danger">{t('errors.generic')}</AppText> : null}
       </ScrollView>
 
       <View style={[styles.bar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <Button icon="file" label={t('create.promptForAi')} disabled={!ready} onPress={() => void makePrompt()} />
+        <Button kind="secondary" icon="file" label={t('create.promptForAi')} disabled={!ready} onPress={() => void makePrompt()} />
+        <Button icon="ai" label={t('create.generate')} disabled={!ready || !model} onPress={() => void startGenerating()} />
       </View>
     </>
   );

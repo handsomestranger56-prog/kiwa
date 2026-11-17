@@ -1,5 +1,7 @@
-import type { LocatedAssessment } from '@/core/quiz/session';
-import { type Course, type LibraryDocument, COURSE_FORMAT, QUIZ_FORMAT } from '@/core/schema';
+import type { QuestionResult } from '@/core/quiz/grading';
+import type { LocatedAssessment, SessionState } from '@/core/quiz/session';
+import { cardsAfterAttempt, qualityFromOutcome, qualityFromRating } from '@/core/review/scheduler';
+import { type Course, type LibraryDocument, type Question, COURSE_FORMAT, QUIZ_FORMAT } from '@/core/schema';
 import type { AppData } from '@/data/provider';
 
 /**
@@ -17,6 +19,20 @@ export async function applyAttemptCompletion(
   if (quizDone || courseDone) {
     await data.library.setMark(document.id, 'completed', true);
   }
+}
+
+/** Puts missed questions and studied flashcards into the review queue, and moves known cards on. */
+export async function scheduleReviews(data: AppData, itemId: string, questions: readonly Question[], session: SessionState, results: QuestionResult[]): Promise<void> {
+  const existing = await data.reviews.forItem(itemId);
+  const byId = new Map(questions.map((question) => [question.id, question]));
+  const graded = results.flatMap((result) => {
+    const question = byId.get(result.questionId);
+    if (!question) return [];
+    const answer = session.answers[result.questionId];
+    const quality = answer?.type === 'flashcard' && answer.rating ? qualityFromRating(answer.rating) : qualityFromOutcome(result.grade.outcome);
+    return [{ questionId: result.questionId, quality, flashcard: question.type === 'flashcard' }];
+  });
+  await data.reviews.save(cardsAfterAttempt(graded, existing, itemId, Date.now()));
 }
 
 /**

@@ -3,6 +3,7 @@ import { BACKUP_FORMAT } from '@/core/transfer/repair';
 
 import { ChangeFeed } from './changes';
 import type { ItemSource, LibraryRepository } from './library-repository';
+import type { ProvidersRepository } from './providers-repository';
 import type { SqlDriver } from './sql';
 
 type ItemMeta = { id: string; source: ItemSource; created_at: number; updated_at: number; deleted_at: number | null };
@@ -21,7 +22,7 @@ type AttemptRow = {
 };
 
 /** Settings that describe this install and should not travel to another device. */
-const LOCAL_SETTINGS = new Set(['samples.seeded']);
+const LOCAL_SETTINGS = new Set(['samples.seeded', 'focus.timer', 'notify.scheduled', 'onboarding.done']);
 
 /**
  * Copies everything on the device into one file and back: content, marks, results and settings.
@@ -31,6 +32,7 @@ export class BackupService {
   constructor(
     private readonly db: SqlDriver,
     private readonly library: LibraryRepository,
+    private readonly providers: ProvidersRepository,
     private readonly changes: ChangeFeed = new ChangeFeed(),
     private readonly now: () => number = Date.now,
   ) {}
@@ -85,7 +87,23 @@ export class BackupService {
       if (!LOCAL_SETTINGS.has(row.key)) settings[row.key] = row.value;
     }
 
-    return { format: BACKUP_FORMAT, createdAt: this.now(), items, settings };
+    const providers = (await this.providers.list()).map(({ id, kind, label, baseUrl, models, enabled }) => ({ id, kind, label, baseUrl, models, enabled }));
+    const focusSessions = await this.db.all<{ id: string; item_id: string | null; started_at: number; ended_at: number; minutes: number; interruptions: number }>(
+      'SELECT * FROM focus_sessions ORDER BY ended_at',
+    );
+    return {
+      format: BACKUP_FORMAT,
+      createdAt: this.now(),
+      items,
+      settings,
+      providers,
+      reviewCards: (
+        await this.db.all<{ item_id: string; question_id: string; due_at: number; interval: number; ease: number; streak: number; lapses: number; last_reviewed_at: number | null }>(
+          'SELECT * FROM review_cards ORDER BY item_id, question_id',
+        )
+      ).map((row) => ({ itemId: row.item_id, questionId: row.question_id, dueAt: row.due_at, interval: row.interval, ease: row.ease, streak: row.streak, lapses: row.lapses, lastReviewedAt: row.last_reviewed_at })),
+      focusSessions: focusSessions.map((row) => ({ id: row.id, itemId: row.item_id, startedAt: row.started_at, endedAt: row.ended_at, minutes: row.minutes, interruptions: row.interruptions })),
+    };
   }
 
   /**
@@ -142,6 +160,31 @@ export class BackupService {
             ],
           );
         }
+      }
+
+      for (const card of backup.reviewCards) {
+        // A card is only kept when its item is on the device.
+        await this.db.run(
+          `INSERT OR REPLACE INTO review_cards (item_id, question_id, due_at, interval, ease, streak, lapses, last_reviewed_at)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM items WHERE id = ?)`,
+          [card.itemId, card.questionId, card.dueAt, card.interval, card.ease, card.streak, card.lapses, card.lastReviewedAt, card.itemId],
+        );
+      }
+
+      for (const session of backup.focusSessions) {
+        await this.db.run(
+          'INSERT OR REPLACE INTO focus_sessions (id, item_id, started_at, ended_at, minutes, interruptions) VALUES (?, ?, ?, ?, ?, ?)',
+          [session.id, session.itemId, session.startedAt, session.endedAt, session.minutes, session.interruptions],
+        );
+      }
+
+      for (const provider of backup.providers) {
+        await this.db.run(
+          `INSERT INTO providers (id, kind, label, base_url, models, enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (id) DO UPDATE SET kind = excluded.kind, label = excluded.label, base_url = excluded.base_url,
+             models = excluded.models, enabled = excluded.enabled, updated_at = excluded.updated_at`,
+          [provider.id, provider.kind, provider.label, provider.baseUrl, JSON.stringify(provider.models), JSON.stringify(provider.enabled), this.now(), this.now()],
+        );
       }
 
       for (const [key, value] of Object.entries(backup.settings)) {

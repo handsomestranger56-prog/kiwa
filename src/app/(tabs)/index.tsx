@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useDeferredValue, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -6,6 +6,7 @@ import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import type { DocumentKind } from '@/core/schema';
 import type { LibraryFilter } from '@/data/library-repository';
 import { useQuery } from '@/data/provider';
+import { JobsBanner } from '@/features/ai/jobs-banner';
 import { useCreateFlow } from '@/features/library/create-flow';
 import { useItemActions } from '@/features/library/item-actions';
 import { ItemRow } from '@/features/library/item-row';
@@ -20,6 +21,14 @@ type FilterKey = 'all' | DocumentKind | 'favorites';
 const FILTERS: FilterKey[] = ['all', 'course', 'quiz', 'deck', 'favorites'];
 
 export default function LibraryScreen() {
+  const onboarding = useQuery('onboarding', ({ settings }) => settings.get('onboarding.done'));
+  if (onboarding.loading) return <Page />;
+  // First launch: say hello before anything else.
+  if (onboarding.data === null) return <Redirect href="/welcome" />;
+  return <Library />;
+}
+
+function Library() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useTabScreenInsets();
@@ -94,6 +103,7 @@ export default function LibraryScreen() {
                 />
               ))}
             </ScrollView>
+            <JobsBanner />
           </View>
         }
         renderItem={({ item }) => (

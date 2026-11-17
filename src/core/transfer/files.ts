@@ -48,6 +48,8 @@ const backupItemSchema = z.object({
           index: z.number().int().nonnegative(),
           answers: z.record(z.string(), z.unknown()),
           checked: z.array(z.string()),
+          ai: z.record(z.string(), z.unknown()).optional(),
+          explanations: z.record(z.string(), z.unknown()).optional(),
         }),
         startedAt: z.number().int(),
         finishedAt: z.number().int().nullable(),
@@ -65,6 +67,45 @@ export const backupSchema = z.object({
   createdAt: z.number().int(),
   items: z.array(backupItemSchema),
   settings: z.record(z.string(), z.string()).default({}),
+  /** Provider settings without their API keys. Keys never leave the device's secure store. */
+  reviewCards: z
+    .array(
+      z.object({
+        itemId: z.string(),
+        questionId: z.string(),
+        dueAt: z.number(),
+        interval: z.number(),
+        ease: z.number(),
+        streak: z.number().int(),
+        lapses: z.number().int(),
+        lastReviewedAt: z.number().nullable(),
+      }),
+    )
+    .default([]),
+  focusSessions: z
+    .array(
+      z.object({
+        id: idSchema,
+        itemId: z.string().nullable().default(null),
+        startedAt: z.number().int(),
+        endedAt: z.number().int(),
+        minutes: z.number().int().nonnegative(),
+        interruptions: z.number().int().nonnegative().default(0),
+      }),
+    )
+    .default([]),
+  providers: z
+    .array(
+      z.object({
+        id: idSchema,
+        kind: z.enum(['claude', 'gemini', 'openai']),
+        label: z.string(),
+        baseUrl: z.string().nullable().default(null),
+        models: z.array(z.object({ id: z.string(), label: z.string() })).default([]),
+        enabled: z.array(z.string()).default([]),
+      }),
+    )
+    .default([]),
 });
 
 export type BackupItem = Omit<z.infer<typeof backupItemSchema>, 'document'> & { document: LibraryDocument };
