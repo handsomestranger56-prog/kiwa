@@ -32,7 +32,8 @@ This runs the linter, the type checker and the tests. CI runs the same three on 
 | `src/core` | The file format, grading, attempt logic, templates. Plain TypeScript, no React or Expo. | nothing else in `src` |
 | `src/data` | SQLite schema, migrations and repositories. | `core` |
 | `src/ui` | Theme and shared components. | — |
-| `src/features` | Behaviour shared by several screens. | `core`, `data`, `ui` |
+| `src/platform` | File picking, sharing and clipboard. The only place device file APIs are called. | `core` |
+| `src/features` | Behaviour shared by several screens. | `core`, `data`, `ui`, `platform` |
 | `src/app` | Screens. One file per route (Expo Router). | everything |
 | `src/i18n` | Strings. `en.ts` is the source of truth. | — |
 
@@ -48,6 +49,20 @@ to validate stored and imported content and to produce JSON Schema for AI prompt
 
 Content and personal state are stored separately. Favorites, bookmarks and completion marks
 point at content by id, so replacing a course with a newer version keeps them.
+
+## Import, export and prompts
+
+Everything that reads or writes a file lives in `src/core/transfer`:
+
+- `extract.ts` finds the JSON in a chatbot reply, with or without a code fence around it.
+- `repair.ts` corrects common slips before validation (a missing `format`, missing or repeated
+  ids, an answer written as text) and reports each correction so the user sees what changed.
+- `files.ts` reads imports and writes exports. Besides the three document formats there is
+  `lesson/1` for a single lesson and `backup/1` for everything on the device.
+- `prompt.ts` builds the prompt a user pastes into any chatbot, and the follow-up prompt for a
+  reply that failed validation. Both are generated from the same schema the importer checks.
+
+A backup holds content, marks, results and settings. API keys are never part of it.
 
 ## Question types
 

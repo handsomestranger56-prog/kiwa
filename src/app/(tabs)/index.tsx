@@ -39,6 +39,8 @@ export default function LibraryScreen() {
   const create = useCreateFlow({
     onCreated: (id) => router.push({ pathname: '/item/[id]', params: { id } }),
     onError: actions.showError,
+    onCreateWithAi: () => router.push('/create'),
+    onImport: () => router.push('/import'),
   });
 
   // A pending undo message should not follow the user to another screen.

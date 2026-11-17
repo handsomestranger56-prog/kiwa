@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { backupFile } from '@/core/transfer/files';
 import { useData, useQuery } from '@/data/provider';
+import { shareTextFile } from '@/platform/files';
 import { TextField } from '@/ui/controls';
-import { Icon } from '@/ui/icon';
+import { type IconName, Icon } from '@/ui/icon';
 import { Page, useTabScreenInsets } from '@/ui/layout';
 import { AppText } from '@/ui/text';
 import { MIN_TOUCH, radius, spacing, useTheme } from '@/ui/theme';
@@ -16,7 +18,28 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useTabScreenInsets();
   const { colors } = useTheme();
+  const { backups } = useData();
   const name = useQuery('settings:name', ({ settings }) => settings.get('profile.name'));
+  const [backupNote, setBackupNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const backUp = () => {
+    setBackupNote(null);
+    backups
+      .create()
+      .then(async (backup) => {
+        const file = backupFile(backup);
+        const result = await shareTextFile(file);
+        if (result === 'unavailable') setBackupNote({ ok: false, text: t('errors.generic') });
+        else if (result === 'downloaded') setBackupNote({ ok: true, text: t('settings.backedUp', { name: file.name }) });
+      })
+      .catch(() => setBackupNote({ ok: false, text: t('errors.generic') }));
+  };
+
+  const rows: { key: string; icon: IconName; label: string; onPress: () => void }[] = [
+    { key: 'backup', icon: 'share', label: t('settings.backup'), onPress: backUp },
+    { key: 'import', icon: 'importFile', label: t('settings.importOrRestore'), onPress: () => router.push('/import') },
+    { key: 'trash', icon: 'trash', label: t('settings.openTrash'), onPress: () => router.push('/trash') },
+  ];
 
   return (
     <Page>
@@ -39,20 +62,28 @@ export default function SettingsScreen() {
           <AppText variant="label" color="textSecondary">
             {t('settings.data')}
           </AppText>
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => router.push('/trash')}
-            style={({ pressed }) => [
-              styles.row,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-              pressed && styles.pressed,
-            ]}>
-            <Icon name="trash" color="textSecondary" />
-            <AppText style={styles.rowText}>{t('settings.openTrash')}</AppText>
-            <Icon name="chevron" size={18} color="textSecondary" />
-          </Pressable>
+          {rows.map((row) => (
+            <Pressable
+              key={row.key}
+              accessibilityRole="button"
+              onPress={row.onPress}
+              style={({ pressed }) => [
+                styles.row,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+                pressed && styles.pressed,
+              ]}>
+              <Icon name={row.icon} color="textSecondary" />
+              <AppText style={styles.rowText}>{row.label}</AppText>
+              <Icon name="chevron" size={18} color="textSecondary" />
+            </Pressable>
+          ))}
+          {backupNote ? (
+            <AppText variant="small" color={backupNote.ok ? 'accent' : 'danger'} accessibilityLiveRegion="polite">
+              {backupNote.text}
+            </AppText>
+          ) : null}
           <AppText variant="small" color="textSecondary">
-            {t('settings.storage')}
+            {t('settings.storage')} {t('settings.backupHint')}
           </AppText>
         </View>
 

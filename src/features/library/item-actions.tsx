@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { documentFile } from '@/core/transfer/files';
 import type { LibraryItem } from '@/data/library-repository';
 import { useData } from '@/data/provider';
+import { shareTextFile } from '@/platform/files';
 import { type SheetAction, type SnackbarMessage, ActionSheet, PromptDialog } from '@/ui/overlays';
 
 type Options = {
@@ -25,6 +27,19 @@ export function useItemActions({ onRemoved }: Options = {}) {
 
   const toggleFavorite = (item: LibraryItem) => {
     library.setMark(item.id, 'favorite', !item.favorite).catch(fail);
+  };
+
+  const exportItem = (item: LibraryItem) => {
+    library
+      .getDocument(item.id)
+      .then(async (document) => {
+        if (!document) throw new Error('missing');
+        const file = documentFile(document);
+        const result = await shareTextFile(file);
+        if (result === 'unavailable') fail();
+        else if (result === 'downloaded') setSnackbar({ id: Date.now(), text: t('actions.exported', { name: file.name }) });
+      })
+      .catch(fail);
   };
 
   const remove = (item: LibraryItem) => {
@@ -61,6 +76,7 @@ export function useItemActions({ onRemoved }: Options = {}) {
             library.setMark(target.id, 'completed', !target.completed).catch(fail);
           },
         },
+        { key: 'export', icon: 'share', label: t('actions.export'), onPress: () => exportItem(target) },
         { key: 'remove', icon: 'trash', label: t('actions.moveToTrash'), danger: true, onPress: () => remove(target) },
       ]
     : [];

@@ -140,6 +140,14 @@ export default function ItemScreen() {
                 />
               ))}
             </Section>
+            <View style={styles.start}>
+              <Button
+                kind="secondary"
+                icon="ai"
+                label={t('item.addLesson')}
+                onPress={() => router.push({ pathname: '/create', params: { kind: 'lesson', course: item.id } })}
+              />
+            </View>
             {document.finalExam ? (
               <View style={styles.section}>
                 <AppText variant="label" color="textSecondary">
