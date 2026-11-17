@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { type TextInputProps, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { type TextInputProps, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { type IconName, Icon } from './icon';
 import { AppText } from './text';
@@ -122,7 +122,7 @@ export function TextField({ leading, trailing, style, onFocus, onBlur, ...rest }
       <TextInput
         placeholderTextColor={colors.textSecondary}
         selectionColor={colors.accent}
-        style={[styles.input, { color: colors.text }, style]}
+        style={[styles.input, webInput, { color: colors.text }, style]}
         onFocus={(event) => {
           setFocused(true);
           onFocus?.(event);
@@ -137,6 +137,9 @@ export function TextField({ leading, trailing, style, onFocus, onBlur, ...rest }
     </View>
   );
 }
+
+// The field's border already shows focus, so the browser's own outline would be a second ring.
+const webInput = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null;
 
 const styles = StyleSheet.create({
   button: {

@@ -14,7 +14,10 @@ export const palettes = {
     warm: '#9A5200',
     warmSoft: '#F6E8D3',
     danger: '#B3261E',
+    dangerSoft: '#FBE3E1',
     onDanger: '#FFFFFF',
+    success: '#1B7F4B',
+    successSoft: '#DDF3E6',
     scrim: 'rgba(15, 20, 27, 0.45)',
   },
   dark: {
@@ -30,7 +33,10 @@ export const palettes = {
     warm: '#E7A552',
     warmSoft: '#3A2A12',
     danger: '#F2867E',
+    dangerSoft: '#3D1512',
     onDanger: '#3B0A07',
+    success: '#5BD08F',
+    successSoft: '#12321F',
     scrim: 'rgba(0, 0, 0, 0.6)',
   },
 } as const;

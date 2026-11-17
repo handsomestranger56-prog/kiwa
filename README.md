@@ -29,7 +29,7 @@ This runs the linter, the type checker and the tests. CI runs the same three on 
 
 | Folder | What lives there | May import |
 | --- | --- | --- |
-| `src/core` | The file format, question types, templates. Plain TypeScript, no React or Expo. | nothing else in `src` |
+| `src/core` | The file format, grading, attempt logic, templates. Plain TypeScript, no React or Expo. | nothing else in `src` |
 | `src/data` | SQLite schema, migrations and repositories. | `core` |
 | `src/ui` | Theme and shared components. | — |
 | `src/features` | Behaviour shared by several screens. | `core`, `data`, `ui` |
@@ -48,6 +48,14 @@ to validate stored and imported content and to produce JSON Schema for AI prompt
 
 Content and personal state are stored separately. Favorites, bookmarks and completion marks
 point at content by id, so replacing a course with a newer version keeps them.
+
+## Question types
+
+A question type has three parts: its schema in `src/core/schema/questions.ts`, its answer shape and
+grading in `src/core/quiz`, and its view in `src/features/study/question-views.tsx`. The player,
+results and attempts work with any type that has all three.
+
+Lesson text uses a small subset of Markdown, listed at the top of `src/core/markdown.ts`.
 
 ## Database changes
 

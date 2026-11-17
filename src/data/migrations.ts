@@ -49,6 +49,29 @@ export const migrations: readonly string[] = [
     value TEXT NOT NULL
   );
   `,
+  // 2: attempts at assessments, and the lesson each course was last opened at
+  `
+  CREATE TABLE attempts (
+    id TEXT PRIMARY KEY NOT NULL,
+    item_id TEXT NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+    lesson_id TEXT NOT NULL DEFAULT '',
+    assessment_id TEXT NOT NULL,
+    mode TEXT NOT NULL CHECK (mode IN ('practice', 'test', 'exam')),
+    state TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    finished_at INTEGER,
+    earned REAL,
+    total REAL,
+    passed INTEGER
+  );
+  CREATE INDEX attempts_lookup ON attempts (item_id, assessment_id, finished_at);
+
+  CREATE TABLE progress (
+    item_id TEXT PRIMARY KEY NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+    lesson_id TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export const LATEST_VERSION = migrations.length;

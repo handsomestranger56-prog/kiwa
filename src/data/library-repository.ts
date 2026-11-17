@@ -288,6 +288,21 @@ export class LibraryRepository {
     await this.writeMark(itemId, lessonId, mark, on);
   }
 
+  /** Remembers where a course was left, so it can be continued from there. */
+  async setLastLesson(itemId: string, lessonId: string): Promise<void> {
+    await this.db.run(
+      `INSERT INTO progress (item_id, lesson_id, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT (item_id) DO UPDATE SET lesson_id = excluded.lesson_id, updated_at = excluded.updated_at`,
+      [itemId, lessonId, this.now()],
+    );
+    this.changes.notify();
+  }
+
+  async lastLesson(itemId: string): Promise<string | null> {
+    const row = await this.db.first<{ lesson_id: string }>('SELECT lesson_id FROM progress WHERE item_id = ?', [itemId]);
+    return row?.lesson_id ?? null;
+  }
+
   /** Moves an item to the trash. Nothing is lost until the trash is emptied. */
   async remove(id: string): Promise<void> {
     await this.db.run('UPDATE items SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL', [this.now(), id]);

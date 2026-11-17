@@ -1,19 +1,20 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { type Assessment, type LibraryDocument, type Question, COURSE_FORMAT, QUIZ_FORMAT } from '@/core/schema';
-import type { LessonSummary, LibraryItem } from '@/data/library-repository';
+import { DECK_ASSESSMENT_ID, findAssessment } from '@/core/quiz/session';
+import { type Flashcard, COURSE_FORMAT, DECK_FORMAT, QUIZ_FORMAT } from '@/core/schema';
+import type { LessonSummary } from '@/data/library-repository';
 import { useData, useQuery } from '@/data/provider';
 import { useItemActions } from '@/features/library/item-actions';
+import { AssessmentCard } from '@/features/study/assessment-card';
+import { resumeLessonId } from '@/features/study/completion';
 import { Button, IconButton, Tag } from '@/ui/controls';
 import { Divider, EmptyState, Page } from '@/ui/layout';
 import { Snackbar } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { radius, spacing, useTheme } from '@/ui/theme';
-
-type Loaded = { item: LibraryItem; document: LibraryDocument; lessons: LessonSummary[] } | null;
 
 export default function ItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,12 +23,16 @@ export default function ItemScreen() {
   const insets = useSafeAreaInsets();
   const { library } = useData();
 
-  const loaded = useQuery<Loaded>(`item:${id}`, async (data) => {
+  const loaded = useQuery(`item:${id}`, async (data) => {
     const item = await data.library.get(id);
     const document = item ? await data.library.getDocument(id) : null;
     if (!item || !document) return null;
-    const lessons = item.kind === 'course' ? await data.library.lessons(id) : [];
-    return { item, document, lessons };
+    const [lessons, lastLesson, records] = await Promise.all([
+      item.kind === 'course' ? data.library.lessons(id) : [],
+      data.library.lastLesson(id),
+      data.attempts.records(id),
+    ]);
+    return { item, document, lessons, lastLesson, records };
   });
 
   const actions = useItemActions({ onRemoved: () => router.back() });
@@ -39,18 +44,22 @@ export default function ItemScreen() {
   if (!current) {
     return (
       <Page>
+        <Stack.Screen options={{ title: '' }} />
         <EmptyState icon="close" title={t('item.notFound')} body={loaded.error?.message ?? ''} />
       </Page>
     );
   }
 
-  const { item, document, lessons } = current;
-  const meta = [
-    t(`units.${item.kind}`, { count: item.unitCount }),
-    item.level ? t(`level.${item.level}`) : null,
-  ]
+  const { item, document, lessons, lastLesson, records } = current;
+  const meta = [t(`units.${item.kind}`, { count: item.unitCount }), item.level ? t(`level.${item.level}`) : null]
     .filter(Boolean)
     .join(' · ');
+
+  const openLesson = (lessonId: string) =>
+    router.push({ pathname: '/item/[id]/lesson/[lessonId]', params: { id: item.id, lessonId } });
+  const resumeAt = resumeLessonId(lessons, lastLesson);
+  const started = lastLesson !== null || lessons.some((lesson) => lesson.completed);
+  const deckRound = document.format === DECK_FORMAT ? findAssessment(document, DECK_ASSESSMENT_ID) : null;
 
   return (
     <Page>
@@ -95,18 +104,33 @@ export default function ItemScreen() {
         {item.deletedAt ? (
           <View style={styles.notice}>
             <AppText color="textSecondary">{t('item.inTrash')}</AppText>
-            <Button kind="secondary" icon="restore" label={t('item.restore')} onPress={() => library.restore(item.id).catch(actions.showError)} />
+            <Button
+              kind="secondary"
+              icon="restore"
+              label={t('item.restore')}
+              onPress={() => library.restore(item.id).catch(actions.showError)}
+            />
           </View>
         ) : null}
 
         {document.format === COURSE_FORMAT ? (
           <>
+            {resumeAt ? (
+              <View style={styles.start}>
+                <Button
+                  icon="play"
+                  label={started ? t('study.continue') : t('study.startCourse')}
+                  onPress={() => openLesson(resumeAt)}
+                />
+              </View>
+            ) : null}
             <Section title={t('item.lessons')} empty={lessons.length === 0 ? t('item.emptyCourse') : null}>
               {lessons.map((lesson, index) => (
                 <LessonRow
                   key={lesson.id}
                   number={index + 1}
                   lesson={lesson}
+                  onOpen={() => openLesson(lesson.id)}
                   onToggleDone={() =>
                     library.setLessonMark(item.id, lesson.id, 'completed', !lesson.completed).catch(actions.showError)
                   }
@@ -117,22 +141,34 @@ export default function ItemScreen() {
               ))}
             </Section>
             {document.finalExam ? (
-              <Section title={t('item.finalExam')} empty={null}>
-                <AssessmentSummary assessment={document.finalExam} />
-              </Section>
+              <View style={styles.section}>
+                <AppText variant="label" color="textSecondary">
+                  {t('item.finalExam')}
+                </AppText>
+                <AssessmentCard itemId={item.id} assessment={document.finalExam} record={records[document.finalExam.id]} />
+              </View>
             ) : null}
           </>
         ) : document.format === QUIZ_FORMAT ? (
-          <Section
-            title={t('item.questions')}
-            empty={document.assessment.questions.length === 0 ? t('item.emptyQuiz') : null}>
-            <AssessmentSummary assessment={document.assessment} />
-            <QuestionList questions={document.assessment.questions} />
-          </Section>
+          document.assessment.questions.length === 0 ? (
+            <AppText color="textSecondary">{t('item.emptyQuiz')}</AppText>
+          ) : (
+            <AssessmentCard itemId={item.id} assessment={document.assessment} record={records[document.assessment.id]} />
+          )
         ) : (
-          <Section title={t('item.cards')} empty={document.cards.length === 0 ? t('item.emptyDeck') : null}>
-            <QuestionList questions={document.cards} />
-          </Section>
+          <>
+            {deckRound && document.cards.length > 0 ? (
+              <AssessmentCard
+                itemId={item.id}
+                assessment={deckRound.assessment}
+                record={records[DECK_ASSESSMENT_ID]}
+                title={t('study.studyAll')}
+              />
+            ) : null}
+            <Section title={t('item.cards')} empty={document.cards.length === 0 ? t('item.emptyDeck') : null}>
+              <CardList cards={document.cards} />
+            </Section>
+          </>
         )}
       </ScrollView>
       {actions.overlays}
@@ -160,11 +196,12 @@ function Section({ title, empty, children }: { title: string; empty: string | nu
 type LessonRowProps = {
   number: number;
   lesson: LessonSummary;
+  onOpen: () => void;
   onToggleDone: () => void;
   onToggleBookmark: () => void;
 };
 
-function LessonRow({ number, lesson, onToggleDone, onToggleBookmark }: LessonRowProps) {
+function LessonRow({ number, lesson, onOpen, onToggleDone, onToggleBookmark }: LessonRowProps) {
   const { t } = useTranslation();
   const meta = [
     lesson.minutes ? t('item.minutes', { count: lesson.minutes }) : null,
@@ -184,7 +221,11 @@ function LessonRow({ number, lesson, onToggleDone, onToggleBookmark }: LessonRow
           label={lesson.completed ? t('item.markLessonNotDone') : t('item.markLessonDone')}
           onPress={onToggleDone}
         />
-        <View style={styles.lessonText}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('item.openLesson', { number, title: lesson.title })}
+          onPress={onOpen}
+          style={({ pressed }) => [styles.lessonText, pressed && styles.pressed]}>
           <AppText variant="bodyStrong">
             {number}. {lesson.title}
           </AppText>
@@ -198,7 +239,7 @@ function LessonRow({ number, lesson, onToggleDone, onToggleBookmark }: LessonRow
               {meta}
             </AppText>
           ) : null}
-        </View>
+        </Pressable>
         <IconButton
           icon={lesson.bookmarked ? 'bookmarkFilled' : 'bookmark'}
           color={lesson.bookmarked ? 'warm' : 'textSecondary'}
@@ -211,39 +252,16 @@ function LessonRow({ number, lesson, onToggleDone, onToggleBookmark }: LessonRow
   );
 }
 
-function AssessmentSummary({ assessment }: { assessment: Assessment }) {
-  const { t } = useTranslation();
-  const parts = [
-    t(`mode.${assessment.mode}`),
-    t('units.quiz', { count: assessment.questions.length }),
-    assessment.mode === 'practice' ? null : t('item.passMark', { percent: Math.round(assessment.passMark * 100) }),
-    assessment.timeLimitMinutes ? t('item.minutes', { count: assessment.timeLimitMinutes }) : null,
-  ].filter(Boolean);
-  return (
-    <View style={styles.summary}>
-      <AppText variant="small" color="textSecondary">
-        {parts.join(' · ')}
-      </AppText>
-    </View>
-  );
-}
-
-function QuestionList({ questions }: { questions: readonly Question[] }) {
-  const { t } = useTranslation();
+function CardList({ cards }: { cards: readonly Flashcard[] }) {
   return (
     <>
-      {questions.map((question, index) => (
-        <View key={question.id}>
-          <Divider />
-          <View style={styles.question}>
+      {cards.map((card, index) => (
+        <View key={card.id}>
+          {index > 0 ? <Divider /> : null}
+          <View style={styles.cardRow}>
             <AppText>
-              {index + 1}. {question.prompt}
+              {index + 1}. {card.prompt}
             </AppText>
-            {question.type === 'flashcard' ? null : (
-              <AppText variant="small" color="textSecondary">
-                {t(`questionType.${question.type}`)}
-              </AppText>
-            )}
           </View>
         </View>
       ))}
@@ -257,10 +275,11 @@ const styles = StyleSheet.create({
   intro: { gap: spacing.sm },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   notice: { gap: spacing.sm, alignItems: 'flex-start' },
+  start: { alignItems: 'flex-start' },
   section: { gap: spacing.sm },
   card: { borderWidth: 1, borderRadius: radius.lg, overflow: 'hidden' },
   lesson: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.xs },
-  lessonText: { flex: 1, minWidth: 0, gap: 2 },
-  summary: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  question: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: 2 },
+  lessonText: { flex: 1, minWidth: 0, gap: 2, paddingVertical: spacing.xs },
+  pressed: { opacity: 0.6 },
+  cardRow: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
 });
