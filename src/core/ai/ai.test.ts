@@ -68,8 +68,8 @@ describe('Claude', () => {
       { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' },
     ]);
     expect(calls[0].url).toBe('https://api.anthropic.com/v1/models?limit=100');
-    // SDK 1.x sends the key as a bearer token.
-    expect(calls[0].headers.authorization).toBe('Bearer sk-ant-test');
+    expect(calls[0].headers['x-api-key']).toBe('sk-ant-test');
+    expect(calls[0].headers['anthropic-version']).toBe('2026-10-21');
     expect(calls[0].headers['anthropic-dangerous-direct-browser-access']).toBe('true');
     expect(calls[1].url).toContain('after_id=claude-opus-5-5');
   });
