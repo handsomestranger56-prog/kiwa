@@ -225,19 +225,39 @@ export class LibraryRepository {
 
   /** Adds a validated document to the library. Fails if its id is already taken. */
   async add(document: LibraryDocument, source: ItemSource = 'manual'): Promise<LibraryItem> {
-    const kind = kindOf(document);
     const timestamp = this.now();
-
     await this.db.transaction(async () => {
-      const existing = await this.db.first<{ id: string }>('SELECT id FROM items WHERE id = ?', [document.id]);
-      if (existing) throw new DuplicateItemError(document.id);
+      if (await this.exists(document.id)) throw new DuplicateItemError(document.id);
+      await this.insertRows(document, { source, createdAt: timestamp, updatedAt: timestamp, deletedAt: null });
+    });
+    this.changes.notify();
+    return (await this.get(document.id)) as LibraryItem;
+  }
 
+  async exists(id: string): Promise<boolean> {
+    return (await this.db.first<{ id: string }>('SELECT id FROM items WHERE id = ?', [id])) !== null;
+  }
+
+  /**
+   * Swaps an item's content for a newer version with the same id.
+   * Marks and results stay, because they point at content by id. Marks on lessons that
+   * no longer exist are dropped. A trashed item comes back out of the trash.
+   */
+  async replace(document: LibraryDocument, source?: ItemSource): Promise<LibraryItem> {
+    await this.db.transaction(async () => {
+      const existing = await this.db.first<{ source: ItemSource; created_at: number }>(
+        'SELECT source, created_at FROM items WHERE id = ?',
+        [document.id],
+      );
+      if (!existing) throw new Error(`There is no item with the id "${document.id}" to replace.`);
+
+      const lessonIds = document.format === COURSE_FORMAT ? document.lessons.map((lesson) => lesson.id) : [];
+      await this.db.run('DELETE FROM lessons WHERE item_id = ?', [document.id]);
       await this.db.run(
-        `INSERT INTO items (id, kind, title, description, language, level, tags, body, unit_count, source, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `UPDATE items SET kind = ?, title = ?, description = ?, language = ?, level = ?, tags = ?, body = ?,
+           unit_count = ?, source = ?, deleted_at = NULL, updated_at = ? WHERE id = ?`,
         [
-          document.id,
-          kind,
+          kindOf(document),
           document.title,
           document.description ?? null,
           document.language,
@@ -245,32 +265,68 @@ export class LibraryRepository {
           JSON.stringify(document.tags),
           JSON.stringify(itemBody(document)),
           unitCount(document),
-          source,
-          timestamp,
-          timestamp,
+          source ?? existing.source,
+          this.now(),
+          document.id,
         ],
       );
+      await this.insertLessons(document);
 
-      if (document.format === COURSE_FORMAT) {
-        for (const [position, lesson] of document.lessons.entries()) {
-          await this.db.run(
-            `INSERT INTO lessons (item_id, id, position, title, summary, minutes, body) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
-              document.id,
-              lesson.id,
-              position,
-              lesson.title,
-              lesson.summary ?? null,
-              lesson.minutes ?? null,
-              JSON.stringify({ blocks: lesson.blocks, assessments: lesson.assessments }),
-            ],
-          );
-        }
-      }
+      const keep = lessonIds.map(() => '?').join(', ');
+      const gone = keep ? `lesson_id NOT IN (${keep})` : '1 = 1';
+      await this.db.run(`DELETE FROM marks WHERE item_id = ? AND lesson_id != '' AND ${gone}`, [document.id, ...lessonIds]);
+      await this.db.run(`DELETE FROM progress WHERE item_id = ? AND ${gone}`, [document.id, ...lessonIds]);
     });
-
     this.changes.notify();
     return (await this.get(document.id)) as LibraryItem;
+  }
+
+  /**
+   * Writes the rows of a new item. Call only inside a transaction, after making sure the id is free.
+   * Public so a restore can write an item together with its marks and results.
+   */
+  async insertRows(
+    document: LibraryDocument,
+    meta: { source: ItemSource; createdAt: number; updatedAt: number; deletedAt: number | null },
+  ): Promise<void> {
+    await this.db.run(
+      `INSERT INTO items (id, kind, title, description, language, level, tags, body, unit_count, source, deleted_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        document.id,
+        kindOf(document),
+        document.title,
+        document.description ?? null,
+        document.language,
+        document.level ?? null,
+        JSON.stringify(document.tags),
+        JSON.stringify(itemBody(document)),
+        unitCount(document),
+        meta.source,
+        meta.deletedAt,
+        meta.createdAt,
+        meta.updatedAt,
+      ],
+    );
+    await this.insertLessons(document);
+  }
+
+  private async insertLessons(document: LibraryDocument): Promise<void> {
+    if (document.format !== COURSE_FORMAT) return;
+    for (const [position, lesson] of document.lessons.entries()) {
+      await this.db.run(
+        'INSERT INTO lessons (item_id, id, position, title, summary, minutes, body) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [
+          document.id,
+          lesson.id,
+          position,
+          lesson.title,
+          lesson.summary ?? null,
+          lesson.minutes ?? null,
+          JSON.stringify({ blocks: lesson.blocks, assessments: lesson.assessments }),
+        ],
+      );
+    }
   }
 
   async rename(id: string, title: string): Promise<void> {

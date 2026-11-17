@@ -29,6 +29,13 @@ const glyphs = {
   hint: { ios: 'lightbulb', material: 'lightbulb' },
   timer: { ios: 'timer', material: 'timer' },
   play: { ios: 'play.fill', material: 'play_arrow' },
+  ai: { ios: 'sparkles', material: 'auto_awesome' },
+  importFile: { ios: 'square.and.arrow.down', material: 'download' },
+  share: { ios: 'square.and.arrow.up', material: 'ios_share' },
+  copy: { ios: 'doc.on.doc', material: 'content_copy' },
+  paste: { ios: 'doc.on.clipboard', material: 'content_paste' },
+  file: { ios: 'doc', material: 'description' },
+  minus: { ios: 'minus', material: 'remove' },
 } as const satisfies Record<string, Glyph>;
 
 export type IconName = keyof typeof glyphs;

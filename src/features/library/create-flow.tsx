@@ -7,10 +7,15 @@ import { useData } from '@/data/provider';
 import i18n from '@/i18n';
 import { ActionSheet, PromptDialog } from '@/ui/overlays';
 
-type Options = { onCreated: (id: string) => void; onError: () => void };
+type Options = {
+  onCreated: (id: string) => void;
+  onError: () => void;
+  onCreateWithAi: () => void;
+  onImport: () => void;
+};
 
-/** Pick a kind, give it a title, and an empty course, quiz or deck is added to the library. */
-export function useCreateFlow({ onCreated, onError }: Options) {
+/** The "New" menu: create with AI, import, or start an empty course, quiz or deck. */
+export function useCreateFlow({ onCreated, onError, onCreateWithAi, onImport }: Options) {
   const { t } = useTranslation();
   const { library } = useData();
   const [choosing, setChoosing] = useState(false);
@@ -30,13 +35,17 @@ export function useCreateFlow({ onCreated, onError }: Options) {
         visible={choosing}
         title={t('create.title')}
         onClose={() => setChoosing(false)}
-        actions={DOCUMENT_KINDS.map((option) => ({
-          key: option,
-          icon: option,
-          label: t(`create.${option}.label`),
-          hint: t(`create.${option}.hint`),
-          onPress: () => setKind(option),
-        }))}
+        actions={[
+          { key: 'ai', icon: 'ai', label: t('create.withAi.label'), hint: t('create.withAi.hint'), onPress: onCreateWithAi },
+          { key: 'import', icon: 'importFile', label: t('create.importItem.label'), hint: t('create.importItem.hint'), onPress: onImport },
+          ...DOCUMENT_KINDS.map((option) => ({
+            key: option,
+            icon: option,
+            label: t(`create.${option}.label`),
+            hint: t(`create.${option}.hint`),
+            onPress: () => setKind(option),
+          })),
+        ]}
       />
       <PromptDialog
         visible={kind !== null}

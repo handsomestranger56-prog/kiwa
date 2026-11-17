@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type TextInputProps, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { type IconName, Icon } from './icon';
@@ -107,6 +108,36 @@ export function Tag({ label, tone = 'neutral' }: TagProps) {
   );
 }
 
+type StepperProps = { label: string; value: number; min: number; max: number; onChange: (value: number) => void };
+
+/** A number with minus and plus buttons, for small counts. */
+export function Stepper({ label, value, min, max, onChange }: StepperProps) {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  return (
+    <View style={styles.stepper}>
+      <AppText style={styles.stepperLabel}>{label}</AppText>
+      <View style={[styles.stepperBox, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+        <IconButton
+          icon="minus"
+          label={t('common.fewer', { label })}
+          color={value <= min ? 'border' : 'text'}
+          onPress={() => onChange(Math.max(min, value - 1))}
+        />
+        <AppText variant="bodyStrong" style={styles.stepperValue} accessibilityLabel={`${label}: ${value}`}>
+          {value}
+        </AppText>
+        <IconButton
+          icon="add"
+          label={t('common.more', { label })}
+          color={value >= max ? 'border' : 'text'}
+          onPress={() => onChange(Math.min(max, value + 1))}
+        />
+      </View>
+    </View>
+  );
+}
+
 type FieldProps = TextInputProps & { leading?: ReactNode; trailing?: ReactNode };
 
 export function TextField({ leading, trailing, style, onFocus, onBlur, ...rest }: FieldProps) {
@@ -179,4 +210,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   input: { flex: 1, fontSize: 16, paddingVertical: spacing.sm, minWidth: 0 },
+  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  stepperLabel: { flex: 1, minWidth: 0 },
+  stepperBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: radius.md },
+  stepperValue: { minWidth: 36, textAlign: 'center', fontVariant: ['tabular-nums'] },
 });
