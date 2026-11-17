@@ -38,6 +38,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
+            <Stack.Screen name="provider/[id]" options={{ title: '' }} />
           </Stack>
         </DataProvider>
       </ThemeProvider>

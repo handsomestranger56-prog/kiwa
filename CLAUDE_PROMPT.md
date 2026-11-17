@@ -5,7 +5,7 @@ work where it stopped. It is written to the assistant picking the work up.
 
 ---
 
-You are continuing the build of a mobile app in this repository. Five of nine planned steps are
+You are continuing the build of a mobile app in this repository. Six of nine planned steps are
 done and pushed. Read this file fully, then `README.md` and `AGENTS.md`, before changing anything.
 
 ## The plan and where it lives
@@ -76,7 +76,8 @@ All on branch `claude/quirky-cori-s17bdd`.
 | 1 Foundation, 2 Format and library | `a8d5cdd` | Project, lint, tests, CI, theme, translations, SQLite with migrations, the schema with seven question types, library with search, filters, favorites, completed, trash with undo, samples |
 | 3 Lesson player and quiz engine | `757ed26` | Lesson reader, Markdown subset, player for all seven types in practice, test and exam modes, grading, attempts saved and resumed, results with review, course resume, deck study |
 | 4 Import, export, Prompt for AI | `3a88235` | Create form, prompt builder, tolerant import with automatic repairs, conflict handling, fix prompt, export, lesson files, backup and restore |
-| 5 Editor and drag-and-drop types | see `git log` | Editing of details, lessons, blocks, assessments and every question type, with reorder and undo on removal; matching, ordering and sort-into-groups with drag and a tap alternative |
+| 5 Editor and drag-and-drop types | `19d1e0a` | Editing of details, lessons, blocks, assessments and every question type, with reorder and undo on removal; matching, ordering and sort-into-groups with drag and a tap alternative |
+| 6 Settings and providers | see `git log` | Provider list, keys in the secure store, test and detect models, model checkboxes, default model, adapters for Claude (official SDK), Gemini and OpenAI-compatible with a base URL; providers travel in backups without keys |
 
 Question types today: `single_choice`, `multiple_choice`, `true_false`, `short_answer`, `cloze`,
 `essay`, `flashcard`, `matching`, `ordering`, `categorize`.
@@ -114,7 +115,7 @@ Work one step at a time, in this order.
 - Removing a lesson should go to a trash with undo, like items do.
 - Done when a complete course using every question type can be built on the phone with no file.
 
-### Step 6: Settings and providers
+### Step 6: Settings and providers (built)
 
 - Provider list with add, edit and remove. Each entry: kind, label, key, and a base URL for the
   compatible kind.
@@ -187,6 +188,18 @@ Work one step at a time, in this order.
 - Run `npm run check` (lint, types, tests) before calling a step done.
 - Report plainly: what works, how it was checked, what was not verified, and choices the user may
   want changed. The user reads on a phone, so keep reports short and concrete.
+
+## AI providers as built
+
+- `src/core/ai`: one adapter per kind behind `listModels` and `generate`, each taking an injectable
+  `fetch`. Errors become `AiError` with a kind the screens explain. `strictSchema` strips JSON Schema
+  features strict structured output rejects.
+- Claude uses `@anthropic-ai/sdk` pinned at 1.9.0, with the base URL set explicitly so the SDK cannot
+  pick one up from the environment. SDK 1.x sends the key as `Authorization: Bearer` and API version
+  2026-10-21. Requests are not streamed: React Native's fetch cannot read a streamed body.
+- Keys: `src/platform/secrets.ts`. On the web build they sit in local storage, development only.
+- `e2e/mock-ai.js` stands in for all three providers in browser checks. Set `state.reply` to control
+  what generation returns.
 
 ## Things that will trip you up
 

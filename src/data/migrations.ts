@@ -72,6 +72,19 @@ export const migrations: readonly string[] = [
     updated_at INTEGER NOT NULL
   );
   `,
+  // 3: AI providers. Their API keys are kept in the device's secure store, not here.
+  `
+  CREATE TABLE providers (
+    id TEXT PRIMARY KEY NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('claude', 'gemini', 'openai')),
+    label TEXT NOT NULL,
+    base_url TEXT,
+    models TEXT NOT NULL DEFAULT '[]',
+    enabled TEXT NOT NULL DEFAULT '[]',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export const LATEST_VERSION = migrations.length;

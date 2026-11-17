@@ -1,7 +1,7 @@
 import { ChangeFeed } from './changes';
 import type { SqlDriver } from './sql';
 
-export type SettingKey = 'profile.name' | 'samples.seeded';
+export type SettingKey = 'profile.name' | 'samples.seeded' | 'ai.defaultModel';
 
 /** Small non-secret values. API keys never go here. They belong in the device's secure store. */
 export class SettingsRepository {

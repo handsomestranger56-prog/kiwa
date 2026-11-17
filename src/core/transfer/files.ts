@@ -65,6 +65,19 @@ export const backupSchema = z.object({
   createdAt: z.number().int(),
   items: z.array(backupItemSchema),
   settings: z.record(z.string(), z.string()).default({}),
+  /** Provider settings without their API keys. Keys never leave the device's secure store. */
+  providers: z
+    .array(
+      z.object({
+        id: idSchema,
+        kind: z.enum(['claude', 'gemini', 'openai']),
+        label: z.string(),
+        baseUrl: z.string().nullable().default(null),
+        models: z.array(z.object({ id: z.string(), label: z.string() })).default([]),
+        enabled: z.array(z.string()).default([]),
+      }),
+    )
+    .default([]),
 });
 
 export type BackupItem = Omit<z.infer<typeof backupItemSchema>, 'document'> & { document: LibraryDocument };

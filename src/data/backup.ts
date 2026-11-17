@@ -3,6 +3,7 @@ import { BACKUP_FORMAT } from '@/core/transfer/repair';
 
 import { ChangeFeed } from './changes';
 import type { ItemSource, LibraryRepository } from './library-repository';
+import type { ProvidersRepository } from './providers-repository';
 import type { SqlDriver } from './sql';
 
 type ItemMeta = { id: string; source: ItemSource; created_at: number; updated_at: number; deleted_at: number | null };
@@ -31,6 +32,7 @@ export class BackupService {
   constructor(
     private readonly db: SqlDriver,
     private readonly library: LibraryRepository,
+    private readonly providers: ProvidersRepository,
     private readonly changes: ChangeFeed = new ChangeFeed(),
     private readonly now: () => number = Date.now,
   ) {}
@@ -85,7 +87,8 @@ export class BackupService {
       if (!LOCAL_SETTINGS.has(row.key)) settings[row.key] = row.value;
     }
 
-    return { format: BACKUP_FORMAT, createdAt: this.now(), items, settings };
+    const providers = (await this.providers.list()).map(({ id, kind, label, baseUrl, models, enabled }) => ({ id, kind, label, baseUrl, models, enabled }));
+    return { format: BACKUP_FORMAT, createdAt: this.now(), items, settings, providers };
   }
 
   /**
@@ -142,6 +145,15 @@ export class BackupService {
             ],
           );
         }
+      }
+
+      for (const provider of backup.providers) {
+        await this.db.run(
+          `INSERT INTO providers (id, kind, label, base_url, models, enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (id) DO UPDATE SET kind = excluded.kind, label = excluded.label, base_url = excluded.base_url,
+             models = excluded.models, enabled = excluded.enabled, updated_at = excluded.updated_at`,
+          [provider.id, provider.kind, provider.label, provider.baseUrl, JSON.stringify(provider.models), JSON.stringify(provider.enabled), this.now(), this.now()],
+        );
       }
 
       for (const [key, value] of Object.entries(backup.settings)) {

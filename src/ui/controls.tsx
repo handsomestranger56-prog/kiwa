@@ -56,7 +56,7 @@ export function IconButton({ icon, label, onPress, color = 'textSecondary', sele
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={selected === undefined ? undefined : { selected }}
+      aria-selected={selected}
       hitSlop={4}
       onPress={onPress}
       style={({ pressed }) => [styles.iconButton, pressed && styles.dimmed]}>
@@ -72,7 +72,7 @@ export function Chip({ label, selected, onPress }: ChipProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected }}
+      aria-selected={selected}
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,

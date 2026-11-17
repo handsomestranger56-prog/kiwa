@@ -8,6 +8,7 @@ import { BackupService } from './backup';
 import { ChangeFeed } from './changes';
 import { LibraryRepository } from './library-repository';
 import { migrate } from './migrations';
+import { ProvidersRepository } from './providers-repository';
 import { SettingsRepository } from './settings-repository';
 import { createMemoryDriver } from './testing/memory-driver';
 
@@ -26,8 +27,9 @@ async function device() {
   const library = new LibraryRepository(db, changes, now);
   const attempts = new AttemptsRepository(db, changes, now);
   const settings = new SettingsRepository(db, changes);
-  const backups = new BackupService(db, library, changes, now);
-  return { db, library, attempts, settings, backups, changes };
+  const providers = new ProvidersRepository(db, changes, now);
+  const backups = new BackupService(db, library, providers, changes, now);
+  return { db, library, attempts, settings, providers, backups, changes };
 }
 
 /** A device with content, marks, a finished attempt, an open attempt, a trashed item and a name. */
@@ -172,5 +174,52 @@ describe('BackupService', () => {
     await expect(target.backups.restore(broken)).rejects.toThrow();
     expect((await target.library.list()).map((item) => item.id)).toEqual(['sample-git']);
     expect(await target.settings.get('profile.name')).toBeNull();
+  });
+});
+
+describe('ProvidersRepository', () => {
+  const claudeModels = [
+    { id: 'claude-opus-5-5', label: 'Claude Opus 5.5' },
+    { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' },
+  ];
+
+  it('keeps only ticked models that were found, and offers them as choices', async () => {
+    const d = await device();
+    const id = await d.providers.save({ kind: 'claude', label: ' My Claude ', baseUrl: '  ', models: claudeModels, enabled: ['claude-haiku-5-5', 'gone', 'claude-haiku-5-5'] });
+    expect(await d.providers.get(id)).toMatchObject({ label: 'My Claude', baseUrl: null, enabled: ['claude-haiku-5-5'] });
+    expect(await d.providers.choices()).toEqual([{ providerId: id, providerLabel: 'My Claude', kind: 'claude', model: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' }]);
+  });
+
+  it('keeps a default that still exists and moves it when it goes away', async () => {
+    const d = await device();
+    expect(await d.providers.defaultChoice()).toBeNull();
+
+    const claude = await d.providers.save({ kind: 'claude', label: 'Claude', baseUrl: null, models: claudeModels, enabled: ['claude-opus-5-5', 'claude-haiku-5-5'] });
+    expect((await d.providers.defaultChoice())?.model).toBe('claude-opus-5-5');
+
+    const local = await d.providers.save({ kind: 'openai', label: 'Ollama', baseUrl: 'http://localhost:11434/v1', models: [{ id: 'llama4', label: 'llama4' }], enabled: ['llama4'] });
+    await d.providers.setDefault(local, 'llama4');
+    expect(await d.providers.defaultChoice()).toMatchObject({ providerId: local, model: 'llama4' });
+
+    await d.providers.remove(local);
+    expect(await d.providers.defaultChoice()).toMatchObject({ providerId: claude, model: 'claude-opus-5-5' });
+
+    await d.providers.save({ id: claude, kind: 'claude', label: 'Claude', baseUrl: null, models: claudeModels, enabled: [] });
+    expect(await d.providers.defaultChoice()).toBeNull();
+    expect(await d.settings.get('ai.defaultModel')).toBeNull();
+  });
+
+  it('travels in a backup without any key, and comes back on restore', async () => {
+    const source = await device();
+    const id = await source.providers.save({ kind: 'gemini', label: 'Gemini', baseUrl: null, models: [{ id: 'gemini-3-pro', label: 'Gemini 3 Pro' }], enabled: ['gemini-3-pro'] });
+    const backup = await source.backups.create();
+    expect(backup.providers).toEqual([{ id, kind: 'gemini', label: 'Gemini', baseUrl: null, models: [{ id: 'gemini-3-pro', label: 'Gemini 3 Pro' }], enabled: ['gemini-3-pro'] }]);
+    expect(JSON.stringify(backup)).not.toMatch(/key/i);
+
+    const target = await device();
+    const read = readImport(backupFile(backup).text);
+    if (!read.ok || read.kind !== 'backup') throw new Error('backup did not read back');
+    await target.backups.restore(read.backup);
+    expect(await target.providers.defaultChoice()).toMatchObject({ providerId: id, model: 'gemini-3-pro' });
   });
 });

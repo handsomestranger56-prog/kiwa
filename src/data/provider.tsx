@@ -15,6 +15,7 @@ import { ChangeFeed } from './changes';
 import { createExpoDriver } from './expo-driver';
 import { LibraryRepository } from './library-repository';
 import { migrate } from './migrations';
+import { ProvidersRepository } from './providers-repository';
 import { seedSamples } from './seed';
 import { SettingsRepository } from './settings-repository';
 
@@ -24,6 +25,7 @@ export type AppData = {
   library: LibraryRepository;
   attempts: AttemptsRepository;
   backups: BackupService;
+  providers: ProvidersRepository;
   settings: SettingsRepository;
   changes: ChangeFeed;
 };
@@ -41,11 +43,13 @@ async function openAppData(): Promise<AppData> {
   const changes = new ChangeFeed();
   const library = new LibraryRepository(driver, changes);
   const settings = new SettingsRepository(driver, changes);
+  const providers = new ProvidersRepository(driver, changes);
   await seedSamples(library, settings);
   return {
     library,
     attempts: new AttemptsRepository(driver, changes),
-    backups: new BackupService(driver, library, changes),
+    backups: new BackupService(driver, library, providers, changes),
+    providers,
     settings,
     changes,
   };
