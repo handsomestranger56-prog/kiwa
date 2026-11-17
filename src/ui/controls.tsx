@@ -1,0 +1,179 @@
+import { type ReactNode, useState } from 'react';
+import { type TextInputProps, Pressable, StyleSheet, TextInput, View } from 'react-native';
+
+import { type IconName, Icon } from './icon';
+import { AppText } from './text';
+import { type ColorName, MIN_TOUCH, radius, spacing, useTheme } from './theme';
+
+type ButtonProps = {
+  label: string;
+  onPress: () => void;
+  kind?: 'primary' | 'secondary' | 'danger' | 'plain';
+  icon?: IconName;
+  disabled?: boolean;
+};
+
+export function Button({ label, onPress, kind = 'primary', icon, disabled }: ButtonProps) {
+  const { colors } = useTheme();
+  const look = {
+    primary: { background: colors.accent, text: 'onAccent', border: colors.accent },
+    secondary: { background: colors.surface, text: 'text', border: colors.border },
+    danger: { background: colors.danger, text: 'onDanger', border: colors.danger },
+    plain: { background: 'transparent', text: 'accent', border: 'transparent' },
+  }[kind] as { background: string; text: ColorName; border: string };
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.button,
+        { backgroundColor: look.background, borderColor: look.border },
+        (pressed || disabled) && styles.dimmed,
+      ]}>
+      {icon ? <Icon name={icon} size={18} color={look.text} /> : null}
+      <AppText variant="bodyStrong" color={look.text}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+type IconButtonProps = {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+  color?: ColorName;
+  selected?: boolean;
+};
+
+/** A square button that shows only an icon. `label` is read by screen readers. */
+export function IconButton({ icon, label, onPress, color = 'textSecondary', selected }: IconButtonProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={selected === undefined ? undefined : { selected }}
+      hitSlop={4}
+      onPress={onPress}
+      style={({ pressed }) => [styles.iconButton, pressed && styles.dimmed]}>
+      <Icon name={icon} color={color} />
+    </Pressable>
+  );
+}
+
+type ChipProps = { label: string; selected: boolean; onPress: () => void };
+
+export function Chip({ label, selected, onPress }: ChipProps) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        {
+          backgroundColor: selected ? colors.accent : colors.surface,
+          borderColor: selected ? colors.accent : colors.border,
+        },
+        pressed && styles.dimmed,
+      ]}>
+      <AppText variant="small" color={selected ? 'onAccent' : 'text'} style={styles.chipText}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+type TagProps = { label: string; tone?: 'neutral' | 'accent' | 'warm' };
+
+/** A small non-interactive label. */
+export function Tag({ label, tone = 'neutral' }: TagProps) {
+  const { colors } = useTheme();
+  const look = {
+    neutral: { background: colors.surfaceAlt, text: 'textSecondary' },
+    accent: { background: colors.accentSoft, text: 'accent' },
+    warm: { background: colors.warmSoft, text: 'warm' },
+  }[tone] as { background: string; text: ColorName };
+  return (
+    <View style={[styles.tag, { backgroundColor: look.background }]}>
+      <AppText variant="label" color={look.text}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+type FieldProps = TextInputProps & { leading?: ReactNode; trailing?: ReactNode };
+
+export function TextField({ leading, trailing, style, onFocus, onBlur, ...rest }: FieldProps) {
+  const { colors } = useTheme();
+  const [focused, setFocused] = useState(false);
+  return (
+    <View
+      style={[
+        styles.field,
+        { backgroundColor: colors.surface, borderColor: focused ? colors.accent : colors.border },
+      ]}>
+      {leading}
+      <TextInput
+        placeholderTextColor={colors.textSecondary}
+        selectionColor={colors.accent}
+        style={[styles.input, { color: colors.text }, style]}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
+        {...rest}
+      />
+      {trailing}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  button: {
+    minHeight: MIN_TOUCH,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  iconButton: {
+    width: MIN_TOUCH,
+    height: MIN_TOUCH,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+  },
+  dimmed: { opacity: 0.55 },
+  chip: {
+    minHeight: 36,
+    paddingHorizontal: spacing.md + 2,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    justifyContent: 'center',
+  },
+  chipText: { fontWeight: '500' },
+  tag: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm, alignSelf: 'flex-start' },
+  field: {
+    minHeight: MIN_TOUCH + 4,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  input: { flex: 1, fontSize: 16, paddingVertical: spacing.sm, minWidth: 0 },
+});
