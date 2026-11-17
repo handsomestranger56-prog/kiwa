@@ -79,6 +79,7 @@ async function start({ permissions = [], colorScheme = 'light' } = {}) {
       const deadline = Date.now() + 8000;
       for (;;) {
         for (const candidate of await page.getByRole(role, { name, exact: true }).all()) {
+          await candidate.scrollIntoViewIfNeeded({ timeout: 500 }).catch(() => {});
           const onTop = await candidate
             .evaluate((element) => {
               const box = element.getBoundingClientRect();

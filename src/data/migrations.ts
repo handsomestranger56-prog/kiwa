@@ -85,6 +85,20 @@ export const migrations: readonly string[] = [
     updated_at INTEGER NOT NULL
   );
   `,
+  // 4: generation runs, saved step by step
+  `
+  CREATE TABLE jobs (
+    id TEXT PRIMARY KEY NOT NULL,
+    request TEXT NOT NULL,
+    model TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('running', 'outline', 'ready', 'saved', 'failed', 'cancelled')),
+    state TEXT NOT NULL,
+    error TEXT,
+    saved_item_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export const LATEST_VERSION = migrations.length;

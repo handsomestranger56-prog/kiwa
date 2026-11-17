@@ -5,9 +5,12 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isAnswered, isSelfGraded } from '@/core/quiz/answers';
+import { canCheck } from '@/core/quiz/ai-feedback';
+import { ESSAY_RATINGS, type EssayRating } from '@/core/quiz/answers';
 import { grade } from '@/core/quiz/grading';
 import { DECK_ASSESSMENT_ID, isRevealed, unansweredCount } from '@/core/quiz/session';
 import type { Question } from '@/core/schema';
+import { AiActions } from '@/features/ai/ai-actions';
 import { Feedback } from '@/features/study/feedback';
 import { QuestionView } from '@/features/study/question-views';
 import { usePlayer } from '@/features/study/use-player';
@@ -120,7 +123,25 @@ export default function PlayScreen() {
           locked={checked}
           revealed={revealed}
         />
-        {revealed ? <Feedback question={question} grade={grade(question, answer)} /> : null}
+        {revealed ? <Feedback question={question} grade={grade(question, answer, session.ai?.[question.id])} /> : null}
+        {revealed || (practice && answer?.type === 'essay' && answer.submitted) ? (
+          <AiActions
+            question={question}
+            answer={answer}
+            correct={grade(question, answer, session.ai?.[question.id]).outcome === 'correct'}
+            allowCheck={canCheck(question) && (question.type === 'essay' || grade(question, answer).outcome !== 'correct')}
+            check={session.ai?.[question.id]}
+            explanation={session.explanations?.[question.id]}
+            onCheck={(check) =>
+              player.saveAi(question.id, {
+                check,
+                // An essay checked by AI counts as rated, so practice can move on.
+                answer: answer?.type === 'essay' ? { ...answer, submitted: true, rating: nearestRating(check.score) } : undefined,
+              })
+            }
+            onExplain={(explanation) => player.saveAi(question.id, { explanation })}
+          />
+        ) : null}
         {player.saveFailed ? <AppText color="danger">{t('study.saveFailed')}</AppText> : null}
         {failed ? <AppText color="danger">{t('errors.generic')}</AppText> : null}
       </QuestionPage>
@@ -217,6 +238,10 @@ function useCountdown(deadline: number | null, onExpire: () => void): number | n
   }, [deadline]);
 
   return deadline === null ? null : Math.max(0, deadline - now);
+}
+
+function nearestRating(score: number): EssayRating {
+  return ESSAY_RATINGS.reduce((best, rating) => (Math.abs(rating - score) < Math.abs(best - score) ? rating : best));
 }
 
 function formatClock(milliseconds: number): string {

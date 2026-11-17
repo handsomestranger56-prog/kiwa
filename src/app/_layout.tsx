@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DataProvider } from '@/data/provider';
+import { JobRunnerProvider } from '@/features/ai/job-runner';
 import { AppText } from '@/ui/text';
 import { monoFont, spacing, useTheme } from '@/ui/theme';
 
@@ -32,14 +33,22 @@ export default function RootLayout() {
             border: colors.border,
             primary: colors.accent,
           },
-        }}>
+        }}
+      >
         <StatusBar style={dark ? 'light' : 'dark'} />
-        <DataProvider onReady={() => SplashScreen.hide()} renderError={(error) => <StartupError error={error} />}>
-          <Stack screenOptions={{ headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
-            <Stack.Screen name="provider/[id]" options={{ title: '' }} />
-          </Stack>
+        <DataProvider
+          onReady={() => SplashScreen.hide()}
+          renderError={(error) => <StartupError error={error} />}
+        >
+          <JobRunnerProvider>
+            <Stack
+              screenOptions={{ headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
+              <Stack.Screen name="provider/[id]" options={{ title: '' }} />
+            </Stack>
+          </JobRunnerProvider>
         </DataProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

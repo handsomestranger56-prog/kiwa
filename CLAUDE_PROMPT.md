@@ -5,7 +5,7 @@ work where it stopped. It is written to the assistant picking the work up.
 
 ---
 
-You are continuing the build of a mobile app in this repository. Six of nine planned steps are
+You are continuing the build of a mobile app in this repository. Seven of nine planned steps are
 done and pushed. Read this file fully, then `README.md` and `AGENTS.md`, before changing anything.
 
 ## The plan and where it lives
@@ -77,7 +77,8 @@ All on branch `claude/quirky-cori-s17bdd`.
 | 3 Lesson player and quiz engine | `757ed26` | Lesson reader, Markdown subset, player for all seven types in practice, test and exam modes, grading, attempts saved and resumed, results with review, course resume, deck study |
 | 4 Import, export, Prompt for AI | `3a88235` | Create form, prompt builder, tolerant import with automatic repairs, conflict handling, fix prompt, export, lesson files, backup and restore |
 | 5 Editor and drag-and-drop types | `19d1e0a` | Editing of details, lessons, blocks, assessments and every question type, with reorder and undo on removal; matching, ordering and sort-into-groups with drag and a tap alternative |
-| 6 Settings and providers | see `git log` | Provider list, keys in the secure store, test and detect models, model checkboxes, default model, adapters for Claude (official SDK), Gemini and OpenAI-compatible with a base URL; providers travel in backups without keys |
+| 6 Settings and providers | `1053fd1` | Provider list, keys in the secure store, test and detect models, model checkboxes, default model, adapters for Claude (official SDK), Gemini and OpenAI-compatible with a base URL; providers travel in backups without keys |
+| 7 Generate, Check, Explain deeper | see `git log` | Generate on the create form with a model picker; course outline the user edits before lessons are written; lessons two at a time; every step saved and resumed on app start; one repair request per bad reply; review before adding; Check with AI for essays and short answers, its score counts and is marked; Explain deeper; tokens shown after every AI action |
 
 Question types today: `single_choice`, `multiple_choice`, `true_false`, `short_answer`, `cloze`,
 `essay`, `flashcard`, `matching`, `ordering`, `categorize`.
@@ -136,7 +137,7 @@ Work one step at a time, in this order.
 - Done when keys for three providers are saved, each lists its models, and no key appears in a
   backup file.
 
-### Step 7: Generate, Check and Explain deeper
+### Step 7: Generate, Check and Explain deeper (built)
 
 - A "Generate" button on the existing create form, next to "Prompt for AI", with the model picker.
 - One request for a lesson, quiz or deck. For a course: an outline first that the user can edit,
@@ -200,6 +201,16 @@ Work one step at a time, in this order.
 - Keys: `src/platform/secrets.ts`. On the web build they sit in local storage, development only.
 - `e2e/mock-ai.js` stands in for all three providers in browser checks. Set `state.reply` to control
   what generation returns.
+
+## Generation as built
+
+- `src/core/generate/plan.ts` is the whole pipeline as pure functions: `nextStep` says what to do,
+  `runStep` does it with an injected `ask`, and the result is a new state. Tested in
+  `src/core/generate/generate.test.ts` with a scripted model.
+- `src/features/ai/job-runner.tsx` runs steps in the background, saves after each, and resumes runs
+  marked `running` when the app starts. Jobs live in the `jobs` table.
+- AI feedback is stored in the attempt's state (`ai` and `explanations`) and travels in backups.
+- Not built yet: the notification when a run finishes. That belongs to step 8's notification planner.
 
 ## Things that will trip you up
 

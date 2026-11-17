@@ -4,9 +4,12 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FLASHCARD_RATINGS } from '@/core/quiz/answers';
-import { type Outcome, summarize } from '@/core/quiz/grading';
+import { type AiCheck, type AiExplanation, canCheck } from '@/core/quiz/ai-feedback';
+import { type Outcome, grade, hasPassed, summarize } from '@/core/quiz/grading';
 import { DECK_ASSESSMENT_ID, findAssessment, sessionQuestions } from '@/core/quiz/session';
-import { useQuery } from '@/data/provider';
+import { useData, useQuery } from '@/data/provider';
+import { AiActions } from '@/features/ai/ai-actions';
+import { applyAttemptCompletion } from '@/features/study/completion';
 import { Feedback } from '@/features/study/feedback';
 import { QuestionView } from '@/features/study/question-views';
 import { Button, Tag } from '@/ui/controls';
@@ -27,11 +30,12 @@ export default function ResultScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const data = useData();
 
   const loaded = useQuery(`result:${id}:${attemptId}`, async ({ library, attempts }) => {
     const [attempt, document] = await Promise.all([attempts.get(attemptId), library.getDocument(id)]);
     const located = attempt && document ? findAssessment(document, attempt.assessmentId) : null;
-    return attempt && located ? { attempt, located } : null;
+    return attempt && located && document ? { attempt, located, document } : null;
   });
 
   if (loaded.loading) return <Page />;
@@ -44,9 +48,24 @@ export default function ResultScreen() {
     );
   }
 
-  const { attempt, located } = loaded.data;
+  const { attempt, located, document } = loaded.data;
   const questions = sessionQuestions(located.assessment, attempt.state);
-  const summary = summarize(questions, attempt.state.answers);
+  const summary = summarize(questions, attempt.state.answers, attempt.state.ai ?? {});
+
+  /** Stores AI feedback on the finished attempt and recalculates its score, which a check can change. */
+  const saveAi = (questionId: string, changes: { check?: AiCheck; explanation?: AiExplanation }) => {
+    const state = {
+      ...attempt.state,
+      ai: changes.check ? { ...attempt.state.ai, [questionId]: changes.check } : attempt.state.ai,
+      explanations: changes.explanation ? { ...attempt.state.explanations, [questionId]: changes.explanation } : attempt.state.explanations,
+    };
+    const next = summarize(questions, state.answers, state.ai ?? {});
+    const passed = hasPassed(located.assessment.mode, located.assessment.passMark, next);
+    data.attempts
+      .amend(attempt.id, state, { earned: next.earned, total: next.total, passed })
+      .then(() => applyAttemptCompletion(data, document, located, passed))
+      .catch(() => {});
+  };
   const isDeck = attempt.assessmentId === DECK_ASSESSMENT_ID;
   const seconds = attempt.finishedAt ? Math.max(1, Math.round((attempt.finishedAt - attempt.startedAt) / 1000)) : null;
   const duration =
@@ -122,6 +141,18 @@ export default function ResultScreen() {
               <Markdown source={question.prompt} />
               <QuestionView question={question} answer={attempt.state.answers[question.id]} onChange={noop} locked revealed />
               {question.explanation ? <Feedback question={question} grade={result.grade} explanationOnly /> : null}
+              {isDeck ? null : (
+                <AiActions
+                  question={question}
+                  answer={attempt.state.answers[question.id]}
+                  correct={result.grade.outcome === 'correct'}
+                  allowCheck={canCheck(question) && (question.type === 'essay' || grade(question, attempt.state.answers[question.id]).outcome !== 'correct')}
+                  check={attempt.state.ai?.[question.id]}
+                  explanation={attempt.state.explanations?.[question.id]}
+                  onCheck={(check) => saveAi(question.id, { check })}
+                  onExplain={(explanation) => saveAi(question.id, { explanation })}
+                />
+              )}
             </View>
           );
         })}

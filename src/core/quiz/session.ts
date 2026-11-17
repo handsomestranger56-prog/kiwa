@@ -6,6 +6,7 @@ import {
   DECK_FORMAT,
   QUIZ_FORMAT,
 } from '../schema';
+import type { AiCheck, AiExplanation } from './ai-feedback';
 import { type Answer, isAnswered, isSelfGraded } from './answers';
 
 /** Everything needed to put an attempt back exactly where it was left. */
@@ -16,6 +17,10 @@ export type SessionState = {
   answers: Record<string, Answer>;
   /** Practice only: questions whose feedback has been shown. Their answers are locked. */
   checked: string[];
+  /** AI grading of written answers, by question id. Its score replaces the app's own. */
+  ai?: Record<string, AiCheck>;
+  /** Longer explanations asked for, by question id. */
+  explanations?: Record<string, AiExplanation>;
 };
 
 /** The id under which a deck's cards are studied. Decks have no assessment of their own. */

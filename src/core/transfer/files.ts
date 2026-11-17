@@ -48,6 +48,8 @@ const backupItemSchema = z.object({
           index: z.number().int().nonnegative(),
           answers: z.record(z.string(), z.unknown()),
           checked: z.array(z.string()),
+          ai: z.record(z.string(), z.unknown()).optional(),
+          explanations: z.record(z.string(), z.unknown()).optional(),
         }),
         startedAt: z.number().int(),
         finishedAt: z.number().int().nullable(),

@@ -20,7 +20,11 @@ export function matchesAccepted(accepted: readonly string[], text: string): bool
   return given !== '' && accepted.some((candidate) => normalizeText(candidate) === given);
 }
 
-export function grade(question: Question, stored: Answer | undefined): Grade {
+/**
+ * Grades one answer. An AI check of a written answer, when there is one, decides the score.
+ */
+export function grade(question: Question, stored: Answer | undefined, check?: { score: number }): Grade {
+  if (check && (question.type === 'essay' || question.type === 'short_answer')) return toGrade(check.score);
   return toGrade(scoreOf(question, answerFor(question, stored)));
 }
 
@@ -103,13 +107,17 @@ export type Summary = {
   counts: Record<Outcome, number>;
 };
 
-export function summarize(questions: readonly Question[], answers: Record<string, Answer>): Summary {
+export function summarize(
+  questions: readonly Question[],
+  answers: Record<string, Answer>,
+  checks: Record<string, { score: number }> = {},
+): Summary {
   const counts: Record<Outcome, number> = { correct: 0, partial: 0, incorrect: 0 };
   let earned = 0;
   let total = 0;
 
   const results = questions.map((question) => {
-    const result = grade(question, answers[question.id]);
+    const result = grade(question, answers[question.id], checks[question.id]);
     counts[result.outcome] += 1;
     total += question.points;
     earned += question.points * result.score;

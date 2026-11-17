@@ -118,6 +118,18 @@ export class AttemptsRepository {
     this.changes.notify();
   }
 
+  /** Updates a finished attempt, for example after an AI check changed a score. */
+  async amend(id: string, state: SessionState, result: AttemptResult): Promise<void> {
+    await this.db.run('UPDATE attempts SET state = ?, earned = ?, total = ?, passed = ? WHERE id = ? AND finished_at IS NOT NULL', [
+      JSON.stringify(state),
+      result.earned,
+      result.total,
+      result.passed === null ? null : result.passed ? 1 : 0,
+      id,
+    ]);
+    this.changes.notify();
+  }
+
   async discard(id: string): Promise<void> {
     await this.db.run('DELETE FROM attempts WHERE id = ?', [id]);
     this.changes.notify();

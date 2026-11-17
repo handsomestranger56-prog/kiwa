@@ -6,6 +6,7 @@ import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import type { DocumentKind } from '@/core/schema';
 import type { LibraryFilter } from '@/data/library-repository';
 import { useQuery } from '@/data/provider';
+import { JobsBanner } from '@/features/ai/jobs-banner';
 import { useCreateFlow } from '@/features/library/create-flow';
 import { useItemActions } from '@/features/library/item-actions';
 import { ItemRow } from '@/features/library/item-row';
@@ -94,6 +95,7 @@ export default function LibraryScreen() {
                 />
               ))}
             </ScrollView>
+            <JobsBanner />
           </View>
         }
         renderItem={({ item }) => (
