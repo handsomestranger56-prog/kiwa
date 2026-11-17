@@ -22,7 +22,7 @@ type AttemptRow = {
 };
 
 /** Settings that describe this install and should not travel to another device. */
-const LOCAL_SETTINGS = new Set(['samples.seeded']);
+const LOCAL_SETTINGS = new Set(['samples.seeded', 'focus.timer', 'notify.scheduled']);
 
 /**
  * Copies everything on the device into one file and back: content, marks, results and settings.
@@ -88,7 +88,17 @@ export class BackupService {
     }
 
     const providers = (await this.providers.list()).map(({ id, kind, label, baseUrl, models, enabled }) => ({ id, kind, label, baseUrl, models, enabled }));
-    return { format: BACKUP_FORMAT, createdAt: this.now(), items, settings, providers };
+    const focusSessions = await this.db.all<{ id: string; item_id: string | null; started_at: number; ended_at: number; minutes: number; interruptions: number }>(
+      'SELECT * FROM focus_sessions ORDER BY ended_at',
+    );
+    return {
+      format: BACKUP_FORMAT,
+      createdAt: this.now(),
+      items,
+      settings,
+      providers,
+      focusSessions: focusSessions.map((row) => ({ id: row.id, itemId: row.item_id, startedAt: row.started_at, endedAt: row.ended_at, minutes: row.minutes, interruptions: row.interruptions })),
+    };
   }
 
   /**
@@ -145,6 +155,13 @@ export class BackupService {
             ],
           );
         }
+      }
+
+      for (const session of backup.focusSessions) {
+        await this.db.run(
+          'INSERT OR REPLACE INTO focus_sessions (id, item_id, started_at, ended_at, minutes, interruptions) VALUES (?, ?, ?, ?, ?, ?)',
+          [session.id, session.itemId, session.startedAt, session.endedAt, session.minutes, session.interruptions],
+        );
       }
 
       for (const provider of backup.providers) {

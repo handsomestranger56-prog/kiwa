@@ -10,6 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DataProvider } from '@/data/provider';
 import { JobRunnerProvider } from '@/features/ai/job-runner';
+import { FocusProvider } from '@/features/focus/focus-provider';
+import { NotificationsSync } from '@/features/focus/notifications-sync';
 import { AppText } from '@/ui/text';
 import { monoFont, spacing, useTheme } from '@/ui/theme';
 
@@ -41,13 +43,19 @@ export default function RootLayout() {
           renderError={(error) => <StartupError error={error} />}
         >
           <JobRunnerProvider>
-            <Stack
-              screenOptions={{ headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}
-            >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
-              <Stack.Screen name="provider/[id]" options={{ title: '' }} />
-            </Stack>
+            <FocusProvider>
+              <NotificationsSync />
+              <Stack
+                screenOptions={{
+                  headerShadowVisible: false,
+                  headerBackButtonDisplayMode: 'minimal',
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
+                <Stack.Screen name="provider/[id]" options={{ title: '' }} />
+              </Stack>
+            </FocusProvider>
           </JobRunnerProvider>
         </DataProvider>
       </ThemeProvider>

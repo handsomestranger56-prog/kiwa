@@ -10,6 +10,10 @@ let failed = false;
 for (const file of files) {
   console.log(`\n== ${file}`);
   const result = spawnSync(process.execPath, [path.join(__dirname, file), ...process.argv.slice(2)], { stdio: 'inherit' });
-  if (result.status !== 0) failed = true;
+  if (result.status !== 0) {
+    failed = true;
+    // A script that crashes outside a step prints no FAIL line of its own.
+    console.log(`FAIL ${file} exited with code ${result.status}`);
+  }
 }
 process.exit(failed ? 1 : 0);

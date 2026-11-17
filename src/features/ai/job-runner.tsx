@@ -1,8 +1,11 @@
 import { type PropsWithChildren, createContext, use, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { AiError } from '@/core/ai';
 import { type Ask, type Job, type JobError, type JobState, GenerationError, missingLessons, nextStep, runStep } from '@/core/generate/plan';
 import { type AppData, useData } from '@/data/provider';
+import i18n from '@/i18n';
+import { showNow } from '@/platform/notifications';
 
 import { callModel } from './call';
 
@@ -98,8 +101,16 @@ export class JobRunner {
     return next;
   }
 
-  private save(id: string, state: JobState, status?: Job['status']): Promise<void> {
-    return this.merge(id, () => state).then(() => (status ? this.data.jobs.update(id, { status, error: null }) : undefined));
+  private async save(id: string, state: JobState, status?: Job['status']): Promise<void> {
+    await this.merge(id, () => state);
+    if (!status) return;
+    await this.data.jobs.update(id, { status, error: null });
+    // Someone who left the app while it worked hears that it needs them.
+    if ((status === 'ready' || status === 'outline') && AppState.currentState !== 'active') {
+      const job = await this.data.jobs.get(id);
+      const topic = job?.request.topic.split('\n')[0] ?? '';
+      await showNow(i18n.t(status === 'ready' ? 'notify.generated.title' : 'notify.outline.title'), topic).catch(() => {});
+    }
   }
 
   private async fail(id: string, error: unknown): Promise<void> {

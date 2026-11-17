@@ -99,6 +99,18 @@ export const migrations: readonly string[] = [
     updated_at INTEGER NOT NULL
   );
   `,
+  // 5: finished focus sessions
+  `
+  CREATE TABLE focus_sessions (
+    id TEXT PRIMARY KEY NOT NULL,
+    item_id TEXT,
+    started_at INTEGER NOT NULL,
+    ended_at INTEGER NOT NULL,
+    minutes INTEGER NOT NULL,
+    interruptions INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX focus_sessions_end ON focus_sessions (ended_at);
+  `,
 ];
 
 export const LATEST_VERSION = migrations.length;

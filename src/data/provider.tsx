@@ -14,6 +14,7 @@ import { BackupService } from './backup';
 import { ChangeFeed } from './changes';
 import { createExpoDriver } from './expo-driver';
 import { LibraryRepository } from './library-repository';
+import { FocusRepository } from './focus-repository';
 import { JobsRepository } from './jobs-repository';
 import { migrate } from './migrations';
 import { ProvidersRepository } from './providers-repository';
@@ -28,6 +29,7 @@ export type AppData = {
   backups: BackupService;
   providers: ProvidersRepository;
   jobs: JobsRepository;
+  focus: FocusRepository;
   settings: SettingsRepository;
   changes: ChangeFeed;
 };
@@ -53,6 +55,7 @@ async function openAppData(): Promise<AppData> {
     backups: new BackupService(driver, library, providers, changes),
     providers,
     jobs: new JobsRepository(driver, changes),
+    focus: new FocusRepository(driver, changes),
     settings,
     changes,
   };

@@ -5,7 +5,7 @@ work where it stopped. It is written to the assistant picking the work up.
 
 ---
 
-You are continuing the build of a mobile app in this repository. Seven of nine planned steps are
+You are continuing the build of a mobile app in this repository. Eight of nine planned steps are
 done and pushed. Read this file fully, then `README.md` and `AGENTS.md`, before changing anything.
 
 ## The plan and where it lives
@@ -78,7 +78,8 @@ All on branch `claude/quirky-cori-s17bdd`.
 | 4 Import, export, Prompt for AI | `3a88235` | Create form, prompt builder, tolerant import with automatic repairs, conflict handling, fix prompt, export, lesson files, backup and restore |
 | 5 Editor and drag-and-drop types | `19d1e0a` | Editing of details, lessons, blocks, assessments and every question type, with reorder and undo on removal; matching, ordering and sort-into-groups with drag and a tap alternative |
 | 6 Settings and providers | `1053fd1` | Provider list, keys in the secure store, test and detect models, model checkboxes, default model, adapters for Claude (official SDK), Gemini and OpenAI-compatible with a base URL; providers travel in backups without keys |
-| 7 Generate, Check, Explain deeper | see `git log` | Generate on the create form with a model picker; course outline the user edits before lessons are written; lessons two at a time; every step saved and resumed on app start; one repair request per bad reply; review before adding; Check with AI for essays and short answers, its score counts and is marked; Explain deeper; tokens shown after every AI action |
+| 7 Generate, Check, Explain deeper | `45e27ce` | Generate on the create form with a model picker; course outline the user edits before lessons are written; lessons two at a time; every step saved and resumed on app start; one repair request per bad reply; review before adding; Check with AI for essays and short answers, its score counts and is marked; Explain deeper; tokens shown after every AI action |
+| 8 Focus, Pomodoro, notifications | see `git log` | Focus tab with a Pomodoro timer stored as an end time, sessions logged with interruptions, streak; focus view on lessons with the header hidden and the screen kept awake; reminders in Settings; one planner reconciles local notifications; a notice when generation finishes in the background |
 
 Question types today: `single_choice`, `multiple_choice`, `true_false`, `short_answer`, `cloze`,
 `essay`, `flashcard`, `matching`, `ordering`, `categorize`.
@@ -151,7 +152,7 @@ Work one step at a time, in this order.
 - Done when a course, a quiz and a deck are each generated with a picked model, an interrupted
   course run finishes after reopening the app, and an essay comes back with a score and feedback.
 
-### Step 8: Focus, Pomodoro and notifications
+### Step 8: Focus, Pomodoro and notifications (built)
 
 - Focus view: lesson full screen, navigation hidden, screen kept awake, leaving the app during a
   session recorded as an interruption.
@@ -211,6 +212,17 @@ Work one step at a time, in this order.
   marked `running` when the app starts. Jobs live in the `jobs` table.
 - AI feedback is stored in the attempt's state (`ai` and `explanations`) and travels in backups.
 - Not built yet: the notification when a run finishes. That belongs to step 8's notification planner.
+
+## Focus and notifications as built
+
+- `src/core/focus`: the timer (`pomodoro.ts`), study days and streaks (`days.ts`), and the
+  notification planner with `reconcile` (`planner.ts`). All pure and tested.
+- `src/features/focus/notifications-sync.tsx` re-plans on app start, on returning to the front and
+  after any write. It takes `reviewsDueAt`, which step 9 must supply; today it is always null.
+- The app records what it scheduled in the `notify.scheduled` setting, because the device does not
+  report trigger times back reliably. On the web the schedule is kept in `globalThis.__notifications`.
+- On the web, hidden tabs stay mounted, so text from the Focus tab can match in other screens.
+  Narrow browser lookups with `.locator('visible=true')`.
 
 ## Things that will trip you up
 

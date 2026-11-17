@@ -6,6 +6,7 @@ import { appendLesson, backupFile, readImport } from '@/core/transfer/files';
 import { AttemptsRepository } from './attempts-repository';
 import { BackupService } from './backup';
 import { ChangeFeed } from './changes';
+import { FocusRepository } from './focus-repository';
 import { LibraryRepository } from './library-repository';
 import { migrate } from './migrations';
 import { ProvidersRepository } from './providers-repository';
@@ -221,5 +222,31 @@ describe('ProvidersRepository', () => {
     if (!read.ok || read.kind !== 'backup') throw new Error('backup did not read back');
     await target.backups.restore(read.backup);
     expect(await target.providers.defaultChoice()).toMatchObject({ providerId: id, model: 'gemini-3-pro' });
+  });
+});
+
+describe('FocusRepository', () => {
+  it('totals the local day and finds every day with study', async () => {
+
+    const d = await device();
+    const focus = new FocusRepository(d.db, d.changes);
+    const offset = 0;
+    const day1 = Date.UTC(2026, 2, 9, 10);
+    const day2 = Date.UTC(2026, 2, 10, 10);
+    await focus.log({ startedAt: day1 - 25 * 60_000, endedAt: day1, minutes: 25, interruptions: 1, itemId: null });
+    await focus.log({ startedAt: day2 - 25 * 60_000, endedAt: day2, minutes: 25, interruptions: 0, itemId: null });
+    await focus.log({ startedAt: day2, endedAt: day2 + 25 * 60_000, minutes: 25, interruptions: 2, itemId: 'x' });
+    expect(await focus.day(day2, offset)).toEqual({ sessions: 2, minutes: 50, interruptions: 2 });
+
+    await d.library.add(valid(sampleQuizInput));
+    const attempt = await d.attempts.start({ itemId: 'sample-git', lessonId: null, assessmentId: 'git-quiz', mode: 'practice', state: { questionIds: [], index: 0, answers: {}, checked: [] } });
+    await d.attempts.finish(attempt.id, attempt.state, { earned: 0, total: 0, passed: null });
+    const days = await focus.studyDays(offset);
+    expect(days.has('2026-03-09')).toBe(true);
+    expect(days.has('2026-03-10')).toBe(true);
+    expect(days.size).toBe(3);
+
+    const backup = await d.backups.create();
+    expect(backup.focusSessions).toHaveLength(3);
   });
 });

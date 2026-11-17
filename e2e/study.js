@@ -10,7 +10,7 @@ const { start } = require('./harness');
   const seen = (value) => text(value).waitFor();
 
   await page.goto(base + '/');
-  await page.getByText('How to study so it sticks').waitFor({ timeout: 20000 });
+  await page.getByText('How to study so it sticks').first().waitFor({ timeout: 20000 });
 
   await step('course: start opens lesson 1 with formatted content', async () => {
     await h.open('How to study so it sticks');
@@ -203,7 +203,7 @@ const { start } = require('./harness');
 
   await step('results survive a reload', async () => {
     await page.goto(base + '/');
-    await page.getByText('How to study so it sticks').waitFor({ timeout: 20000 });
+    await page.getByText('How to study so it sticks').first().waitFor({ timeout: 20000 });
     const completed = await page.getByText('COMPLETED', { exact: false }).count();
     if (completed < 2) throw new Error(`expected 2 completed items, saw ${completed}`);
   });

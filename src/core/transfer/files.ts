@@ -68,6 +68,18 @@ export const backupSchema = z.object({
   items: z.array(backupItemSchema),
   settings: z.record(z.string(), z.string()).default({}),
   /** Provider settings without their API keys. Keys never leave the device's secure store. */
+  focusSessions: z
+    .array(
+      z.object({
+        id: idSchema,
+        itemId: z.string().nullable().default(null),
+        startedAt: z.number().int(),
+        endedAt: z.number().int(),
+        minutes: z.number().int().nonnegative(),
+        interruptions: z.number().int().nonnegative().default(0),
+      }),
+    )
+    .default([]),
   providers: z
     .array(
       z.object({
