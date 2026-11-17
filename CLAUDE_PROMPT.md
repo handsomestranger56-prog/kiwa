@@ -5,7 +5,7 @@ work where it stopped. It is written to the assistant picking the work up.
 
 ---
 
-You are continuing the build of a mobile app in this repository. Four of nine planned steps are
+You are continuing the build of a mobile app in this repository. Five of nine planned steps are
 done and pushed. Read this file fully, then `README.md` and `AGENTS.md`, before changing anything.
 
 ## The plan and where it lives
@@ -76,9 +76,14 @@ All on branch `claude/quirky-cori-s17bdd`.
 | 1 Foundation, 2 Format and library | `a8d5cdd` | Project, lint, tests, CI, theme, translations, SQLite with migrations, the schema with seven question types, library with search, filters, favorites, completed, trash with undo, samples |
 | 3 Lesson player and quiz engine | `757ed26` | Lesson reader, Markdown subset, player for all seven types in practice, test and exam modes, grading, attempts saved and resumed, results with review, course resume, deck study |
 | 4 Import, export, Prompt for AI | `3a88235` | Create form, prompt builder, tolerant import with automatic repairs, conflict handling, fix prompt, export, lesson files, backup and restore |
+| 5 Editor and drag-and-drop types | see `git log` | Editing of details, lessons, blocks, assessments and every question type, with reorder and undo on removal; matching, ordering and sort-into-groups with drag and a tap alternative |
 
 Question types today: `single_choice`, `multiple_choice`, `true_false`, `short_answer`, `cloze`,
-`essay`, `flashcard`.
+`essay`, `flashcard`, `matching`, `ordering`, `categorize`.
+
+Editing: pure document edits in `src/core/edit/document.ts`, question form state in
+`src/core/edit/drafts.ts`, screens under `src/app/item/[id]/edit/`. Structural changes save at once
+and a removal can be undone from the message that follows it.
 
 Where things are:
 
@@ -98,7 +103,7 @@ Where things are:
 
 Work one step at a time, in this order.
 
-### Step 5: Editor and drag-and-drop question types
+### Step 5: Editor and drag-and-drop question types (built)
 
 - Edit courses, lessons and blocks on the phone, with reordering, adding and removing.
 - An editor for every question type, including the seven that exist.

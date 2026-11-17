@@ -75,6 +75,34 @@ export const flashcardSchema = z.object({
   back: textSchema,
 });
 
+export const matchingSchema = z.object({
+  ...base,
+  type: z.literal('matching'),
+  /** Each left item belongs with its right item. The right side is shown shuffled. */
+  pairs: z
+    .array(z.object({ left: textSchema, right: textSchema }))
+    .min(2, 'Give at least two pairs.')
+    .max(10),
+});
+
+export const orderingSchema = z.object({
+  ...base,
+  type: z.literal('ordering'),
+  /** Written in the correct order. Shown shuffled. */
+  items: z.array(textSchema).min(2, 'Give at least two items to put in order.').max(10),
+});
+
+export const categorizeSchema = z.object({
+  ...base,
+  type: z.literal('categorize'),
+  categories: z.array(textSchema).min(2, 'Give at least two groups.').max(6),
+  /** `category` is a position in `categories`, starting at 0. */
+  items: z
+    .array(z.object({ text: textSchema, category: z.number().int().nonnegative() }))
+    .min(2, 'Give at least two items to sort.')
+    .max(20),
+});
+
 export const questionSchema = z
   .discriminatedUnion('type', [
     singleChoiceSchema,
@@ -84,6 +112,9 @@ export const questionSchema = z
     clozeSchema,
     essaySchema,
     flashcardSchema,
+    matchingSchema,
+    orderingSchema,
+    categorizeSchema,
   ])
   .superRefine((question, ctx) => {
     for (const issue of questionIssues(question)) {
@@ -104,6 +135,9 @@ export const QUESTION_TYPES = [
   'cloze',
   'essay',
   'flashcard',
+  'matching',
+  'ordering',
+  'categorize',
 ] as const satisfies readonly QuestionType[];
 
 const GAP_PATTERN = /\{\{\s*([A-Za-z0-9_-]+)\s*\}\}/g;
@@ -167,6 +201,29 @@ function questionIssues(question: z.infer<typeof questionSchema>): Issue[] {
         });
       }
     });
+  }
+
+  if (question.type === 'categorize') {
+    question.items.forEach((item, index) => {
+      if (item.category >= question.categories.length) {
+        issues.push({
+          path: ['items', index, 'category'],
+          message: `Group ${item.category} does not exist. The last group is ${question.categories.length - 1}.`,
+        });
+      }
+    });
+    question.categories.forEach((_, category) => {
+      if (!question.items.some((item) => item.category === category)) {
+        issues.push({ path: ['categories', category], message: 'No item belongs to this group.' });
+      }
+    });
+  }
+
+  if (question.type === 'matching') {
+    const lefts = question.pairs.map((pair) => pair.left);
+    if (new Set(lefts).size !== lefts.length) {
+      issues.push({ path: ['pairs'], message: 'Two pairs have the same left side.' });
+    }
   }
 
   return issues;

@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +20,7 @@ type Options = {
 export function useItemActions({ onRemoved }: Options = {}) {
   const { t } = useTranslation();
   const { library } = useData();
+  const router = useRouter();
   const [target, setTarget] = useState<LibraryItem | null>(null);
   const [renaming, setRenaming] = useState<LibraryItem | null>(null);
   const [snackbar, setSnackbar] = useState<SnackbarMessage | null>(null);
@@ -61,6 +63,12 @@ export function useItemActions({ onRemoved }: Options = {}) {
 
   const actions: SheetAction[] = target
     ? [
+        {
+          key: 'edit',
+          icon: 'edit',
+          label: t('editor.edit'),
+          onPress: () => router.push({ pathname: '/item/[id]/edit', params: { id: target.id } }),
+        },
         { key: 'rename', icon: 'edit', label: t('actions.rename'), onPress: () => setRenaming(target) },
         {
           key: 'favorite',

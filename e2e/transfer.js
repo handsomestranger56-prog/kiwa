@@ -142,7 +142,7 @@ const broken = JSON.stringify({ format: 'deck/1', id: 'bad-deck', title: 'Broken
   let exported;
   await step('export: a quiz is saved as a file that holds content only', async () => {
     await home();
-    await page.getByText('Git in ten minutes').click();
+    await h.open('Git in ten minutes');
     await top('Add to favorites').click();
     await top('More actions').click();
     exported = await download(() => page.getByText('Export', { exact: true }).locator('visible=true').last().click());
@@ -171,7 +171,7 @@ const broken = JSON.stringify({ format: 'deck/1', id: 'bad-deck', title: 'Broken
   let lessonExport;
   await step('lesson: flashcards from a lesson prefills the form with its text', async () => {
     await home();
-    await page.getByText('How to study so it sticks').click();
+    await h.open('How to study so it sticks');
     await page.getByText('1. Recall beats rereading').click();
     await button('Lesson actions').click();
     await page.getByText('Make flashcards from this lesson').click();
@@ -233,12 +233,11 @@ const broken = JSON.stringify({ format: 'deck/1', id: 'bad-deck', title: 'Broken
 
   await step('restore: a change made after the backup is undone', async () => {
     await page.getByRole('tab', { name: 'Library' }).click();
-    await page.getByText('Git in eleven minutes').click();
+    await h.open('Git in eleven minutes');
     await top('Remove from favorites').click();
     await top('More actions').click();
     await page.getByText('Move to trash').locator('visible=true').last().click();
-    await page.getByText('Clipboard deck').waitFor();
-    if (await page.getByText('Git in eleven minutes').count()) throw new Error('quiz still listed after removing');
+    await h.gone('Git in eleven minutes');
 
     await page.getByRole('tab', { name: 'Settings' }).click();
     await page.getByText('Import or restore').last().click();
@@ -250,7 +249,7 @@ const broken = JSON.stringify({ format: 'deck/1', id: 'bad-deck', title: 'Broken
     await button('Restore').click();
     await seen('Restored ');
     await home();
-    await page.getByText('Git in eleven minutes').click();
+    await h.open('Git in eleven minutes');
     await button('Remove from favorites').waitFor();
   });
 

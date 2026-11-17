@@ -46,7 +46,7 @@ const { start } = require('./harness');
     await page.getByText('Capital cities').waitFor();
   });
   await step('open the sample course', async () => {
-    await page.getByText('How to study so it sticks').click();
+    await h.open('How to study so it sticks');
     await page.getByText('1. Recall beats rereading').waitFor();
     await page.getByRole('button', { name: 'Mark lesson as completed' }).first().click();
     await page.getByRole('button', { name: 'Mark lesson as not completed' }).waitFor();

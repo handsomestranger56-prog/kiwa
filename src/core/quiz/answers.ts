@@ -16,7 +16,13 @@ export type Answer =
   | { type: 'cloze'; gaps: Record<string, string> }
   /** `submitted` locks the text and reveals the model answer. `rating` is the learner's own score. */
   | { type: 'essay'; text: string; submitted: boolean; rating: EssayRating | null }
-  | { type: 'flashcard'; revealed: boolean; rating: FlashcardRating | null };
+  | { type: 'flashcard'; revealed: boolean; rating: FlashcardRating | null }
+  /** For each left item, the position of the chosen right item in the question's `pairs`. */
+  | { type: 'matching'; matches: (number | null)[] }
+  /** Positions in the question's `items`, in the order the learner arranged them. Null until they move one. */
+  | { type: 'ordering'; order: number[] | null }
+  /** For each item, the position of the group it was put in. */
+  | { type: 'categorize'; placements: (number | null)[] };
 
 export type AnswerOf<T extends Answer['type']> = Extract<Answer, { type: T }>;
 
@@ -36,6 +42,12 @@ export function emptyAnswer(question: Question): Answer {
       return { type: 'essay', text: '', submitted: false, rating: null };
     case 'flashcard':
       return { type: 'flashcard', revealed: false, rating: null };
+    case 'matching':
+      return { type: 'matching', matches: question.pairs.map(() => null) };
+    case 'ordering':
+      return { type: 'ordering', order: null };
+    case 'categorize':
+      return { type: 'categorize', placements: question.items.map(() => null) };
   }
 }
 
@@ -69,6 +81,12 @@ export function isAnswered(question: Question, stored: Answer | undefined): bool
     case 'essay':
     case 'flashcard':
       return answer.rating !== null;
+    case 'matching':
+      return question.type === 'matching' && question.pairs.every((_, index) => typeof answer.matches[index] === 'number');
+    case 'ordering':
+      return answer.order !== null;
+    case 'categorize':
+      return question.type === 'categorize' && question.items.every((_, index) => typeof answer.placements[index] === 'number');
   }
 }
 

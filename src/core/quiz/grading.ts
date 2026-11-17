@@ -60,6 +60,29 @@ function scoreOf(question: Question, answer: Answer): number {
 
     case 'flashcard':
       return answer.type === 'flashcard' && answer.rating ? FLASHCARD_SCORE[answer.rating] : 0;
+
+    case 'matching': {
+      if (answer.type !== 'matching') return 0;
+      // Compared by text, so two pairs that share a right side are interchangeable.
+      const right = question.pairs.filter((pair, index) => {
+        const chosen = answer.matches[index];
+        return typeof chosen === 'number' && question.pairs[chosen]?.right === pair.right;
+      }).length;
+      return right / question.pairs.length;
+    }
+
+    case 'ordering': {
+      if (answer.type !== 'ordering' || !answer.order) return 0;
+      const order = answer.order;
+      const right = question.items.filter((item, position) => question.items[order[position]] === item).length;
+      return right / question.items.length;
+    }
+
+    case 'categorize': {
+      if (answer.type !== 'categorize') return 0;
+      const right = question.items.filter((item, index) => answer.placements[index] === item.category).length;
+      return right / question.items.length;
+    }
   }
 }
 

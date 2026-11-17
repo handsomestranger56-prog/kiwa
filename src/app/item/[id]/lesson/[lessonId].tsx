@@ -158,6 +158,12 @@ export default function LessonScreen() {
         onClose={() => setMenuOpen(false)}
         actions={[
           {
+            key: 'edit',
+            icon: 'edit',
+            label: t('editor.lesson.screen'),
+            onPress: () => router.push({ pathname: '/item/[id]/edit/lesson/[lessonId]', params: { id, lessonId: lesson.id } }),
+          },
+          {
             key: 'quiz',
             icon: 'quiz',
             label: t('lesson.makeQuiz'),

@@ -36,6 +36,9 @@ const glyphs = {
   paste: { ios: 'doc.on.clipboard', material: 'content_paste' },
   file: { ios: 'doc', material: 'description' },
   minus: { ios: 'minus', material: 'remove' },
+  up: { ios: 'chevron.up', material: 'keyboard_arrow_up' },
+  down: { ios: 'chevron.down', material: 'keyboard_arrow_down' },
+  drag: { ios: 'line.3.horizontal', material: 'drag_indicator' },
 } as const satisfies Record<string, Glyph>;
 
 export type IconName = keyof typeof glyphs;

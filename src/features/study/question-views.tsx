@@ -11,6 +11,8 @@ import { InlineMarkdown, Markdown } from '@/ui/markdown';
 import { AppText } from '@/ui/text';
 import { type ColorName, MIN_TOUCH, radius, spacing, useTheme } from '@/ui/theme';
 
+import { Categorize, Matching, Ordering } from './arrange-views';
+
 type ViewProps<T extends Question['type']> = {
   question: Extract<Question, { type: T }>;
   answer: AnswerOf<T>;
@@ -49,6 +51,12 @@ export function QuestionView({ question, answer, onChange, locked, revealed }: P
       return <Essay question={question} answer={current as AnswerOf<'essay'>} {...shared} />;
     case 'flashcard':
       return <Flashcard question={question} answer={current as AnswerOf<'flashcard'>} {...shared} />;
+    case 'matching':
+      return <Matching question={question} answer={current as AnswerOf<'matching'>} {...shared} />;
+    case 'ordering':
+      return <Ordering question={question} answer={current as AnswerOf<'ordering'>} {...shared} />;
+    case 'categorize':
+      return <Categorize question={question} answer={current as AnswerOf<'categorize'>} {...shared} />;
   }
 }
 

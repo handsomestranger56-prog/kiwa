@@ -13,7 +13,7 @@ const { start } = require('./harness');
   await page.getByText('How to study so it sticks').waitFor({ timeout: 20000 });
 
   await step('course: start opens lesson 1 with formatted content', async () => {
-    await page.getByText('How to study so it sticks').click();
+    await h.open('How to study so it sticks');
     await button('Start course').click();
     await seen('Lesson 1 of 3');
     await seen('retrieval practice');
@@ -105,8 +105,8 @@ const { start } = require('./harness');
   await step('last lesson completes and returns to the course', async () => {
     await button('Complete lesson').click();
     await seen('Final exam');
-    const done = await page.getByRole('button', { name: 'Mark lesson as not completed' }).count();
-    if (done !== 3) throw new Error(`expected 3 completed lessons, saw ${done}`);
+    // The course re-reads its marks after the write, so wait for all three instead of counting once.
+    await page.waitForFunction(() => document.querySelectorAll('[aria-label="Mark lesson as not completed"]').length >= 3, null, { timeout: 8000 });
   });
 
   await step('exam: leave halfway, resume with the answer kept', async () => {
@@ -153,7 +153,7 @@ const { start } = require('./harness');
   });
 
   await step('quiz: finishing marks it completed', async () => {
-    await page.getByText('Git in ten minutes').click();
+    await h.open('Git in ten minutes');
     await button('Start').click();
     await page.getByRole('radio', { name: 'A snapshot of the whole project' }).click();
     await button('Check').click();
@@ -180,7 +180,7 @@ const { start } = require('./harness');
   });
 
   await step('deck: flip and rate every card', async () => {
-    await page.getByText('Everyday keyboard shortcuts').click();
+    await h.open('Everyday keyboard shortcuts');
     await button('Study').click();
     await seen('Card 1 of 10');
     if (!(await button('Next').isDisabled())) throw new Error('Next enabled before rating');

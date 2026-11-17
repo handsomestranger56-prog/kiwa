@@ -108,10 +108,10 @@ export function Tag({ label, tone = 'neutral' }: TagProps) {
   );
 }
 
-type StepperProps = { label: string; value: number; min: number; max: number; onChange: (value: number) => void };
+type StepperProps = { label: string; value: number; min: number; max: number; step?: number; onChange: (value: number) => void };
 
 /** A number with minus and plus buttons, for small counts. */
-export function Stepper({ label, value, min, max, onChange }: StepperProps) {
+export function Stepper({ label, value, min, max, step = 1, onChange }: StepperProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   return (
@@ -122,7 +122,7 @@ export function Stepper({ label, value, min, max, onChange }: StepperProps) {
           icon="minus"
           label={t('common.fewer', { label })}
           color={value <= min ? 'border' : 'text'}
-          onPress={() => onChange(Math.max(min, value - 1))}
+          onPress={() => onChange(Math.max(min, value - step))}
         />
         <AppText variant="bodyStrong" style={styles.stepperValue} accessibilityLabel={`${label}: ${value}`}>
           {value}
@@ -131,7 +131,7 @@ export function Stepper({ label, value, min, max, onChange }: StepperProps) {
           icon="add"
           label={t('common.more', { label })}
           color={value >= max ? 'border' : 'text'}
-          onPress={() => onChange(Math.min(max, value + 1))}
+          onPress={() => onChange(Math.min(max, value + step))}
         />
       </View>
     </View>

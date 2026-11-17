@@ -150,6 +150,25 @@ function fixQuestion(question: Json, counts: Counts) {
     }
   }
 
+  // A group given by name instead of by position.
+  if (question.type === 'categorize' && Array.isArray(question.categories)) {
+    const categories = question.categories;
+    let changed = false;
+    asObjects(question.items).forEach((item) => {
+      const index = typeof item.category === 'string' ? categories.indexOf(item.category) : -1;
+      if (index >= 0) {
+        item.category = index;
+        changed = true;
+      }
+    });
+    if (changed) counts.converted += 1;
+  }
+
+  // An ordering written as objects with a text field.
+  if (question.type === 'ordering' && Array.isArray(question.items)) {
+    question.items = question.items.map((item) => (isObject(item) && typeof item.text === 'string' ? item.text : item));
+  }
+
   if (question.type === 'cloze') {
     asObjects(question.gaps).forEach((gap) => {
       if (typeof gap.id === 'number') gap.id = String(gap.id);

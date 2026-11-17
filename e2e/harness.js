@@ -114,7 +114,36 @@ async function start({ permissions = [], colorScheme = 'light' } = {}) {
   const home = async () => {
     await page.goto(`${base}/`);
     await page.getByText('How to study so it sticks').first().waitFor({ timeout: 20000 });
+    // The router finishes restoring its state a moment after the first paint. A tap before that is undone.
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
   };
+
+  /**
+   * Opens a library item by tapping its title. A tap during startup can be swallowed while the
+   * router restores its state, so the tap is repeated until the item screen is showing.
+   */
+  const open = async (title) => {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await page.getByText(title, { exact: true }).locator('visible=true').first().click();
+      try {
+        await page.waitForURL(/\/item\//, { timeout: 2500 });
+        await page.getByRole('button', { name: 'More actions', exact: true }).locator('visible=true').last().waitFor({ timeout: 4000 });
+        return;
+      } catch {
+        // Not there yet. Tap again.
+      }
+    }
+    throw new Error(`could not open ${title}`);
+  };
+
+  /** Waits until no visible element shows this text. Hidden screens behind the current one are ignored. */
+  const gone = (text) =>
+    page.waitForFunction(
+      (value) => ![...document.querySelectorAll('div[dir="auto"]')].some((node) => node.offsetParent !== null && node.textContent === value),
+      text,
+      { timeout: 8000 },
+    );
 
   const finish = async () => {
     console.log(steps.join('\n'));
@@ -126,7 +155,7 @@ async function start({ permissions = [], colorScheme = 'light' } = {}) {
     if (steps.some((line) => line.startsWith('FAIL'))) process.exitCode = 1;
   };
 
-  return { page, context, browser, base, out, steps, step, shot, button, top, seen, clipboard, download, chooseFile, home, finish, VIEWPORT };
+  return { page, context, browser, base, out, steps, step, shot, button, top, seen, clipboard, download, chooseFile, home, open, gone, finish, VIEWPORT };
 }
 
 module.exports = { start };
