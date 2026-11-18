@@ -32,7 +32,8 @@ export const claudeAdapter: Adapter = {
     const models: { id: string; label: string }[] = [];
     let after: string | null = null;
     for (let page = 0; page < 20; page += 1) {
-      const query: string = `limit=100${after ? `&after_id=${encodeURIComponent(after)}` : ''}`;
+      // 1000 is the most the API returns per page. Further pages are followed below.
+      const query: string = `limit=1000${after ? `&after_id=${encodeURIComponent(after)}` : ''}`;
       const data = (await requestJson(fetchImpl, `${base(connection)}/v1/models?${query}`, { headers: headers(connection) })) as ModelPage;
       for (const model of data.data ?? []) {
         if (typeof model.id === 'string') models.push({ id: model.id, label: model.display_name || model.id });

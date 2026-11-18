@@ -21,14 +21,14 @@ const lessonReply = (n: number) => {
 };
 
 /** A model that answers each kind of step correctly, and records what it was asked. */
-function scriptedModel(overrides: { lesson?: (n: number) => string; quiz?: () => string } = {}) {
+function scriptedModel(overrides: { lesson?: (n: number) => string; quiz?: () => string; outline?: Record<string, unknown> } = {}) {
   const prompts: string[] = [];
   let lessonCount = 0;
   const ask: Ask = async (request) => {
     prompts.push(request.prompt);
     const usage = { inputTokens: 100, outputTokens: 50 };
-    if (request.prompt.includes('Plan a course of')) {
-      return { text: JSON.stringify({ title: 'Kitchen physics', description: 'Cooking explained.', lessons: [{ title: 'Boiling', summary: 'Why water boils.' }, { title: 'Freezing' }, { title: 'Baking' }] }), usage };
+    if (request.prompt.includes('Plan a course')) {
+      return { text: JSON.stringify({ title: 'Kitchen physics', description: 'Cooking explained.', ...overrides.outline, lessons: [{ title: 'Boiling', summary: 'Why water boils.' }, { title: 'Freezing' }, { title: 'Baking' }] }), usage };
     }
     if (request.prompt.includes('Set `format` to "lesson/1".')) {
       lessonCount += 1;
@@ -150,6 +150,32 @@ describe('generating a course', () => {
     const course = assembleCourse(request(), state, () => 0.5);
     expect(course.id.startsWith('unicode-course-')).toBe(true);
     expect(parseDocument(course)).toMatchObject({ ok: true });
+  });
+});
+
+describe('letting the model choose', () => {
+  it('plans as many lessons as it sees fit, at the level it picks, and sizes each lesson itself', async () => {
+    const { ask, prompts } = scriptedModel({ outline: { level: 'advanced' } });
+    let current = await runAll(job({ level: 'auto', autoSize: true, lessons: 1 }), ask);
+    expect(prompts[0]).toContain('Choose how many lessons it needs, from 1 to 20');
+    expect(prompts[0]).toContain('`level`');
+    expect(prompts[0]).not.toContain('exactly');
+    // The number in the form is ignored: all three planned lessons are kept.
+    expect(current.state.outline?.lessons).toHaveLength(3);
+
+    current = await runAll({ ...current, status: 'running', state: approveOutline(current.state, current.state.outline!) }, ask);
+    const lessonPrompt = prompts.find((prompt) => prompt.includes('Set `format` to "lesson/1".'))!;
+    expect(lessonPrompt).toContain('2 to 8 questions, as many as the lesson needs');
+    expect(lessonPrompt).toContain('- Level: advanced');
+    const course = (current.state.result as { document: Course }).document;
+    expect(course.level).toBe('advanced');
+  });
+
+  it('leaves the level out when the model did not pick one', async () => {
+    const { ask } = scriptedModel();
+    let current = await runAll(job({ level: 'auto' }), ask);
+    current = await runAll({ ...current, status: 'running', state: approveOutline(current.state, current.state.outline!) }, ask);
+    expect((current.state.result as { document: Course }).document.level).toBeUndefined();
   });
 });
 

@@ -1,7 +1,7 @@
-import { type PropsWithChildren, createContext, use, useEffect, useState } from 'react';
+import { type PropsWithChildren, createContext, use, useEffect, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
-import { AiError } from '@/core/ai';
+import { type Usage, AiError, retryWait } from '@/core/ai';
 import { type Ask, type Job, type JobError, type JobState, GenerationError, missingLessons, nextStep, runStep } from '@/core/generate/plan';
 import { type AppData, useData } from '@/data/provider';
 import i18n from '@/i18n';
@@ -18,6 +18,11 @@ const PARALLEL_LESSONS = 2;
  */
 export class JobRunner {
   private active = new Set<string>();
+  /** Runs that hit a rate limit write one lesson at a time from then on. */
+  private throttled = new Set<string>();
+  /** When a run paused for a rate limit or a busy server will try again. */
+  private waits = new Map<string, number>();
+  private listeners = new Set<() => void>();
 
   constructor(private readonly data: AppData) {}
 
@@ -28,6 +33,22 @@ export class JobRunner {
 
   isActive(id: string): boolean {
     return this.active.has(id);
+  }
+
+  /** The time a paused run tries again, or null when it is not waiting. */
+  waitingUntil(id: string): number | null {
+    return this.waits.get(id) ?? null;
+  }
+
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+
+  private setWait(id: string, until: number | null): void {
+    if (until === null) this.waits.delete(id);
+    else this.waits.set(id, Math.max(until, this.waits.get(id) ?? 0));
+    for (const listener of this.listeners) listener();
   }
 
   /** Starts a run unless it is already going. Returns at once. */
@@ -44,7 +65,7 @@ export class JobRunner {
       const step = nextStep(job);
       if (!step) return;
 
-      const ask: Ask = (request) => callModel(this.data.providers, job.model, request);
+      const ask = this.askFor(job);
       try {
         if (step.type === 'lesson') {
           await this.writeLessons(job, ask);
@@ -59,9 +80,48 @@ export class JobRunner {
     }
   }
 
+  /**
+   * Sends requests for one run. Every request is counted, failed ones too. A rate limit or a busy
+   * server is waited out and the same request sent again, so the run carries on by itself.
+   */
+  private askFor(job: Job): Ask {
+    return async (request) => {
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          const reply = await callModel(this.data.providers, job.model, request);
+          await this.count(job.id, reply.usage, false);
+          return reply;
+        } catch (error) {
+          await this.count(job.id, error instanceof AiError ? error.usage : undefined, true);
+          const wait = retryWait(error, attempt);
+          if (wait === null) throw error;
+          if (error instanceof AiError && error.kind === 'rate') this.throttled.add(job.id);
+          this.setWait(job.id, Date.now() + wait);
+          await new Promise((resolve) => setTimeout(resolve, wait));
+          this.setWait(job.id, null);
+          // Discarded while it waited: stop here instead of spending another request.
+          const latest = await this.data.jobs.get(job.id);
+          if (!latest || latest.status !== 'running') throw error;
+        }
+      }
+    };
+  }
+
+  private count(id: string, usage: Usage | undefined, failed: boolean): Promise<void> {
+    return this.merge(id, (latest) => ({
+      ...latest,
+      usage: {
+        inputTokens: latest.usage.inputTokens + (usage?.inputTokens ?? 0),
+        outputTokens: latest.usage.outputTokens + (usage?.outputTokens ?? 0),
+        requests: latest.usage.requests + 1,
+        failed: (latest.usage.failed ?? 0) + (failed ? 1 : 0),
+      },
+    }));
+  }
+
   /** Writes several missing lessons at once. Each is saved as soon as it is done. */
   private async writeLessons(job: Job, ask: Ask): Promise<void> {
-    const batch = missingLessons(job.state).slice(0, PARALLEL_LESSONS);
+    const batch = missingLessons(job.state).slice(0, this.throttled.has(job.id) ? 1 : PARALLEL_LESSONS);
     let firstError: unknown = null;
     await Promise.all(
       batch.map(async (index) => {
@@ -73,11 +133,6 @@ export class JobRunner {
             return {
               ...latest,
               lessons,
-              usage: {
-                inputTokens: latest.usage.inputTokens + result.state.usage.inputTokens - job.state.usage.inputTokens,
-                outputTokens: latest.usage.outputTokens + result.state.usage.outputTokens - job.state.usage.outputTokens,
-                requests: latest.usage.requests + result.state.usage.requests - job.state.usage.requests,
-              },
               fixes: [...latest.fixes, ...result.state.fixes.slice(job.state.fixes.length)],
             };
           });
@@ -102,7 +157,8 @@ export class JobRunner {
   }
 
   private async save(id: string, state: JobState, status?: Job['status']): Promise<void> {
-    await this.merge(id, () => state);
+    // Usage is counted per request as it happens (see askFor), so the stored count wins.
+    await this.merge(id, (latest) => ({ ...state, usage: latest.usage }));
     if (!status) return;
     await this.data.jobs.update(id, { status, error: null });
     // Someone who left the app while it worked hears that it needs them.
@@ -136,6 +192,12 @@ export function JobRunnerProvider({ children }: PropsWithChildren) {
   }, [runner]);
 
   return <RunnerContext value={runner}>{children}</RunnerContext>;
+}
+
+/** When the run will try again after a rate limit or a busy server, or null. */
+export function useJobWait(id: string): number | null {
+  const runner = useJobRunner();
+  return useSyncExternalStore(runner.subscribe, () => runner.waitingUntil(id));
 }
 
 export function useJobRunner(): JobRunner {

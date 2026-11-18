@@ -169,6 +169,44 @@ function goodModel({ prompt }) {
     await seen('Ready to review');
   });
 
+  await step('a rate limit is waited out, and the failed request is counted', async () => {
+    ai.failures = [{ status: 429, body: { error: { code: 429, message: 'Quota exceeded', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '1s' }] } } }];
+    await openCreate();
+    await button('Quiz').click();
+    await field('Topic').fill('Patience');
+    await button('Generate').click();
+    await seen('The provider asked to slow down. Trying again in');
+    await shot('waiting');
+    await seen('Ready to review');
+    await seen('2 requests, 1 failed');
+  });
+
+  await step('a failing model can be swapped for another on the error card', async () => {
+    ai.failFor = ({ kind }) => (kind === 'claude' ? { status: 401, body: { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } } } : null);
+    await openCreate();
+    await button('Quiz').click();
+    await field('Topic').fill('Second chance');
+    await button('Generate').click();
+    await seen('This stopped');
+    await seen('The key was not accepted');
+    await seen('Try again with');
+    await shot('failed-pick-model');
+    await button('llama4 · My server').click();
+    const before = ai.log.length;
+    await button('Try again').click();
+    await seen('Ready to review');
+    await seen('With llama4');
+    const call = ai.log.slice(before).find((entry) => entry.method === 'POST');
+    if (call?.kind !== 'openai') throw new Error(`retried with ${call?.kind}`);
+    ai.failFor = () => null;
+  });
+
+  await step('Back from a run returns to the form, still filled in', async () => {
+    await page.getByRole('link', { name: 'Create with AI, back' }).filter({ visible: true }).first().click();
+    await seen('What to create');
+    if ((await field('Topic').inputValue()) !== 'Second chance') throw new Error('the form lost its topic');
+  });
+
   await step('a course starts with an outline the user can edit', async () => {
     await openCreate();
     await field('Topic').fill('Volcanoes');

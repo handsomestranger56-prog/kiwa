@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,8 +9,9 @@ import { type Course, type LibraryDocument, COURSE_FORMAT, kindOf, unitCount } f
 import { appendLesson, asCopy } from '@/core/transfer/files';
 import { useData, useQuery } from '@/data/provider';
 import { Field } from '@/features/editor/parts';
-import { useJobRunner } from '@/features/ai/job-runner';
-import { formatUsage } from '@/features/ai/model-picker';
+import { useJobRunner, useJobWait } from '@/features/ai/job-runner';
+import { ModelPicker, formatUsage, useModelChoices } from '@/features/ai/model-picker';
+import type { ModelChoice } from '@/data/providers-repository';
 import { Button, IconButton, Tag, TextField } from '@/ui/controls';
 import { EmptyState, Loading, Page } from '@/ui/layout';
 import { ConfirmDialog } from '@/ui/overlays';
@@ -40,14 +41,21 @@ function JobView({ job }: { job: Job }) {
   const runner = useJobRunner();
   const [failed, setFailed] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const models = useModelChoices();
+  const [nextModel, setNextModel] = useState<ModelChoice | null>(null);
+  const waitingUntil = useJobWait(job.id);
+  const secondsLeft = useSecondsUntil(waitingUntil);
 
   const { request, state, status } = job;
   const topic = request.topic.split('\n')[0];
+  const usage = state.usage;
 
+  /** Tries again from the last finished step, with another model if one was picked. */
   const retry = () => {
     setFailed(false);
+    const model = nextModel ? { providerId: nextModel.providerId, model: nextModel.model, label: nextModel.label } : undefined;
     data.jobs
-      .update(job.id, { status: state.outline && state.lessons.length === 0 ? 'outline' : 'running', error: null })
+      .update(job.id, { status: state.outline && state.lessons.length === 0 ? 'outline' : 'running', error: null, model })
       .then(() => runner.start(job.id))
       .catch(() => setFailed(true));
   };
@@ -110,8 +118,13 @@ function JobView({ job }: { job: Job }) {
         {status === 'running' ? (
           <View style={styles.running} accessibilityLiveRegion="polite">
             <ActivityIndicator color={colors.accent} />
-            <AppText>{progress}</AppText>
+            <AppText style={styles.grow}>{progress}</AppText>
           </View>
+        ) : null}
+        {status === 'running' && secondsLeft !== null ? (
+          <AppText color="warm" accessibilityLiveRegion="polite">
+            {t('job.waiting', { seconds: secondsLeft })}
+          </AppText>
         ) : null}
         {status === 'running' ? <AppText color="textSecondary">{t('job.background')}</AppText> : null}
 
@@ -172,7 +185,16 @@ function JobView({ job }: { job: Job }) {
                 {issue.path}: {issue.message}
               </AppText>
             ))}
+            {job.error.kind === 'rate' ? <AppText>{t('job.limitHint')}</AppText> : null}
             <AppText color="textSecondary">{t('job.keptSteps')}</AppText>
+            {models && models.choices.length > 1 ? (
+              <View style={styles.list}>
+                <AppText variant="label" color="textSecondary">
+                  {t('job.retryWith')}
+                </AppText>
+                <ModelPicker options={models} value={nextModel ?? models.choices.find((choice) => choice.providerId === job.model.providerId && choice.model === job.model.model) ?? null} onChange={setNextModel} />
+              </View>
+            ) : null}
             <View style={styles.row}>
               <Button icon="restore" label={t('job.retry')} onPress={retry} />
               <Button kind="secondary" label={t('job.discard')} onPress={() => setConfirmingDiscard(true)} />
@@ -180,9 +202,10 @@ function JobView({ job }: { job: Job }) {
           </View>
         ) : null}
 
-        {state.usage.requests > 0 ? (
+        {usage.requests > 0 ? (
           <AppText variant="small" color="textSecondary">
-            {formatUsage(state.usage)} · {t('job.requests', { count: state.usage.requests })}
+            {formatUsage(usage)} · {t('job.requests', { count: usage.requests })}
+            {usage.failed ? `, ${t('job.requestsFailed', { count: usage.failed })}` : ''}
           </AppText>
         ) : null}
         {state.fixes.length > 0 ? (
@@ -205,6 +228,17 @@ function JobView({ job }: { job: Job }) {
       />
     </>
   );
+}
+
+/** Whole seconds until a time, ticking once a second. Null when there is no time to count to. */
+function useSecondsUntil(until: number | null): number | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (until === null) return;
+    const timer = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(timer);
+  }, [until]);
+  return until === null ? null : Math.max(0, Math.ceil((until - now) / 1000));
 }
 
 /** The planned lessons, editable before anything expensive runs. */

@@ -28,11 +28,14 @@ export const PROMPT_QUESTION_TYPES = [
   'categorize',
 ] as const satisfies readonly QuestionType[];
 
+/** "auto" leaves the choice to the model, guided by the topic and the person's notes. */
+export type LevelChoice = Level | 'auto';
+
 export type CreateRequest = {
   kind: CreateKind;
   topic: string;
   audience?: string;
-  level: Level;
+  level: LevelChoice;
   /** Language the content is written in, as a tag such as "en". */
   language: string;
   /** Lessons in a course. */
@@ -41,6 +44,8 @@ export type CreateRequest = {
   questions: number;
   /** Cards in a deck. */
   cards: number;
+  /** The model decides how many lessons, questions or cards, within LIMITS. Ignores the numbers above. */
+  autoSize?: boolean;
   questionTypes: QuestionType[];
   /** How a standalone quiz behaves. */
   quizMode: AssessmentMode;
@@ -63,6 +68,21 @@ export const defaultRequest: CreateRequest = {
 };
 
 export const LIMITS = { lessons: [1, 20], questions: [1, 30], cards: [5, 100] } as const;
+
+/** Questions in each lesson's practice when the model picks the size. */
+const AUTO_LESSON_QUESTIONS = [2, 8] as const;
+
+/** Final exam size: two questions per lesson, between 5 and 15. With no lesson count yet, the full range. */
+export function examSizeText(lessons: number | null): string {
+  return lessons === null ? '5 to 15' : String(Math.min(15, Math.max(5, lessons * 2)));
+}
+
+/** The level line of a prompt. */
+export function levelLine(level: LevelChoice, field: boolean): string {
+  if (level !== 'auto') return `- Level: ${level}`;
+  const set = field ? ', and set `level` to it' : '';
+  return `- Level: choose "beginner", "intermediate" or "advanced" to suit the topic, the audience and any notes${set}`;
+}
 
 const QUESTION_RULES: Record<QuestionType, string> = {
   single_choice: '`single_choice`: `options` is 2 to 8 strings, `answer` is the position of the one correct option, counting from 0.',
@@ -107,11 +127,18 @@ function effectiveTypes(request: CreateRequest): QuestionType[] {
 }
 
 function task(request: CreateRequest): string {
+  const auto = request.autoSize;
   const what = {
-    course: `a course of ${request.lessons} ${plural(request.lessons, 'lesson')}`,
+    course: auto
+      ? `a course. Choose how many lessons it needs, from ${LIMITS.lessons[0]} to ${LIMITS.lessons[1]}: few for a narrow topic or a request for something brief, more for a broad one`
+      : `a course of ${request.lessons} ${plural(request.lessons, 'lesson')}`,
     lesson: 'one lesson',
-    quiz: `a quiz of ${request.questions} ${plural(request.questions, 'question')}`,
-    deck: `a set of ${request.cards} flashcards`,
+    quiz: auto
+      ? `a quiz. Choose how many questions it needs, from ${LIMITS.questions[0]} to ${LIMITS.questions[1]}, to fit the topic and any request for something brief or thorough`
+      : `a quiz of ${request.questions} ${plural(request.questions, 'question')}`,
+    deck: auto
+      ? `a set of flashcards. Choose how many cards it needs, from ${LIMITS.cards[0]} to ${LIMITS.cards[1]}, to fit the topic and any request for something brief or thorough`
+      : `a set of ${request.cards} flashcards`,
   }[request.kind];
 
   const lines = [
@@ -121,7 +148,7 @@ function task(request: CreateRequest): string {
     '',
     request.topic.trim(),
     '',
-    `- Level: ${request.level}`,
+    levelLine(request.level, request.kind !== 'lesson'),
     `- Language: write all content in the language with the tag \`${request.language}\`, and set \`language\` to it`,
   ];
   if (request.audience?.trim()) lines.push(`- Audience: ${request.audience.trim()}`);
@@ -150,7 +177,9 @@ function source(text: string): string {
 
 function writingRules(request: CreateRequest): string {
   const rules: string[] = [];
-  const perLesson = `${request.questions} ${plural(request.questions, 'question')}`;
+  const perLesson = request.autoSize
+    ? `${AUTO_LESSON_QUESTIONS[0]} to ${AUTO_LESSON_QUESTIONS[1]} questions, as many as the lesson needs,`
+    : `${request.questions} ${plural(request.questions, 'question')}`;
 
   if (request.kind === 'course' || request.kind === 'lesson') {
     rules.push(
@@ -160,7 +189,7 @@ function writingRules(request: CreateRequest): string {
     );
   }
   if (request.kind === 'course') {
-    const examSize = Math.min(15, Math.max(5, request.lessons * 2));
+    const examSize = examSizeText(request.autoSize ? null : request.lessons);
     rules.push(
       'Order the lessons so each one builds on the ones before it.',
       `Add a \`finalExam\` in mode "exam" with ${examSize} new questions drawn from across the whole course.`,

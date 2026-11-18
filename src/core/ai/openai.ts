@@ -22,8 +22,19 @@ const headers = (connection: Connection): Record<string, string> =>
 
 export const openaiAdapter: Adapter = {
   async listModels(connection, fetchImpl) {
-    const data = await requestJson(fetchImpl, `${base(connection)}/models`, { headers: headers(connection) });
-    const entries = (data.data as { id?: string; name?: string }[] | undefined) ?? [];
+    // Most services list every model at once. Some page the list the way OpenAI pages others,
+    // with `has_more` and `last_id`: follow those pages too.
+    const entries: { id?: string; name?: string }[] = [];
+    let after = '';
+    for (let page = 0; page < 20; page += 1) {
+      const url = `${base(connection)}/models${after ? `?after=${encodeURIComponent(after)}` : ''}`;
+      const data = await requestJson(fetchImpl, url, { headers: headers(connection) });
+      const batch = (data.data as { id?: string; name?: string }[] | undefined) ?? [];
+      entries.push(...batch);
+      const next = typeof data.last_id === 'string' ? data.last_id : batch.at(-1)?.id;
+      if (data.has_more !== true || !next || next === after) break;
+      after = next;
+    }
     return entries
       .filter((entry): entry is { id: string; name?: string } => typeof entry.id === 'string' && !NOT_TEXT.test(entry.id))
       .map((entry) => ({ id: entry.id, label: entry.name || entry.id }))

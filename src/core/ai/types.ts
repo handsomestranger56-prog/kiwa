@@ -43,6 +43,11 @@ export class AiError extends Error {
     message: string,
     /** Tokens already spent when the error happened, if the provider said. */
     public readonly usage?: Usage,
+    /**
+     * Set when the same request may succeed later: a rate limit or a busy server. Holds how long
+     * the provider asked to wait, in milliseconds, or 0 when it did not say.
+     */
+    public readonly retryAfterMs?: number,
   ) {
     super(message);
     this.name = 'AiError';
@@ -64,6 +69,11 @@ export function kindForStatus(status: number): AiErrorKind {
   if (status === 402 || status === 429) return 'rate';
   if (status >= 500) return 'server';
   return 'badRequest';
+}
+
+/** Statuses worth trying again after a pause: too many requests, or a busy or failing server. */
+export function isRetryableStatus(status: number): boolean {
+  return status === 429 || status === 500 || status === 502 || status === 503 || status === 504 || status === 529;
 }
 
 export const DEFAULT_MAX_TOKENS = 16000;

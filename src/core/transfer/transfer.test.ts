@@ -316,6 +316,26 @@ describe('buildPrompt', () => {
   });
 });
 
+describe('buildPrompt with choices left to the model', () => {
+  it('asks the model to size a quiz, deck or course and pick the level', () => {
+    const quiz = buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x', level: 'auto', autoSize: true, questions: 7 });
+    expect(quiz).toContain('Choose how many questions it needs, from 1 to 30');
+    expect(quiz).toContain('set `level` to it');
+    expect(quiz).not.toContain('7 questions');
+    expect(buildPrompt({ ...defaultRequest, kind: 'deck', topic: 'x', autoSize: true })).toContain('Choose how many cards it needs, from 5 to 100');
+    const course = buildPrompt({ ...defaultRequest, topic: 'x', autoSize: true });
+    expect(course).toContain('Choose how many lessons it needs');
+    expect(course).toContain('2 to 8 questions, as many as the lesson needs');
+    expect(course).toContain('`finalExam` in mode "exam" with 5 to 15 new questions');
+  });
+
+  it('never asks for a level field in a lesson file', () => {
+    const lesson = buildPrompt({ ...defaultRequest, kind: 'lesson', topic: 'x', level: 'auto' });
+    expect(lesson).toContain('choose "beginner", "intermediate" or "advanced"');
+    expect(lesson).not.toContain('set `level` to it');
+  });
+});
+
 describe('buildFixPrompt', () => {
   it('lists each problem with its place', () => {
     const prompt = buildFixPrompt({

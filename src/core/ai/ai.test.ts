@@ -3,6 +3,7 @@
  */
 import { documentJsonSchema } from '../schema';
 import { type Connection, type FetchLike, AiError, generate, listModels, strictSchema } from './index';
+import { retryDelay } from './http';
 
 type Call = { url: string; method: string; headers: Record<string, string>; body: any };
 
@@ -67,7 +68,7 @@ describe('Claude', () => {
       { id: 'claude-opus-5-5', label: 'Claude Opus 5.5' },
       { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' },
     ]);
-    expect(calls[0].url).toBe('https://api.anthropic.com/v1/models?limit=100');
+    expect(calls[0].url).toBe('https://api.anthropic.com/v1/models?limit=1000');
     expect(calls[0].headers['x-api-key']).toBe('sk-ant-test');
     expect(calls[0].headers['anthropic-version']).toBe('2026-10-21');
     expect(calls[0].headers['anthropic-dangerous-direct-browser-access']).toBe('true');
@@ -178,6 +179,15 @@ describe('OpenAI-compatible', () => {
     expect(calls[0].headers.authorization).toBe('Bearer sk-test');
   });
 
+  it('follows further pages when a service pages its model list', async () => {
+    const { fetchImpl, calls } = fakeFetch(
+      { body: { data: [{ id: 'model-a' }], has_more: true, last_id: 'model-a' } },
+      { body: { data: [{ id: 'model-b' }], has_more: false } },
+    );
+    expect((await listModels(openai, fetchImpl)).map((model) => model.id)).toEqual(['model-a', 'model-b']);
+    expect(calls[1].url).toBe('https://api.openai.com/v1/models?after=model-a');
+  });
+
   it('uses the right length parameter for OpenAI and for other services', async () => {
     const reply = { body: { choices: [{ finish_reason: 'stop', message: { content: '{}' } }], usage: { prompt_tokens: 3, completion_tokens: 1 } } };
     const atOpenAi = fakeFetch(reply);
@@ -213,6 +223,26 @@ describe('OpenAI-compatible', () => {
       throw new TypeError('Network request failed');
     };
     expect(await failure(listModels({ kind: 'openai', apiKey: '', baseUrl: 'http://localhost:11434/v1' }, offline))).toMatchObject({ kind: 'network' });
+  });
+});
+
+describe('retry hints', () => {
+  it('reads how long to wait from Google\'s RetryInfo and from Retry-After', async () => {
+    const gemini = { kind: 'gemini' as const, apiKey: 'k' };
+    const limited = fakeFetch({
+      status: 429,
+      body: { error: { code: 429, message: 'Quota exceeded', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '37s' }] } },
+    });
+    expect(await failure(generate(gemini, { model: 'm', prompt: 'p' }, limited.fetchImpl))).toMatchObject({ kind: 'rate', retryAfterMs: 37000 });
+    expect(retryDelay({ headers: new Headers({ 'retry-after': '12' }) }, null)).toBe(12000);
+    expect(retryDelay({ headers: new Headers() }, null)).toBe(0);
+  });
+
+  it('marks only rate limits and busy servers as worth retrying', async () => {
+    const busy = fakeFetch({ status: 529, body: { error: { message: 'Overloaded' } } });
+    expect(await failure(generate({ kind: 'claude', apiKey: 'k' }, { model: 'm', prompt: 'p' }, busy.fetchImpl))).toMatchObject({ kind: 'server', retryAfterMs: 0 });
+    const noCredit = fakeFetch({ status: 402, body: { error: { message: 'No credit' } } });
+    expect((await failure(generate({ kind: 'claude', apiKey: 'k' }, { model: 'm', prompt: 'p' }, noCredit.fetchImpl))).retryAfterMs).toBeUndefined();
   });
 });
 
