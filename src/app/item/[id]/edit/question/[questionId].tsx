@@ -10,7 +10,7 @@ import { type LibraryDocument, type ParseIssue, type Question, QUESTION_TYPES } 
 import { SaveBar, useEditor } from '@/features/editor/parts';
 import { QuestionForm } from '@/features/editor/question-form';
 import { Tag } from '@/ui/controls';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { spacing } from '@/ui/theme';
 
 export default function EditQuestionScreen() {
@@ -26,7 +26,7 @@ export default function EditQuestionScreen() {
   return (
     <Page>
       <Stack.Screen options={{ title: isNew ? t('editor.question.screenNew') : t('editor.question.screenEdit') }} />
-      {editor.loading ? null : editor.document && located && (existing || (isNew && newType)) ? (
+      {editor.loading ? <Loading /> : editor.document && located && (existing || (isNew && newType)) ? (
         <QuestionEditor
           document={editor.document}
           assessmentId={params.assessment}

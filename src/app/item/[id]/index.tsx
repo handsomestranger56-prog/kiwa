@@ -11,7 +11,7 @@ import { useItemActions } from '@/features/library/item-actions';
 import { AssessmentCard } from '@/features/study/assessment-card';
 import { resumeLessonId } from '@/features/study/completion';
 import { Button, IconButton, Tag } from '@/ui/controls';
-import { Divider, EmptyState, Page } from '@/ui/layout';
+import { Divider, EmptyState, Loading, Page } from '@/ui/layout';
 import { Snackbar } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { radius, spacing, useTheme } from '@/ui/theme';
@@ -39,7 +39,7 @@ export default function ItemScreen() {
   const current = loaded.data;
 
   if (loaded.loading) {
-    return <Page />;
+    return <Loading />;
   }
   if (!current) {
     return (

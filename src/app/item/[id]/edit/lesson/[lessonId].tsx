@@ -8,7 +8,7 @@ import { type AssessmentMode, type Block, type BlockType, type Course, type Less
 import { Field, SaveBar, StructureRow, useEditor } from '@/features/editor/parts';
 import { useApply } from '@/features/editor/use-apply';
 import { Button, Chip, IconButton, TextField } from '@/ui/controls';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { ActionSheet, Snackbar } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { monoFont, radius, spacing, useTheme } from '@/ui/theme';
@@ -58,7 +58,7 @@ export default function EditLessonScreen() {
   return (
     <Page>
       <Stack.Screen options={{ title: t('editor.lesson.screen') }} />
-      {editor.loading ? null : course && lesson ? (
+      {editor.loading ? <Loading /> : course && lesson ? (
         <LessonEditor course={course} lesson={lesson} save={editor.save} />
       ) : (
         <EmptyState icon="close" title={t('study.missing')} body="" />

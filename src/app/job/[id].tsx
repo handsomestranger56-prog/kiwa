@@ -12,7 +12,7 @@ import { Field } from '@/features/editor/parts';
 import { useJobRunner } from '@/features/ai/job-runner';
 import { formatUsage } from '@/features/ai/model-picker';
 import { Button, IconButton, Tag, TextField } from '@/ui/controls';
-import { EmptyState, Page } from '@/ui/layout';
+import { EmptyState, Loading, Page } from '@/ui/layout';
 import { ConfirmDialog } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { monoFont, radius, spacing, useTheme } from '@/ui/theme';
@@ -25,7 +25,7 @@ export default function JobScreen() {
   return (
     <Page>
       <Stack.Screen options={{ title: t('job.title') }} />
-      {loaded.loading ? null : loaded.data ? <JobView job={loaded.data} /> : <EmptyState icon="close" title={t('study.missing')} body="" />}
+      {loaded.loading ? <Loading /> : loaded.data ? <JobView job={loaded.data} /> : <EmptyState icon="close" title={t('study.missing')} body="" />}
     </Page>
   );
 }
