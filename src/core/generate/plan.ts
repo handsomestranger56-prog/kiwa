@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { type GenerateRequest, type Usage, AiError, strictSchema } from '../ai';
+import { type GenerateRequest, type RateLimit, type Usage, AiError, strictSchema } from '../ai';
 import { newId } from '../ids';
 import {
   type Assessment,
@@ -62,9 +62,17 @@ export type JobState = {
   /** Every request sent, including ones that failed. `failed` is missing in runs saved before it was counted. */
   usage: Usage & { requests: number; failed?: number };
   fixes: Fix[];
+  /** The most recent failed requests, newest last, for showing what went wrong. */
+  failures?: FailedRequest[];
 };
 
-export type JobError = { kind: string; message: string; issues?: ParseIssue[] };
+/** One request that did not work: an HTTP error, no connection, or a reply the model cut off or refused. */
+export type FailedRequest = { at: number; model: string; status?: number; kind?: string; limit?: RateLimit; message: string };
+
+/** How many failed requests a run keeps. Older ones are dropped. */
+export const MAX_FAILURES_KEPT = 30;
+
+export type JobError = { kind: string; message: string; issues?: ParseIssue[]; limit?: RateLimit };
 
 export type Job = {
   id: string;

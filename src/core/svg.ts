@@ -83,7 +83,9 @@ export function svgPage(svg: string, background: string): string {
     '<!doctype html><html><head><meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">',
     `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:">`,
-    `<style>html,body{margin:0;padding:0;background:${background};overflow:hidden}svg{display:block;width:100%;height:100vh}</style>`,
+    `<style>html,body{margin:0;padding:0;background:${background};overflow:hidden}svg{display:block;width:100%;height:100vh}`,
+    // People who turn on "reduce motion" see the picture still. SMIL animation cannot be paused from CSS.
+    '@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}</style>',
     `</head><body>${svg}</body></html>`,
   ].join('');
 }

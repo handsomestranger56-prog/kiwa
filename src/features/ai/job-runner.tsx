@@ -2,12 +2,12 @@ import { type PropsWithChildren, createContext, use, useEffect, useState, useSyn
 import { AppState } from 'react-native';
 
 import { type Usage, AiError, retryWait } from '@/core/ai';
-import { type Ask, type Job, type JobError, type JobState, GenerationError, missingLessons, nextStep, runStep } from '@/core/generate/plan';
+import { type Ask, type FailedRequest, type Job, type JobError, type JobState, GenerationError, MAX_FAILURES_KEPT, missingLessons, nextStep, runStep } from '@/core/generate/plan';
 import { type AppData, useData } from '@/data/provider';
 import i18n from '@/i18n';
 import { showNow } from '@/platform/notifications';
 
-import { callModel } from './call';
+import { type RequestRecord, callModel } from './call';
 
 /** How many lessons of one course are written at the same time. */
 const PARALLEL_LESSONS = 2;
@@ -22,6 +22,8 @@ export class JobRunner {
   private throttled = new Set<string>();
   /** When a run paused for a rate limit or a busy server will try again. */
   private waits = new Map<string, number>();
+  /** Ends a wait early: used when the person picks another model for a waiting run. */
+  private wakers = new Map<string, Set<() => void>>();
   private listeners = new Set<() => void>();
 
   constructor(private readonly data: AppData) {}
@@ -81,41 +83,86 @@ export class JobRunner {
   }
 
   /**
-   * Sends requests for one run. Every request is counted, failed ones too. A rate limit or a busy
-   * server is waited out and the same request sent again, so the run carries on by itself.
+   * Sends requests for one run. Every HTTP request is counted, failed ones too, and failures are
+   * kept so the run screen can show them. A per-minute limit or a busy server is waited out and
+   * the request sent again. A daily limit or used-up credit stops the run, so another model can
+   * take over. A model picked while waiting takes over at once.
    */
   private askFor(job: Job): Ask {
     return async (request) => {
+      let model = job.model;
       for (let attempt = 0; ; attempt += 1) {
+        const records: RequestRecord[] = [];
         try {
-          const reply = await callModel(this.data.providers, job.model, request);
-          await this.count(job.id, reply.usage, false);
+          const reply = await callModel(this.data.providers, model, request, (record) => records.push(record));
+          await this.count(job.id, model.label, records, reply.usage, null);
           return reply;
         } catch (error) {
-          await this.count(job.id, error instanceof AiError ? error.usage : undefined, true);
+          await this.count(job.id, model.label, records, error instanceof AiError ? error.usage : undefined, error);
           const wait = retryWait(error, attempt);
           if (wait === null) throw error;
           if (error instanceof AiError && error.kind === 'rate') this.throttled.add(job.id);
-          this.setWait(job.id, Date.now() + wait);
-          await new Promise((resolve) => setTimeout(resolve, wait));
-          this.setWait(job.id, null);
+          await this.pause(job.id, wait);
           // Discarded while it waited: stop here instead of spending another request.
           const latest = await this.data.jobs.get(job.id);
           if (!latest || latest.status !== 'running') throw error;
+          if (latest.model.providerId !== model.providerId || latest.model.model !== model.model) {
+            // Another model was picked while waiting: it starts fresh, with its own retries.
+            model = latest.model;
+            attempt = -1;
+          }
         }
       }
     };
   }
 
-  private count(id: string, usage: Usage | undefined, failed: boolean): Promise<void> {
+  /** Waits, unless a new model is picked first. */
+  private pause(id: string, ms: number): Promise<void> {
+    this.setWait(id, Date.now() + ms);
+    return new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        this.wakers.get(id)?.delete(done);
+        this.setWait(id, null);
+        resolve();
+      };
+      const timer = setTimeout(done, ms);
+      const set = this.wakers.get(id) ?? new Set<() => void>();
+      set.add(done);
+      this.wakers.set(id, set);
+    });
+  }
+
+  /** Hands the rest of a run to another model. A request waiting on a limit goes to it at once. */
+  async switchModel(id: string, model: Job['model']): Promise<void> {
+    await this.data.jobs.update(id, { model });
+    this.throttled.delete(id);
+    for (const wake of [...(this.wakers.get(id) ?? [])]) wake();
+  }
+
+  private count(id: string, model: string, records: RequestRecord[], usage: Usage | undefined, error: unknown): Promise<void> {
+    const failures: FailedRequest[] = records
+      .filter((record) => !record.ok)
+      .map((record) => ({ at: record.at, model, status: record.status, message: record.message ?? '' }));
+    if (error) {
+      const info = error instanceof AiError ? { kind: error.kind, limit: error.limit, message: error.message } : { kind: 'network', message: error instanceof Error ? error.message : String(error) };
+      const last = records.at(-1);
+      // Name the kind of problem on the request that caused it. A reply that arrived but was cut
+      // off or refused is a failure too, though the network saw a success.
+      if (last && !last.ok) Object.assign(failures[failures.length - 1], info);
+      else failures.push({ at: last?.at ?? Date.now(), model, ...info });
+    }
+    // Requests that never reached the network (no key, removed provider) still count once.
+    const sent = Math.max(records.length, error ? 1 : 0);
     return this.merge(id, (latest) => ({
       ...latest,
       usage: {
         inputTokens: latest.usage.inputTokens + (usage?.inputTokens ?? 0),
         outputTokens: latest.usage.outputTokens + (usage?.outputTokens ?? 0),
-        requests: latest.usage.requests + 1,
-        failed: (latest.usage.failed ?? 0) + (failed ? 1 : 0),
+        requests: latest.usage.requests + sent,
+        failed: (latest.usage.failed ?? 0) + failures.length,
       },
+      failures: failures.length > 0 ? [...(latest.failures ?? []), ...failures].slice(-MAX_FAILURES_KEPT) : latest.failures,
     }));
   }
 
@@ -157,8 +204,8 @@ export class JobRunner {
   }
 
   private async save(id: string, state: JobState, status?: Job['status']): Promise<void> {
-    // Usage is counted per request as it happens (see askFor), so the stored count wins.
-    await this.merge(id, (latest) => ({ ...state, usage: latest.usage }));
+    // Usage and failures are recorded per request as they happen (see askFor), so the stored ones win.
+    await this.merge(id, (latest) => ({ ...state, usage: latest.usage, failures: latest.failures }));
     if (!status) return;
     await this.data.jobs.update(id, { status, error: null });
     // Someone who left the app while it worked hears that it needs them.
@@ -172,7 +219,7 @@ export class JobRunner {
   private async fail(id: string, error: unknown): Promise<void> {
     const info: JobError =
       error instanceof AiError
-        ? { kind: error.kind, message: error.message }
+        ? { kind: error.kind, message: error.message, ...(error.limit ? { limit: error.limit } : {}) }
         : error instanceof GenerationError
           ? { kind: 'invalid', message: error.message, issues: error.issues }
           : { kind: 'network', message: error instanceof Error ? error.message : String(error) };

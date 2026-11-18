@@ -37,6 +37,8 @@ export type AiErrorKind =
   /** The provider had a problem on its side. */
   | 'server';
 
+export type RateLimit = 'minute' | 'day' | 'quota';
+
 export class AiError extends Error {
   constructor(
     public readonly kind: AiErrorKind,
@@ -48,6 +50,8 @@ export class AiError extends Error {
      * the provider asked to wait, in milliseconds, or 0 when it did not say.
      */
     public readonly retryAfterMs?: number,
+    /** Which limit a rate error hit, when the provider said: per minute, per day, or credit used up. */
+    public readonly limit?: RateLimit,
   ) {
     super(message);
     this.name = 'AiError';

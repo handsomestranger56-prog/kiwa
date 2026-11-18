@@ -3,7 +3,8 @@
  */
 import { documentJsonSchema } from '../schema';
 import { type Connection, type FetchLike, AiError, generate, listModels, strictSchema } from './index';
-import { retryDelay } from './http';
+import { rateLimitOf, retryDelay } from './http';
+import { retryWait } from './retry';
 
 type Call = { url: string; method: string; headers: Record<string, string>; body: any };
 
@@ -236,6 +237,26 @@ describe('retry hints', () => {
     expect(await failure(generate(gemini, { model: 'm', prompt: 'p' }, limited.fetchImpl))).toMatchObject({ kind: 'rate', retryAfterMs: 37000 });
     expect(retryDelay({ headers: new Headers({ 'retry-after': '12' }) }, null)).toBe(12000);
     expect(retryDelay({ headers: new Headers() }, null)).toBe(0);
+  });
+
+  it('tells a per-minute limit from a daily limit and from used-up credit', () => {
+    const google = (quotaId: string) => ({ error: { code: 429, message: 'Quota exceeded', details: [{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId }] }] } });
+    expect(rateLimitOf(429, google('GenerateRequestsPerMinutePerProjectPerModel-FreeTier'))).toBe('minute');
+    expect(rateLimitOf(429, google('GenerateRequestsPerDayPerProjectPerModel-FreeTier'))).toBe('day');
+    expect(rateLimitOf(429, { error: { message: 'Rate limit reached for gpt-x on requests per day (RPD): Limit 200' } })).toBe('day');
+    expect(rateLimitOf(429, { error: { message: 'Rate limit reached on requests per min (RPM)' } })).toBe('minute');
+    expect(rateLimitOf(429, { error: { code: 'insufficient_quota', message: 'You exceeded your current quota' } })).toBe('quota');
+    expect(rateLimitOf(402, null)).toBe('quota');
+    expect(rateLimitOf(429, { error: { message: 'Slow down' } })).toBeUndefined();
+    expect(rateLimitOf(500, null)).toBeUndefined();
+  });
+
+  it('does not wait out a daily limit or used-up credit', async () => {
+    const daily = fakeFetch({ status: 429, body: { error: { message: 'Quota exceeded', details: [{ violations: [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' }] }, { retryDelay: '20s' }] } } });
+    const error = await failure(generate({ kind: 'gemini', apiKey: 'k' }, { model: 'm', prompt: 'p' }, daily.fetchImpl));
+    expect(error).toMatchObject({ kind: 'rate', limit: 'day' });
+    expect(retryWait(error, 0)).toBeNull();
+    expect(retryWait(new AiError('rate', 'slow', undefined, 2000, 'minute'), 0)).toBe(3000);
   });
 
   it('marks only rate limits and busy servers as worth retrying', async () => {

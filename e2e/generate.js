@@ -179,6 +179,43 @@ function goodModel({ prompt }) {
     await shot('waiting');
     await seen('Ready to review');
     await seen('2 requests, 1 failed');
+    await button('1 failed').click();
+    await seen('Failed requests');
+    await seen('HTTP 429');
+    await seen('Quota exceeded');
+    await shot('failed-list');
+  });
+
+  await step('while waiting on a limit, another model can take over at once', async () => {
+    ai.failures = [{ status: 429, body: { error: { code: 429, message: 'Slow down', details: [{ violations: [{ quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' }] }, { retryDelay: '60s' }] } } }];
+    await openCreate();
+    await button('Quiz').click();
+    await field('Topic').fill('Impatient');
+    await button('Generate').click();
+    await seen('Trying again in');
+    await button('Use another model now').click();
+    const before = ai.log.length;
+    await button('llama4 · My server').click();
+    await seen('Ready to review');
+    await seen('With llama4');
+    const call = ai.log.slice(before).find((entry) => entry.method === 'POST');
+    if (call?.kind !== 'openai') throw new Error(`took over with ${call?.kind}`);
+  });
+
+  await step('a daily limit stops at once and suggests another model', async () => {
+    ai.failFor = ({ kind }) =>
+      kind === 'claude' ? { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: 'Daily request limit reached for this model (requests per day).' } } } : null;
+    await openCreate();
+    await button('Quiz').click();
+    await field('Topic').fill('Tomorrow');
+    const started = Date.now();
+    await button('Generate').click();
+    await seen("This model's daily limit is used up");
+    if (Date.now() - started > 6000) throw new Error('waited on a daily limit');
+    await button('llama4 · My server').click();
+    await button('Try again').click();
+    await seen('Ready to review');
+    ai.failFor = () => null;
   });
 
   await step('a failing model can be swapped for another on the error card', async () => {

@@ -1,10 +1,10 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { type Job, type Outline, approveOutline, missingLessons, nextStep } from '@/core/generate/plan';
+import { type FailedRequest, type Job, type Outline, approveOutline, missingLessons, nextStep } from '@/core/generate/plan';
 import { type Course, type LibraryDocument, COURSE_FORMAT, kindOf, unitCount } from '@/core/schema';
 import { appendLesson, asCopy } from '@/core/transfer/files';
 import { useData, useQuery } from '@/data/provider';
@@ -43,6 +43,16 @@ function JobView({ job }: { job: Job }) {
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const models = useModelChoices();
   const [nextModel, setNextModel] = useState<ModelChoice | null>(null);
+  const [switching, setSwitching] = useState(false);
+  const [showFailures, setShowFailures] = useState(false);
+  const current = models?.choices.find((choice) => choice.providerId === job.model.providerId && choice.model === job.model.model) ?? null;
+  const asModel = (choice: ModelChoice) => ({ providerId: choice.providerId, model: choice.model, label: choice.label });
+
+  /** While a run waits on a limit, hands it to another model at once. */
+  const switchNow = (choice: ModelChoice) => {
+    setSwitching(false);
+    runner.switchModel(job.id, asModel(choice)).catch(() => setFailed(true));
+  };
   const waitingUntil = useJobWait(job.id);
   const secondsLeft = useSecondsUntil(waitingUntil);
 
@@ -122,9 +132,20 @@ function JobView({ job }: { job: Job }) {
           </View>
         ) : null}
         {status === 'running' && secondsLeft !== null ? (
-          <AppText color="warm" accessibilityLiveRegion="polite">
-            {t('job.waiting', { seconds: secondsLeft })}
-          </AppText>
+          <View style={styles.list}>
+            <AppText color="warm" accessibilityLiveRegion="polite">
+              {t('job.waiting', { seconds: secondsLeft })}
+            </AppText>
+            {models && models.choices.length > 1 ? (
+              switching ? (
+                <ModelPicker options={models} value={current} onChange={switchNow} />
+              ) : (
+                <View style={styles.start}>
+                  <Button kind="secondary" icon="ai" label={t('job.switchNow')} onPress={() => setSwitching(true)} />
+                </View>
+              )
+            ) : null}
+          </View>
         ) : null}
         {status === 'running' ? <AppText color="textSecondary">{t('job.background')}</AppText> : null}
 
@@ -185,14 +206,14 @@ function JobView({ job }: { job: Job }) {
                 {issue.path}: {issue.message}
               </AppText>
             ))}
-            {job.error.kind === 'rate' ? <AppText>{t('job.limitHint')}</AppText> : null}
+            {job.error.kind === 'rate' ? <AppText>{t(`job.limit.${job.error.limit ?? 'minute'}`)}</AppText> : null}
             <AppText color="textSecondary">{t('job.keptSteps')}</AppText>
             {models && models.choices.length > 1 ? (
               <View style={styles.list}>
                 <AppText variant="label" color="textSecondary">
                   {t('job.retryWith')}
                 </AppText>
-                <ModelPicker options={models} value={nextModel ?? models.choices.find((choice) => choice.providerId === job.model.providerId && choice.model === job.model.model) ?? null} onChange={setNextModel} />
+                <ModelPicker options={models} value={nextModel ?? current} onChange={setNextModel} />
               </View>
             ) : null}
             <View style={styles.row}>
@@ -203,11 +224,21 @@ function JobView({ job }: { job: Job }) {
         ) : null}
 
         {usage.requests > 0 ? (
-          <AppText variant="small" color="textSecondary">
-            {formatUsage(usage)} · {t('job.requests', { count: usage.requests })}
-            {usage.failed ? `, ${t('job.requestsFailed', { count: usage.failed })}` : ''}
-          </AppText>
+          <View style={styles.usage}>
+            <AppText variant="small" color="textSecondary">
+              {formatUsage(usage)} · {t('job.requests', { count: usage.requests })}
+              {usage.failed ? ', ' : ''}
+            </AppText>
+            {usage.failed ? (
+              <Pressable accessibilityRole="button" accessibilityState={{ expanded: showFailures }} onPress={() => setShowFailures(!showFailures)} hitSlop={8}>
+                <AppText variant="small" color="accent" style={styles.link}>
+                  {t('job.requestsFailed', { count: usage.failed })}
+                </AppText>
+              </Pressable>
+            ) : null}
+          </View>
         ) : null}
+        {showFailures ? <FailureList failures={state.failures ?? []} /> : null}
         {state.fixes.length > 0 ? (
           <AppText variant="small" color="textSecondary">
             {t('job.fixes', { count: state.fixes.length })}
@@ -227,6 +258,38 @@ function JobView({ job }: { job: Job }) {
         onClose={() => setConfirmingDiscard(false)}
       />
     </>
+  );
+}
+
+/** What went wrong with each failed request, newest first. */
+function FailureList({ failures }: { failures: FailedRequest[] }) {
+  const { t, i18n } = useTranslation();
+  const { colors } = useTheme();
+  if (failures.length === 0) return <AppText variant="small" color="textSecondary">{t('job.noFailureDetails')}</AppText>;
+  return (
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <AppText variant="label" color="textSecondary">
+        {t('job.failedRequests')}
+      </AppText>
+      {[...failures].reverse().map((failure, index) => {
+        const what = [failure.status ? `HTTP ${failure.status}` : null, failure.kind ? t(`ai.error.${failure.kind as 'network'}`, { defaultValue: failure.kind }) : null, failure.limit ? t(`job.limitName.${failure.limit}`) : null]
+          .filter(Boolean)
+          .join(' · ');
+        return (
+          <View key={`${failure.at}-${index}`} style={styles.failure}>
+            <AppText variant="small" color="textSecondary">
+              {new Date(failure.at).toLocaleTimeString(i18n.language)} · {failure.model}
+            </AppText>
+            {what ? <AppText variant="small">{what}</AppText> : null}
+            {failure.message ? (
+              <AppText variant="small" color="textSecondary" selectable style={{ fontFamily: monoFont }}>
+                {failure.message}
+              </AppText>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -319,4 +382,7 @@ const styles = StyleSheet.create({
   outlineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   grow: { flex: 1, minWidth: 0, gap: spacing.xs },
   start: { alignItems: 'flex-start' },
+  usage: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
+  link: { textDecorationLine: 'underline' },
+  failure: { gap: 2 },
 });
