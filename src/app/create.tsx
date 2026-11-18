@@ -202,6 +202,17 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
           )}
         </Field>
 
+        {request.kind === 'course' || request.kind === 'lesson' ? (
+          <Field label={t('create.pictures')}>
+            <View style={styles.chips}>
+              <Chip label={t('create.picturesOn')} selected={!!request.pictures} onPress={() => set({ pictures: !request.pictures })} />
+            </View>
+            <AppText variant="small" color="textSecondary">
+              {t('create.picturesHint')}
+            </AppText>
+          </Field>
+        ) : null}
+
         {request.kind === 'quiz' ? (
           <Field label={t('create.quizMode')}>
             <View style={styles.chips}>

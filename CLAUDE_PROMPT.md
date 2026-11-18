@@ -63,7 +63,17 @@ Assumptions the user was told about and has not objected to. Keep them unless to
 
 - A score given by the model through "Check" counts toward a test result, marked as AI-graded.
 - Without an API key, essays fall back to showing the model answer for self-rating. Already built.
-- Text, code and images in the first version. No audio or video.
+- Text, code, images and SVG pictures. No audio or video. SVG pictures are a lesson block (`svg`)
+  that a chatbot writes as code. They are cleaned by `src/core/svg.ts` (no scripts, handlers or
+  outside links) and drawn in an `<img>` on the web and in a web view with JavaScript and network
+  off on phones, so CSS and SMIL animation plays. The create form's "Pictures" toggle asks for them.
+- Create with AI can leave the level and the size (lessons, questions, cards) to the model ("Let AI
+  choose"). The model then picks within the usual limits, guided by the topic and notes.
+- Groups: an item is in one group or none (`groups` table, `items.group_id`). An exported item
+  names its group; a whole group exports as a `group/1` file. Backups carry groups.
+- Generation waits out rate limits and busy servers (Retry-After or Google's retryDelay, up to
+  90 s, three times per request) and counts every request, failed ones too. A failed run can be
+  retried with another model.
 - English, Uzbek (Latin) and Russian (`src/i18n/en.ts`, `uz.ts`, `ru.ts`). The app follows the phone's language until one is chosen in Settings or on the welcome screen (setting `app.language`). Reminders are rescheduled in the new language.
 - Typed answers ignore case, spacing and punctuation but keep accents.
 - Completing a lesson is a manual button and does not require passing its test.

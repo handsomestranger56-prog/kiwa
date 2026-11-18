@@ -3,9 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { Block } from '@/core/schema';
+import { cleanSvg } from '@/core/svg';
 import { Markdown } from '@/ui/markdown';
 import { AppText } from '@/ui/text';
 import { type ColorName, monoFont, radius, spacing, useTheme } from '@/ui/theme';
+
+import { SvgPicture } from './svg-picture';
 
 /** The content of a lesson: text, code, images and callouts, in order. */
 export function LessonBlocks({ blocks }: { blocks: readonly Block[] }) {
@@ -58,6 +61,22 @@ function BlockView({ block }: { block: Block }) {
           ) : null}
         </View>
       );
+
+    case 'svg': {
+      // Cleaned again here: content saved by an older version, or edited by hand, gets the same care.
+      const cleaned = cleanSvg(block.svg);
+      if (!cleaned.ok) return null;
+      return (
+        <View style={styles.image}>
+          <SvgPicture svg={cleaned.svg} alt={block.alt} />
+          {block.caption ? (
+            <AppText variant="small" color="textSecondary">
+              {block.caption}
+            </AppText>
+          ) : null}
+        </View>
+      );
+    }
 
     case 'callout': {
       const look = {

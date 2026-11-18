@@ -1,4 +1,5 @@
 import { COURSE_FORMAT, DECK_FORMAT, QUIZ_FORMAT } from '../schema';
+import { cleanSvg } from '../svg';
 
 export const LESSON_FORMAT = 'lesson/1';
 export const BACKUP_FORMAT = 'backup/1';
@@ -59,6 +60,7 @@ export function repairImport(input: Json): { value: Json; fixes: Fix[] } {
   const fixLesson = (lesson: Json, index: number, lessonIds: Set<string>, assessmentIds: Set<string>) => {
     const id = claimIn(lessonIds, lesson, `lesson-${index + 1}`, counts);
     asObjects(lesson.blocks).forEach(normalizeType);
+    asObjects(lesson.blocks).forEach(fixSvgBlock);
     asObjects(lesson.assessments).forEach((assessment, assessmentIndex) =>
       fixAssessment(assessment, `${id}-a${assessmentIndex + 1}`, assessmentIds),
     );
@@ -182,6 +184,19 @@ function fixQuestion(question: Json, counts: Counts) {
 function normalizeType(holder: Json) {
   if (typeof holder.type === 'string') {
     holder.type = holder.type.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  }
+}
+
+/** Pictures arrive as `svg`, or under `code` or `content`. Unsafe parts are removed before validation. */
+function fixSvgBlock(block: Json) {
+  if (block.type !== 'svg') return;
+  if (typeof block.svg !== 'string') {
+    const found = [block.code, block.content, block.markup].find((value) => typeof value === 'string');
+    if (typeof found === 'string') block.svg = found;
+  }
+  if (typeof block.svg === 'string') {
+    const cleaned = cleanSvg(block.svg);
+    if (cleaned.ok) block.svg = cleaned.svg;
   }
 }
 

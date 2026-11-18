@@ -322,6 +322,7 @@ export function lessonText(lesson: Lesson): string {
   for (const block of lesson.blocks) {
     if (block.type === 'text' || block.type === 'callout') parts.push(block.markdown);
     else if (block.type === 'code') parts.push(block.code);
+    else if (block.type === 'svg' && block.alt) parts.push(`(Picture: ${block.alt})`);
   }
   return parts.join('\n\n');
 }

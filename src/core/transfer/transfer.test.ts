@@ -252,9 +252,33 @@ describe('files', () => {
 describe('buildPrompt', () => {
   it('ships examples that really import', () => {
     for (const kind of CREATE_KINDS) {
-      const outcome = readImport(JSON.stringify(example(kind)));
-      expect(outcome).toMatchObject({ ok: true, fixes: [] });
+      for (const pictures of [false, true]) {
+        const outcome = readImport(JSON.stringify(example(kind, pictures)));
+        expect(outcome).toMatchObject({ ok: true, fixes: [] });
+      }
     }
+  });
+
+  it('asks for SVG pictures only when they are wanted', () => {
+    const withPictures = buildPrompt({ ...defaultRequest, topic: 'x' });
+    expect(withPictures).toContain('add an `svg` block');
+    expect(withPictures).toContain("viewBox='0 0 240 120'");
+    const without = buildPrompt({ ...defaultRequest, topic: 'x', pictures: false });
+    expect(without).toContain('Do not use image or svg blocks.');
+    expect(without).not.toContain('<svg');
+    expect(buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x' })).not.toContain('svg');
+  });
+
+  it('cleans an imported picture and refuses one that is not SVG', () => {
+    const lesson = (svg: string) => JSON.stringify({ format: 'lesson/1', lesson: { id: 'l', title: 'L', blocks: [{ type: 'svg', svg, alt: 'A drawing' }], assessments: [] } });
+    const cleaned = readImport(lesson('<svg viewBox="0 0 1 1" onload="x()"><script>x()</script><rect/></svg>'));
+    if (!cleaned.ok || cleaned.kind !== 'lesson') throw new Error('should import');
+    const block = cleaned.lesson.blocks[0] as { svg: string };
+    expect(block.svg).not.toContain('script');
+    expect(block.svg).not.toContain('onload');
+    const fromCode = readImport(JSON.stringify({ format: 'lesson/1', lesson: { id: 'l', title: 'L', blocks: [{ type: 'svg', code: '<svg><rect/></svg>' }], assessments: [] } }));
+    expect(fromCode).toMatchObject({ ok: true, kind: 'lesson' });
+    expect(readImport(lesson('<div>not a picture</div>'))).toMatchObject({ ok: false, stage: 'content', issues: [{ path: 'lesson.blocks[0].svg' }] });
   });
 
   it('states the request, the rules and the schema', () => {
