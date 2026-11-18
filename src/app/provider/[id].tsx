@@ -3,12 +3,22 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { type ModelInfo, type ProviderKind, AiError, OPENAI_COMPATIBLE_PRESETS, PROVIDER_KINDS, listModels } from '@/core/ai';
+import {
+  type ModelInfo,
+  type ModelProfile,
+  type ProviderKind,
+  AiError,
+  CATALOG_UPDATED,
+  OPENAI_COMPATIBLE_PRESETS,
+  PROVIDER_KINDS,
+  groupModels,
+  listModels,
+} from '@/core/ai';
 import type { Provider } from '@/data/providers-repository';
 import { useData, useQuery } from '@/data/provider';
 import { Field, SaveBar } from '@/features/editor/parts';
 import { deleteApiKey, readApiKey, saveApiKey } from '@/platform/secrets';
-import { Button, Chip, IconButton, TextField } from '@/ui/controls';
+import { Button, Chip, IconButton, Tag, TextField } from '@/ui/controls';
 import { EmptyState, Loading, Page } from '@/ui/layout';
 import { ConfirmDialog } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
@@ -46,7 +56,7 @@ const DEFAULT_LABEL: Record<ProviderKind, string> = { claude: 'Claude', gemini: 
 type FormProps = { provider: Provider | null; hasKey: boolean };
 
 function ProviderForm({ provider, hasKey }: FormProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
   const { providers } = useData();
@@ -62,6 +72,7 @@ function ProviderForm({ provider, hasKey }: FormProps) {
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [showOthers, setShowOthers] = useState(false);
 
   const labelIsDefault = Object.values(DEFAULT_LABEL).includes(label) || OPENAI_COMPATIBLE_PRESETS.some((preset) => preset.label === label);
 
@@ -91,10 +102,12 @@ function ProviderForm({ provider, hasKey }: FormProps) {
     try {
       const found = await listModels({ kind, apiKey, baseUrl: baseUrl.trim() || undefined });
       setModels(found);
-      // Keep earlier ticks that still exist. With nothing ticked yet, tick the first model.
-      const kept = enabled.filter((model) => found.some((info) => info.id === model));
-      setEnabled(kept.length > 0 ? kept : found.slice(0, 1).map((info) => info.id));
-      setStatus({ ok: true, text: t('providers.found', { count: found.length }) });
+      // Only models that can write are ticked. Keep earlier ticks that still exist; with none, tick
+      // the first writer, which the catalog sorts free and stable first.
+      const writers = groupModels(kind, found, baseUrl.trim() || null).find((entry) => entry.group === 'text')?.models ?? [];
+      const kept = enabled.filter((model) => writers.some((entry) => entry.model.id === model));
+      setEnabled(kept.length > 0 ? kept : writers.slice(0, 1).map((entry) => entry.model.id));
+      setStatus({ ok: true, text: `${t('providers.found', { count: found.length })} ${t('providers.writers', { count: writers.length })}` });
     } catch (error) {
       const kindOfError = error instanceof AiError ? error.kind : 'network';
       setStatus({ ok: false, text: t(`ai.error.${kindOfError}`) + (error instanceof Error && error.message ? ` (${error.message})` : '') });
@@ -201,30 +214,39 @@ function ProviderForm({ provider, hasKey }: FormProps) {
 
         {models.length > 0 ? (
           <Field label={t('providers.models')} hint={t('providers.modelsHint')}>
-            <View style={[styles.models, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-              {models.map((model) => {
-                const on = enabled.includes(model.id);
-                return (
-                  <View key={model.id} style={styles.model}>
-                    <IconButton
-                      icon={on ? 'checkboxOn' : 'checkboxOff'}
-                      color={on ? 'accent' : 'textSecondary'}
-                      selected={on}
-                      label={t('providers.useModel', { model: model.label })}
-                      onPress={() => toggle(model.id)}
-                    />
-                    <View style={styles.grow}>
-                      <AppText>{model.label}</AppText>
-                      {model.label !== model.id ? (
-                        <AppText variant="small" color="textSecondary">
-                          {model.id}
-                        </AppText>
-                      ) : null}
-                    </View>
+            {groupModels(kind, models, baseUrl.trim() || null).map((entry) => {
+              const writes = entry.group === 'text';
+              if (!writes && !showOthers) return null;
+              return (
+                <View key={entry.group} style={styles.group}>
+                  <AppText variant="label" color="textSecondary">
+                    {t(`providers.group.${entry.group}`)} · {entry.models.length}
+                  </AppText>
+                  <View style={[styles.models, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                    {entry.models.map(({ model, profile }) => (
+                      <ModelRow key={model.id} model={model} profile={profile} on={enabled.includes(model.id)} onToggle={writes ? () => toggle(model.id) : undefined} />
+                    ))}
                   </View>
-                );
-              })}
-            </View>
+                </View>
+              );
+            })}
+            {(() => {
+              const others = groupModels(kind, models, baseUrl.trim() || null)
+                .filter((entry) => entry.group !== 'text')
+                .reduce((total, entry) => total + entry.models.length, 0);
+              if (others === 0) return null;
+              return (
+                <View style={styles.group}>
+                  {showOthers ? <AppText variant="small" color="textSecondary">{t('providers.othersHint')}</AppText> : null}
+                  <View style={styles.start}>
+                    <Button kind="plain" icon={showOthers ? 'up' : 'down'} label={showOthers ? t('providers.hideOthers') : t('providers.showOthers', { count: others })} onPress={() => setShowOthers(!showOthers)} />
+                  </View>
+                </View>
+              );
+            })()}
+            <AppText variant="small" color="textSecondary">
+              {t('providers.tierNote', { date: new Date(`${CATALOG_UPDATED}T12:00:00Z`).toLocaleDateString(i18n.language, { dateStyle: 'medium' }) })}
+            </AppText>
           </Field>
         ) : null}
 
@@ -250,11 +272,45 @@ function ProviderForm({ provider, hasKey }: FormProps) {
   );
 }
 
+/** One model with what it is good for. Only models that can write have a checkbox. */
+function ModelRow({ model, profile, on, onToggle }: { model: ModelInfo; profile: ModelProfile; on: boolean; onToggle?: () => void }) {
+  const { t } = useTranslation();
+  const reads = profile.input.map((modality) => t(`providers.modality.${modality}`)).join(', ');
+  return (
+    <View style={[styles.model, onToggle ? null : styles.plainModel]}>
+      {onToggle ? (
+        <IconButton icon={on ? 'checkboxOn' : 'checkboxOff'} color={on ? 'accent' : 'textSecondary'} selected={on} label={t('providers.useModel', { model: model.label })} onPress={onToggle} />
+      ) : null}
+      <View style={[styles.grow, styles.modelText]}>
+        <AppText>{model.label}</AppText>
+        {model.label !== model.id ? (
+          <AppText variant="small" color="textSecondary" selectable>
+            {model.id}
+          </AppText>
+        ) : null}
+        <View style={styles.tags}>
+          {profile.tier !== 'unknown' ? <Tag tone={profile.tier === 'paid' ? 'neutral' : 'accent'} label={t(`providers.tier.${profile.tier}`)} /> : null}
+          {profile.status !== 'stable' ? <Tag tone={profile.status === 'deprecated' ? 'warm' : 'neutral'} label={t(`providers.status.${profile.status}`)} /> : null}
+          {profile.input.length > 1 ? <Tag label={t('providers.multimodal')} /> : null}
+        </View>
+        <AppText variant="small" color="textSecondary">
+          {t('providers.reads', { list: reads })}
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.xl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   grow: { flex: 1, minWidth: 0 },
   models: { borderWidth: 1, borderRadius: radius.md, paddingVertical: spacing.xs },
-  model: { flexDirection: 'row', alignItems: 'center', paddingRight: spacing.md },
+  model: { flexDirection: 'row', alignItems: 'center', paddingRight: spacing.md, paddingVertical: spacing.xs },
+  plainModel: { paddingLeft: spacing.md },
+  modelText: { gap: 2, paddingVertical: spacing.xs },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  group: { gap: spacing.sm },
+  start: { alignItems: 'flex-start' },
 });

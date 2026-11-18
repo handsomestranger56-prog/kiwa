@@ -1,25 +1,31 @@
 import { requestJson, trimSlash } from './http';
-import { type Adapter, type Connection, AiError, DEFAULT_MAX_TOKENS } from './types';
+import { type Adapter, type Connection, type ModelInfo, AiError, DEFAULT_MAX_TOKENS } from './types';
 
 export const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 
-type GeminiModel = { name: string; displayName?: string; supportedGenerationMethods?: string[] };
+type GeminiModel = { name: string; displayName?: string; description?: string; supportedGenerationMethods?: string[]; inputTokenLimit?: number; outputTokenLimit?: number };
 
 const base = (connection: Connection) => trimSlash(connection.baseUrl || GEMINI_BASE_URL);
 const headers = (connection: Connection) => ({ 'x-goog-api-key': connection.apiKey });
 
 export const geminiAdapter: Adapter = {
   async listModels(connection, fetchImpl) {
-    const models: { id: string; label: string }[] = [];
+    const models: ModelInfo[] = [];
     let pageToken = '';
     for (let page = 0; page < 20; page += 1) {
       const query = `pageSize=1000${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
       const data = await requestJson(fetchImpl, `${base(connection)}/models?${query}`, { headers: headers(connection) });
       for (const model of (data.models as GeminiModel[] | undefined) ?? []) {
-        // Only models that can write text. Embedding and other special models are left out.
-        if (!model.supportedGenerationMethods?.includes('generateContent')) continue;
+        // Every model is kept. The catalog (catalog.ts) decides which ones can write a course.
         const id = model.name.replace(/^models\//, '');
-        models.push({ id, label: model.displayName || id });
+        models.push({
+          id,
+          label: model.displayName || id,
+          ...(model.description ? { description: model.description } : {}),
+          ...(model.supportedGenerationMethods ? { methods: model.supportedGenerationMethods } : {}),
+          ...(model.inputTokenLimit ? { inputLimit: model.inputTokenLimit } : {}),
+          ...(model.outputTokenLimit ? { outputLimit: model.outputTokenLimit } : {}),
+        });
       }
       pageToken = typeof data.nextPageToken === 'string' ? data.nextPageToken : '';
       if (!pageToken) break;

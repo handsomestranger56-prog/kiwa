@@ -71,6 +71,14 @@ Assumptions the user was told about and has not objected to. Keep them unless to
   choose"). The model then picks within the usual limits, guided by the topic and notes.
 - Groups: an item is in one group or none (`groups` table, `items.group_id`). An exported item
   names its group; a whole group exports as a `group/1` file. Backups carry groups.
+- Model catalog: `src/core/ai/catalog.json` holds ordered id patterns per provider (group,
+  modalities, free tier or paid) and `catalog.ts` combines them with what the provider reports
+  (Gemini's methods, OpenRouter's modalities and prices). Every listed model is kept; the provider
+  screen groups them and only models that can write get a checkbox. Pickers ask for a task
+  (`choices('write')`). Free and paid are a guide with a date; update the JSON when they change.
+- Per-minute limits are waited out (with "Use another model now"); daily limits and used-up credit
+  stop the run at once and suggest another model. Every HTTP request is logged; "N failed" opens
+  the list (`state.failures`).
 - Generation waits out rate limits and busy servers (Retry-After or Google's retryDelay, up to
   90 s, three times per request) and counts every request, failed ones too. A failed run can be
   retried with another model.

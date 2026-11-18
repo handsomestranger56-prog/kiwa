@@ -104,7 +104,21 @@ export const backupSchema = z.object({
         kind: z.enum(['claude', 'gemini', 'openai']),
         label: z.string(),
         baseUrl: z.string().nullable().default(null),
-        models: z.array(z.object({ id: z.string(), label: z.string() })).default([]),
+        models: z
+          .array(
+            z.object({
+              id: z.string(),
+              label: z.string(),
+              description: z.string().optional(),
+              methods: z.array(z.string()).optional(),
+              inputLimit: z.number().optional(),
+              outputLimit: z.number().optional(),
+              input: z.array(z.enum(['text', 'image', 'audio', 'video', 'pdf'])).optional(),
+              output: z.array(z.enum(['text', 'image', 'audio', 'video', 'pdf'])).optional(),
+              free: z.boolean().optional(),
+            }),
+          )
+          .default([]),
         enabled: z.array(z.string()).default([]),
       }),
     )

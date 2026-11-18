@@ -104,7 +104,7 @@ function goodModel({ prompt }) {
     await button('Add provider').click();
     await field('API key').fill('sk-ant-good');
     await button('Test and detect models').click();
-    await seen('Connected. Found 2 models.');
+    await seen('Connected. Found 2 models. 2 can write courses and quizzes.');
     await button('Save').click();
     await seen('Claude · 1 model on');
     await button('Add provider').click();
@@ -112,7 +112,7 @@ function goodModel({ prompt }) {
     await field('Address').fill(MOCK_OPENAI_URL);
     await field('Name').fill('My server');
     await button('Test and detect models').click();
-    await seen('Connected. Found 2 models.');
+    await seen('Connected. Found 3 models. 2 can write courses and quizzes.');
     await button('Save').click();
     await seen('OpenAI-compatible · 1 model on');
   });

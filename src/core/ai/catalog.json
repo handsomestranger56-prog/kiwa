@@ -1,0 +1,35 @@
+{
+  "updated": "2026-11-18",
+  "about": "What each model can do and whether it has a free tier, by model id pattern. Rules are checked in order and the first match wins. Patterns are case-insensitive regular expressions. Free and paid change often and depend on the account, so the app shows them as a guide. What the provider itself reports (Gemini's methods, OpenRouter's modalities and prices) takes precedence.",
+  "rules": [
+    { "provider": "gemini", "match": "embedding", "group": "embedding", "input": ["text"], "output": [], "tier": "freeTier" },
+    { "provider": "gemini", "match": "^imagen-", "group": "image", "input": ["text"], "output": ["image"], "tier": "paid" },
+    { "provider": "gemini", "match": "^veo-", "group": "video", "input": ["text", "image"], "output": ["video"], "tier": "paid" },
+    { "provider": "gemini", "match": "native-audio|-live|live-|live$|translate", "group": "live", "input": ["text", "audio", "video"], "output": ["text", "audio"], "tier": "freeTier" },
+    { "provider": "gemini", "match": "tts", "group": "speech", "input": ["text"], "output": ["audio"], "tier": "freeTier" },
+    { "provider": "gemini", "match": "transcri", "group": "speech", "input": ["audio"], "output": ["text"], "tier": "freeTier" },
+    { "provider": "gemini", "match": "image|nano-banana", "group": "image", "input": ["text", "image"], "output": ["text", "image"], "tier": "paid" },
+    { "provider": "gemini", "match": "robotics|computer-use|deep-research|^aqa|learnlm|^lyria", "group": "special", "input": ["text", "image"], "output": ["text"], "tier": "unknown" },
+    { "provider": "gemini", "match": "^gemma-", "group": "text", "input": ["text", "image"], "output": ["text"], "tier": "freeTier" },
+    { "provider": "gemini", "match": "-pro", "group": "text", "input": ["text", "image", "audio", "video", "pdf"], "output": ["text"], "tier": "paid" },
+    { "provider": "gemini", "match": "flash", "group": "text", "input": ["text", "image", "audio", "video", "pdf"], "output": ["text"], "tier": "freeTier" },
+    { "provider": "gemini", "match": "^gemini-", "group": "text", "input": ["text", "image", "audio", "video", "pdf"], "output": ["text"], "tier": "unknown" },
+
+    { "provider": "claude", "match": "^claude-", "group": "text", "input": ["text", "image", "pdf"], "output": ["text"], "tier": "paid" },
+
+    { "provider": "openai", "match": ":free$", "tier": "free" },
+    { "provider": "openai", "match": "embed", "group": "embedding", "input": ["text"], "output": [] },
+    { "provider": "openai", "match": "whisper|transcri|-stt", "group": "speech", "input": ["audio"], "output": ["text"] },
+    { "provider": "openai", "match": "tts|speech", "group": "speech", "input": ["text"], "output": ["audio"] },
+    { "provider": "openai", "match": "realtime|-live|audio-preview|native-audio", "group": "live", "input": ["text", "audio"], "output": ["text", "audio"] },
+    { "provider": "openai", "match": "dall-e|gpt-image|image-gen|flux|stable-diffusion|sdxl|imagen|-image", "group": "image", "input": ["text", "image"], "output": ["image"] },
+    { "provider": "openai", "match": "sora|veo|video", "group": "video", "input": ["text", "image"], "output": ["video"] },
+    { "provider": "openai", "match": "moderation|guard|rerank|computer-use", "group": "special", "input": ["text"], "output": ["text"] },
+    { "provider": "openai", "match": "vision|-vl|vl-|llava|pixtral|gpt-4o|gpt-4\\.1|gpt-5|^o[134](-|$)|grok-4|grok-2-vision|gemini|claude|gemma-3|llama-4|qwen.*vl|mistral-(medium|small)", "group": "text", "input": ["text", "image"], "output": ["text"] }
+  ],
+  "hosts": [
+    { "match": "localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\.local(:|/|$)|192\\.168\\.|10\\.\\d+\\.", "tier": "local" },
+    { "match": "api\\.openai\\.com|api\\.x\\.ai|api\\.deepseek\\.com|api\\.anthropic\\.com", "tier": "paid" },
+    { "match": "openrouter\\.ai", "tier": "paid" }
+  ]
+}

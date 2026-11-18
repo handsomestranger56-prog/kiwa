@@ -118,12 +118,12 @@ describe('Claude', () => {
 });
 
 describe('Gemini', () => {
-  it('lists only models that write text, across pages', async () => {
+  it('lists every model with what Gemini says about it, across pages', async () => {
     const { fetchImpl, calls } = fakeFetch(
       {
         body: {
           models: [
-            { name: 'models/gemini-3-pro', displayName: 'Gemini 3 Pro', supportedGenerationMethods: ['generateContent', 'countTokens'] },
+            { name: 'models/gemini-3-pro', displayName: 'Gemini 3 Pro', description: 'Pro', inputTokenLimit: 1048576, outputTokenLimit: 65536, supportedGenerationMethods: ['generateContent', 'countTokens'] },
             { name: 'models/text-embedding-004', displayName: 'Embedding', supportedGenerationMethods: ['embedContent'] },
           ],
           nextPageToken: 'next',
@@ -132,8 +132,9 @@ describe('Gemini', () => {
       { body: { models: [{ name: 'models/gemini-3-flash', supportedGenerationMethods: ['generateContent'] }] } },
     );
     expect(await listModels(gemini, fetchImpl)).toEqual([
-      { id: 'gemini-3-pro', label: 'Gemini 3 Pro' },
-      { id: 'gemini-3-flash', label: 'gemini-3-flash' },
+      { id: 'gemini-3-pro', label: 'Gemini 3 Pro', description: 'Pro', methods: ['generateContent', 'countTokens'], inputLimit: 1048576, outputLimit: 65536 },
+      { id: 'text-embedding-004', label: 'Embedding', methods: ['embedContent'] },
+      { id: 'gemini-3-flash', label: 'gemini-3-flash', methods: ['generateContent'] },
     ]);
     expect(calls[0].url).toBe('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000');
     expect(calls[0].headers['x-goog-api-key']).toBe('gm-test');
@@ -170,11 +171,20 @@ describe('Gemini', () => {
 });
 
 describe('OpenAI-compatible', () => {
-  it('lists text models from the configured address, sorted', async () => {
-    const { fetchImpl, calls } = fakeFetch({ body: { data: [{ id: 'gpt-5' }, { id: 'text-embedding-3-large' }, { id: 'whisper-1' }, { id: 'gpt-5-mini' }, { id: 'dall-e-3' }] } });
+  it('lists every model from the configured address, sorted, with what the service says', async () => {
+    const { fetchImpl, calls } = fakeFetch({
+      body: {
+        data: [
+          { id: 'gpt-5' },
+          { id: 'whisper-1' },
+          { id: 'vendor/free-model', name: 'Free model', context_length: 32000, architecture: { input_modalities: ['text', 'image', 'file'], output_modalities: ['text'] }, pricing: { prompt: '0', completion: '0' } },
+        ],
+      },
+    });
     expect(await listModels(openai, fetchImpl)).toEqual([
       { id: 'gpt-5', label: 'gpt-5' },
-      { id: 'gpt-5-mini', label: 'gpt-5-mini' },
+      { id: 'vendor/free-model', label: 'Free model', inputLimit: 32000, input: ['text', 'image', 'pdf'], output: ['text'], free: true },
+      { id: 'whisper-1', label: 'whisper-1' },
     ]);
     expect(calls[0].url).toBe('https://api.openai.com/v1/models');
     expect(calls[0].headers.authorization).toBe('Bearer sk-test');

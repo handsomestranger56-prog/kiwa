@@ -4,7 +4,23 @@ export const PROVIDER_KINDS = ['claude', 'gemini', 'openai'] as const satisfies 
 /** What is needed to talk to one provider. The key comes from the device's secure store. */
 export type Connection = { kind: ProviderKind; apiKey: string; baseUrl?: string };
 
-export type ModelInfo = { id: string; label: string };
+export type Modality = 'text' | 'image' | 'audio' | 'video' | 'pdf';
+
+/** A model as the provider listed it. Everything but the id and label is optional: few providers say much. */
+export type ModelInfo = {
+  id: string;
+  label: string;
+  description?: string;
+  /** Gemini: what the model can be asked to do, such as "generateContent" or "embedContent". */
+  methods?: string[];
+  inputLimit?: number;
+  outputLimit?: number;
+  /** OpenRouter and similar: what the model reads and writes. */
+  input?: Modality[];
+  output?: Modality[];
+  /** The service lists it at no cost. */
+  free?: boolean;
+};
 
 export type GenerateRequest = {
   model: string;
