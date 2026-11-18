@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppState } from 'react-native';
 
 import { streak, dayKey } from '@/core/focus/days';
@@ -55,7 +56,15 @@ export async function syncNotifications(data: AppData, timer: { endsAt: number; 
     recorded = [];
   }
   const pending = await pendingIds();
-  const scheduled = recorded.filter((entry) => pending.has(entry.id));
+  let scheduled = recorded.filter((entry) => pending.has(entry.id));
+
+  // Pending reminders carry their text from when they were scheduled. After a language change,
+  // cancel them all so the plan below schedules them again in the new language.
+  const language = i18n.language;
+  if ((await data.settings.get('notify.language')) !== language) {
+    for (const entry of scheduled) await cancel(entry.id).catch(() => {});
+    scheduled = [];
+  }
 
   const changes = reconcile(planned, scheduled);
   for (const id of changes.cancel) await cancel(id).catch(() => {});
@@ -63,12 +72,16 @@ export async function syncNotifications(data: AppData, timer: { endsAt: number; 
     await schedule({ id: entry.id, at: entry.at, ...content(entry, current.length) }).catch(() => {});
   }
   await data.settings.setQuietly('notify.scheduled', JSON.stringify(planned.map(({ id, at }) => ({ id, at }))));
+  await data.settings.setQuietly('notify.language', language);
 }
 
 /** Re-plans notifications when the app opens, comes back to the front, or anything is saved. */
 export function NotificationsSync() {
   const data = useData();
   const { timer } = useFocus();
+  // Re-plans when the language changes, so reminders are rewritten in it.
+  const { i18n: translations } = useTranslation();
+  const language = translations.language;
   const timerKey = timer.status === 'running' && timer.endsAt ? `${timer.phase}:${timer.endsAt}` : 'none';
 
   const run = useEffectEvent(() => {
@@ -93,7 +106,7 @@ export function NotificationsSync() {
       unsubscribe();
       subscription.remove();
     };
-  }, [data, timerKey]);
+  }, [data, timerKey, language]);
 
   return null;
 }

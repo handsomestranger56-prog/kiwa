@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -15,6 +15,7 @@ import { Page } from '@/ui/layout';
 import { ConfirmDialog } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { monoFont, radius, spacing, useTheme } from '@/ui/theme';
+import { openNewItem } from '@/features/library/open-item';
 
 type Checked = { outcome: ImportOutcome; existing: boolean };
 type Success = Extract<ImportOutcome, { ok: true }>;
@@ -22,8 +23,7 @@ type Failure = Extract<ImportOutcome, { ok: false }>;
 
 export default function ImportScreen() {
   const params = useLocalSearchParams<{ course?: string }>();
-  const { t } = useTranslation();
-  const router = useRouter();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const data = useData();
@@ -97,7 +97,7 @@ export default function ImportScreen() {
         : conflict === 'replace'
           ? await data.library.replace(outcome.document, 'imported')
           : await data.library.add(asCopy(outcome.document, t('import.copySuffix')), 'imported');
-      router.replace({ pathname: '/item/[id]', params: { id: item.id } });
+      openNewItem(item.id);
     });
 
   const addLesson = (outcome: Extract<Success, { kind: 'lesson' }>) =>
@@ -106,7 +106,7 @@ export default function ImportScreen() {
       const course = await data.library.getDocument(courseId);
       if (!course || course.format !== COURSE_FORMAT) throw new Error('course missing');
       await data.library.replace(appendLesson(course as Course, outcome.lesson));
-      router.replace({ pathname: '/item/[id]', params: { id: courseId } });
+      openNewItem(courseId);
     });
 
   const restore = (outcome: Extract<Success, { kind: 'backup' }>) =>
@@ -227,7 +227,7 @@ export default function ImportScreen() {
             <Tag tone="warm" label={t('import.backup.tag')} />
             <AppText variant="heading">{t('import.backup.items', { count: outcome.backup.items.length })}</AppText>
             <AppText variant="small" color="textSecondary">
-              {t('import.backup.created', { date: new Date(outcome.backup.createdAt).toLocaleDateString() })}
+              {t('import.backup.created', { date: new Date(outcome.backup.createdAt).toLocaleDateString(i18n.language) })}
             </AppText>
             <AppText color="textSecondary">{t('import.backup.hint')}</AppText>
             <View style={styles.row}>

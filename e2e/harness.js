@@ -20,7 +20,7 @@ const TYPES = {
 
 const VIEWPORT = { width: 390, height: 844 };
 
-async function start({ permissions = [], colorScheme = 'light' } = {}) {
+async function start({ permissions = [], colorScheme = 'light', locale = 'en-US' } = {}) {
   const dist = path.resolve(process.argv[2] || path.join(__dirname, '..', 'dist'));
   if (!fs.existsSync(path.join(dist, 'index.html'))) {
     throw new Error(`No web build at ${dist}. Run: npx expo export --platform web`);
@@ -44,7 +44,7 @@ async function start({ permissions = [], colorScheme = 'light' } = {}) {
   const base = `http://localhost:${server.address().port}`;
 
   const browser = await chromium.launch();
-  const context = await browser.newContext({ viewport: VIEWPORT, colorScheme, deviceScaleFactor: 2, acceptDownloads: true, permissions });
+  const context = await browser.newContext({ viewport: VIEWPORT, colorScheme, locale, deviceScaleFactor: 2, acceptDownloads: true, permissions });
   const page = await context.newPage();
   page.setDefaultTimeout(8000);
 

@@ -8,6 +8,7 @@ import { backupFile } from '@/core/transfer/files';
 import { useData, useQuery } from '@/data/provider';
 import { ProvidersSection } from '@/features/ai/providers-section';
 import { RemindersSection } from '@/features/focus/reminders-section';
+import { LanguagePicker } from '@/features/settings/language';
 import { shareTextFile } from '@/platform/files';
 import { TextField } from '@/ui/controls';
 import { type IconName, Icon } from '@/ui/icon';
@@ -59,6 +60,8 @@ export default function SettingsScreen() {
           {/* Mounted once the stored name is known, so the field starts with it. */}
           {name.loading ? null : <NameField stored={name.data ?? ''} />}
         </View>
+
+        <LanguagePicker />
 
         <ProvidersSection />
 

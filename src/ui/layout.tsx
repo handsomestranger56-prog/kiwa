@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type ViewProps, ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,6 +22,7 @@ export function Page({ style, children, ...rest }: ViewProps) {
  * spinner only appears after a short wait: fast loads show a calm empty page instead of a flicker.
  */
 export function Loading({ delay = 250 }: { delay?: number }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const [visible, setVisible] = useState(delay <= 0);
   useEffect(() => {
@@ -30,7 +32,7 @@ export function Loading({ delay = 250 }: { delay?: number }) {
   }, [delay]);
   return (
     <Page style={styles.loading}>
-      {visible ? <ActivityIndicator size="large" color={colors.accent} accessibilityLabel="Loading" /> : null}
+      {visible ? <ActivityIndicator size="large" color={colors.accent} accessibilityLabel={t('common.loading')} /> : null}
     </Page>
   );
 }

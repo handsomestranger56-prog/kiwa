@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useEffectEvent, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +11,7 @@ import { type ColorName, MAX_CONTENT_WIDTH, MIN_TOUCH, radius, spacing, useTheme
 type OverlayProps = { visible: boolean; onClose: () => void; children: ReactNode; position: 'bottom' | 'center' };
 
 function Overlay({ visible, onClose, children, position }: OverlayProps) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -18,7 +20,7 @@ function Overlay({ visible, onClose, children, position }: OverlayProps) {
         style={[styles.backdrop, position === 'center' ? styles.center : styles.bottom]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={t('common.close')}
           style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }]}
           onPress={onClose}
         />

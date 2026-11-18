@@ -1,4 +1,4 @@
-/** English strings. Add a language by copying this file and registering it in ./index.ts. */
+/** English strings, the source for every other language. Register a new language in ./index.ts. */
 export const en = {
   tabs: {
     library: 'Library',
@@ -51,6 +51,12 @@ export const en = {
     close: 'Close',
     completed: 'Completed',
     sample: 'Sample',
+    loading: 'Loading',
+  },
+  language: {
+    title: 'Language',
+    system: 'Same as phone',
+    hint: 'The language of the app. The language of courses you create is set on the create form.',
   },
   library: {
     title: 'Library',
@@ -683,7 +689,10 @@ export const en = {
   },
 } as const;
 
-type Widen<T> = T extends string ? string : { [K in keyof T]: Widen<T[K]> };
+/** Languages such as Russian need more plural forms than English: allow them next to any `_one`. */
+type ExtraPlurals<T> = { [K in keyof T as K extends `${infer Base}_one` ? `${Base}_${'zero' | 'two' | 'few' | 'many'}` : never]?: string };
+
+type Widen<T> = T extends string ? string : { [K in keyof T]: Widen<T[K]> } & ExtraPlurals<T>;
 
 /** The shape every language file must have. */
 export type Translation = Widen<typeof en>;

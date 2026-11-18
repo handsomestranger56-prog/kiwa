@@ -16,6 +16,7 @@ import { EmptyState, Loading, Page } from '@/ui/layout';
 import { ConfirmDialog } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { monoFont, radius, spacing, useTheme } from '@/ui/theme';
+import { openNewItem } from '@/features/library/open-item';
 
 export default function JobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -75,7 +76,7 @@ function JobView({ job }: { job: Job }) {
         itemId = (await data.library.add(document, 'generated')).id;
       }
       await data.jobs.update(job.id, { status: 'saved', savedItemId: itemId });
-      router.replace({ pathname: '/item/[id]', params: { id: itemId } });
+      openNewItem(itemId);
     } catch {
       setFailed(true);
     }
@@ -155,7 +156,7 @@ function JobView({ job }: { job: Job }) {
         {status === 'saved' && job.savedItemId ? (
           <View style={styles.row}>
             <AppText color="accent">{t('job.saved')}</AppText>
-            <Button kind="secondary" label={t('job.open')} onPress={() => router.replace({ pathname: '/item/[id]', params: { id: job.savedItemId ?? '' } })} />
+            <Button kind="secondary" label={t('job.open')} onPress={() => openNewItem(job.savedItemId ?? '')} />
           </View>
         ) : null}
 

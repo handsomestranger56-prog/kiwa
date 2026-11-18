@@ -12,6 +12,7 @@ import { DataProvider } from '@/data/provider';
 import { JobRunnerProvider } from '@/features/ai/job-runner';
 import { FocusProvider } from '@/features/focus/focus-provider';
 import { NotificationsSync } from '@/features/focus/notifications-sync';
+import { LanguageSync } from '@/features/settings/language';
 import { AppText } from '@/ui/text';
 import { monoFont, spacing, useTheme } from '@/ui/theme';
 
@@ -44,6 +45,7 @@ export default function RootLayout() {
         >
           <JobRunnerProvider>
             <FocusProvider>
+              <LanguageSync />
               <NotificationsSync />
               <Stack
                 screenOptions={{

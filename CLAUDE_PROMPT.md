@@ -64,7 +64,7 @@ Assumptions the user was told about and has not objected to. Keep them unless to
 - A score given by the model through "Check" counts toward a test result, marked as AI-graded.
 - Without an API key, essays fall back to showing the model answer for self-rating. Already built.
 - Text, code and images in the first version. No audio or video.
-- English only at launch. All strings already go through `src/i18n/en.ts`.
+- English, Uzbek (Latin) and Russian (`src/i18n/en.ts`, `uz.ts`, `ru.ts`). The app follows the phone's language until one is chosen in Settings or on the welcome screen (setting `app.language`). Reminders are rescheduled in the new language.
 - Typed answers ignore case, spacing and punctuation but keep accents.
 - Completing a lesson is a manual button and does not require passing its test.
 
@@ -188,7 +188,8 @@ Work one step at a time, in this order.
   SQLite through `src/data/testing/memory-driver.ts`.
 - Schema changes are new entries at the end of `migrations` in `src/data/migrations.ts`. Never
   edit one that has shipped. Add new tables to the backup in `src/data/backup.ts` too.
-- Every user-facing string goes in `src/i18n/en.ts`.
+- Every user-facing string goes in `src/i18n/en.ts`, with the same key in `uz.ts` and `ru.ts` (Russian also needs `_few` and `_many` plural forms). `src/i18n/i18n.test.ts` fails if a key or placeholder is missing.
+- After creating, importing or generating an item, open it with `openNewItem` (`src/features/library/open-item.ts`) so Back goes to the library.
 - Run `npm run check` (lint, types, tests) before calling a step done.
 - Report plainly: what works, how it was checked, what was not verified, and choices the user may
   want changed. The user reads on a phone, so keep reports short and concrete.

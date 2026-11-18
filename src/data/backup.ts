@@ -22,7 +22,7 @@ type AttemptRow = {
 };
 
 /** Settings that describe this install and should not travel to another device. */
-const LOCAL_SETTINGS = new Set(['samples.seeded', 'focus.timer', 'notify.scheduled', 'onboarding.done']);
+const LOCAL_SETTINGS = new Set(['samples.seeded', 'focus.timer', 'notify.scheduled', 'notify.language', 'onboarding.done']);
 
 /**
  * Copies everything on the device into one file and back: content, marks, results and settings.
