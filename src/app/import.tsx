@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { type Course, COURSE_FORMAT, kindOf, unitCount } from '@/core/schema';
+import { type Course, type LibraryDocument, COURSE_FORMAT, kindOf, unitCount } from '@/core/schema';
 import { type ImportOutcome, appendLesson, asCopy, readImport } from '@/core/transfer/files';
 import { buildFixPrompt } from '@/core/transfer/prompt';
 import type { Fix } from '@/core/transfer/repair';
@@ -15,9 +15,10 @@ import { Page } from '@/ui/layout';
 import { ConfirmDialog } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { monoFont, radius, spacing, useTheme } from '@/ui/theme';
-import { openNewItem } from '@/features/library/open-item';
+import { openGroup, openNewItem } from '@/features/library/open-item';
 
-type Checked = { outcome: ImportOutcome; existing: boolean };
+/** `existing` is whether the item is already in the library; for a group, how many of its items are. */
+type Checked = { outcome: ImportOutcome; existing: boolean; existingCount: number };
 type Success = Extract<ImportOutcome, { ok: true }>;
 type Failure = Extract<ImportOutcome, { ok: false }>;
 
@@ -48,12 +49,16 @@ export default function ImportScreen() {
     setMessage(null);
     const outcome = readImport(source);
     const existing = outcome.ok && outcome.kind === 'document' ? await data.library.exists(outcome.document.id) : false;
+    let existingCount = 0;
+    if (outcome.ok && outcome.kind === 'group') {
+      for (const document of outcome.documents) if (await data.library.exists(document.id)) existingCount += 1;
+    }
     setConflict('replace');
     if (outcome.ok && outcome.kind === 'lesson' && !courseId) {
       const suggested = outcome.courseId && (await data.library.exists(outcome.courseId)) ? outcome.courseId : null;
       setCourseId(suggested ?? courses.data?.[0]?.id ?? null);
     }
-    setChecked({ outcome, existing });
+    setChecked({ outcome, existing, existingCount });
   };
 
   const chooseFile = () => {
@@ -90,14 +95,29 @@ export default function ImportScreen() {
       .finally(() => setWorking(false));
   };
 
+  /** Adds one document, or replaces or copies it when its id is taken. Returns the new item's id. */
+  const put = async (document: LibraryDocument, existing: boolean, groupId: string | null) => {
+    if (!existing) return (await data.library.add(document, 'imported', groupId)).id;
+    if (conflict === 'replace') return (await data.library.replace(document, 'imported')).id;
+    return (await data.library.add(asCopy(document, t('import.copySuffix')), 'imported', groupId)).id;
+  };
+
   const addDocument = (outcome: Extract<Success, { kind: 'document' }>, existing: boolean) =>
     run(async () => {
-      const item = !existing
-        ? await data.library.add(outcome.document, 'imported')
-        : conflict === 'replace'
-          ? await data.library.replace(outcome.document, 'imported')
-          : await data.library.add(asCopy(outcome.document, t('import.copySuffix')), 'imported');
-      openNewItem(item.id);
+      // The file names the group it came from: put it back in a group of that name.
+      const group = outcome.group ? await data.groups.ensure(outcome.group) : null;
+      const id = await put(outcome.document, existing, group?.id ?? null);
+      if (group) await data.library.setGroup([id], group.id);
+      openNewItem(id);
+    });
+
+  const addGroup = (outcome: Extract<Success, { kind: 'group' }>) =>
+    run(async () => {
+      const group = await data.groups.ensure(outcome.name);
+      const ids: string[] = [];
+      for (const document of outcome.documents) ids.push(await put(document, await data.library.exists(document.id), group.id));
+      await data.library.setGroup(ids, group.id);
+      openGroup(group.id);
     });
 
   const addLesson = (outcome: Extract<Success, { kind: 'lesson' }>) =>
@@ -174,6 +194,11 @@ export default function ImportScreen() {
               {outcome.document.level ? ` · ${t(`level.${outcome.document.level}`)}` : ''}
             </AppText>
             {outcome.document.description ? <AppText>{outcome.document.description}</AppText> : null}
+            {outcome.group ? (
+              <AppText variant="small" color="textSecondary">
+                {t('import.group', { name: outcome.group })}
+              </AppText>
+            ) : null}
             <Fixes fixes={outcome.fixes} />
 
             {checked?.existing ? (
@@ -196,6 +221,36 @@ export default function ImportScreen() {
                 disabled={working}
                 onPress={() => addDocument(outcome, checked?.existing ?? false)}
               />
+            </View>
+          </View>
+        ) : null}
+
+        {outcome?.ok && outcome.kind === 'group' ? (
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Tag tone="accent" label={t('import.groupTag')} />
+            <AppText variant="heading">{outcome.name}</AppText>
+            <View style={styles.list}>
+              {outcome.documents.map((document) => (
+                <AppText key={document.id}>
+                  {t(`kind.${kindOf(document)}`)} · {document.title}
+                </AppText>
+              ))}
+            </View>
+            <Fixes fixes={outcome.fixes} />
+            {checked && checked.existingCount > 0 ? (
+              <View style={styles.block}>
+                <AppText variant="bodyStrong">{t('import.groupConflict', { count: checked.existingCount })}</AppText>
+                <View style={styles.row}>
+                  <Chip label={t('import.conflict.replace')} selected={conflict === 'replace'} onPress={() => setConflict('replace')} />
+                  <Chip label={t('import.conflict.copy')} selected={conflict === 'copy'} onPress={() => setConflict('copy')} />
+                </View>
+                <AppText variant="small" color="textSecondary">
+                  {t(`import.conflict.${conflict}Hint`)}
+                </AppText>
+              </View>
+            ) : null}
+            <View style={styles.row}>
+              <Button icon="add" label={t('import.addAll', { count: outcome.documents.length })} disabled={working} onPress={() => addGroup(outcome)} />
             </View>
           </View>
         ) : null}
@@ -325,6 +380,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   block: { gap: spacing.sm },
+  list: { gap: 2 },
   paste: { minHeight: 140, paddingTop: spacing.md, fontSize: 13 },
   card: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
   note: { borderRadius: radius.md, padding: spacing.md, gap: spacing.xs },

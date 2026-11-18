@@ -17,6 +17,7 @@ import { LibraryRepository } from './library-repository';
 import { FocusRepository } from './focus-repository';
 import { JobsRepository } from './jobs-repository';
 import { migrate } from './migrations';
+import { GroupsRepository } from './groups-repository';
 import { ProvidersRepository } from './providers-repository';
 import { ReviewsRepository } from './reviews-repository';
 import { seedSamples } from './seed';
@@ -26,6 +27,7 @@ const DATABASE_NAME = 'anki.db';
 
 export type AppData = {
   library: LibraryRepository;
+  groups: GroupsRepository;
   attempts: AttemptsRepository;
   backups: BackupService;
   providers: ProvidersRepository;
@@ -50,9 +52,11 @@ async function openAppData(): Promise<AppData> {
   const library = new LibraryRepository(driver, changes);
   const settings = new SettingsRepository(driver, changes);
   const providers = new ProvidersRepository(driver, changes);
+  const groups = new GroupsRepository(driver, changes);
   await seedSamples(library, settings);
   return {
     library,
+    groups,
     attempts: new AttemptsRepository(driver, changes),
     backups: new BackupService(driver, library, providers, changes),
     providers,

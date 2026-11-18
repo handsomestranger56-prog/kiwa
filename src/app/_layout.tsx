@@ -58,6 +58,7 @@ export default function RootLayout() {
               >
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
+                <Stack.Screen name="groups" options={{ title: t('groups.title') }} />
                 <Stack.Screen name="create" options={{ title: t('create.screenTitle') }} />
                 <Stack.Screen name="import" options={{ title: t('import.title') }} />
                 <Stack.Screen name="review-session" options={{ title: t('review.title') }} />

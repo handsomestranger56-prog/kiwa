@@ -4,9 +4,14 @@ import { useTranslation } from 'react-i18next';
 
 import { documentFile } from '@/core/transfer/files';
 import type { LibraryItem } from '@/data/library-repository';
-import { useData } from '@/data/provider';
+import type { GroupSummary } from '@/data/groups-repository';
+import { useData, useQuery } from '@/data/provider';
 import { shareTextFile } from '@/platform/files';
 import { type SheetAction, type SnackbarMessage, ActionSheet, PromptDialog } from '@/ui/overlays';
+
+/** Snackbar messages need a new id each time so the same text shows again. */
+let snackbarCount = 0;
+const nextSnackbarId = () => (snackbarCount += 1);
 
 type Options = {
   /** Called after an item has been moved to the trash. */
@@ -19,13 +24,16 @@ type Options = {
  */
 export function useItemActions({ onRemoved }: Options = {}) {
   const { t } = useTranslation();
-  const { library } = useData();
+  const { library, groups } = useData();
   const router = useRouter();
   const [target, setTarget] = useState<LibraryItem | null>(null);
   const [renaming, setRenaming] = useState<LibraryItem | null>(null);
+  const [moving, setMoving] = useState<LibraryItem | null>(null);
+  const [naming, setNaming] = useState<LibraryItem | null>(null);
+  const groupList = useQuery('groups:list', ({ groups: all }) => all.list()).data ?? [];
   const [snackbar, setSnackbar] = useState<SnackbarMessage | null>(null);
 
-  const fail = () => setSnackbar({ id: Date.now(), text: t('errors.generic') });
+  const fail = () => setSnackbar({ id: nextSnackbarId(), text: t('errors.generic') });
 
   const toggleFavorite = (item: LibraryItem) => {
     library.setMark(item.id, 'favorite', !item.favorite).catch(fail);
@@ -36,20 +44,41 @@ export function useItemActions({ onRemoved }: Options = {}) {
       .getDocument(item.id)
       .then(async (document) => {
         if (!document) throw new Error('missing');
-        const file = documentFile(document);
+        const group = item.groupId ? await groups.get(item.groupId) : null;
+        const file = documentFile(document, group?.name);
         const result = await shareTextFile(file);
         if (result === 'unavailable') fail();
-        else if (result === 'downloaded') setSnackbar({ id: Date.now(), text: t('actions.exported', { name: file.name }) });
+        else if (result === 'downloaded') setSnackbar({ id: nextSnackbarId(), text: t('actions.exported', { name: file.name }) });
       })
       .catch(fail);
   };
+
+  const move = (item: LibraryItem, group: Pick<GroupSummary, 'id' | 'name'> | null) => {
+    library
+      .setGroup([item.id], group?.id ?? null)
+      .then(() => setSnackbar({ id: nextSnackbarId(), text: group ? t('actions.movedTo', { group: group.name }) : t('actions.ungrouped') }))
+      .catch(fail);
+  };
+
+  const groupActions: SheetAction[] = moving
+    ? [
+        ...groupList.map((group) => ({
+          key: group.id,
+          icon: group.id === moving.groupId ? ('check' as const) : ('folder' as const),
+          label: group.name,
+          onPress: () => move(moving, group),
+        })),
+        ...(moving.groupId ? [{ key: 'none', icon: 'close' as const, label: t('groups.none'), onPress: () => move(moving, null) }] : []),
+        { key: 'new', icon: 'add', label: t('groups.new'), onPress: () => setNaming(moving) },
+      ]
+    : [];
 
   const remove = (item: LibraryItem) => {
     library
       .remove(item.id)
       .then(() => {
         setSnackbar({
-          id: Date.now(),
+          id: nextSnackbarId(),
           text: t('library.movedToTrash', { title: item.title }),
           actionLabel: t('common.undo'),
           onAction: () => {
@@ -84,6 +113,7 @@ export function useItemActions({ onRemoved }: Options = {}) {
             library.setMark(target.id, 'completed', !target.completed).catch(fail);
           },
         },
+        { key: 'group', icon: 'folder', label: t('actions.moveToGroup'), onPress: () => setMoving(target) },
         { key: 'export', icon: 'share', label: t('actions.export'), onPress: () => exportItem(target) },
         { key: 'remove', icon: 'trash', label: t('actions.moveToTrash'), danger: true, onPress: () => remove(target) },
       ]
@@ -108,6 +138,28 @@ export function useItemActions({ onRemoved }: Options = {}) {
           if (renaming) library.rename(renaming.id, title).catch(fail);
         }}
         onClose={() => setRenaming(null)}
+      />
+      <ActionSheet
+        visible={moving !== null}
+        title={moving ? t('actions.moveTitle', { title: moving.title }) : ''}
+        actions={groupActions}
+        onClose={() => setMoving(null)}
+      />
+      <PromptDialog
+        visible={naming !== null}
+        title={t('groups.new')}
+        placeholder={t('groups.namePlaceholder')}
+        confirmLabel={t('common.create')}
+        cancelLabel={t('common.cancel')}
+        onSubmit={(name) => {
+          const item = naming;
+          if (!item) return;
+          groups
+            .ensure(name)
+            .then((group) => move(item, group))
+            .catch(fail);
+        }}
+        onClose={() => setNaming(null)}
       />
     </>
   );

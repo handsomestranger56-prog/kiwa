@@ -1,7 +1,7 @@
 import { type Course, type Lesson, parseDocument } from '../schema';
 import { sampleCourseInput, sampleDeckInput, sampleInputs, sampleQuizInput } from '../templates/samples';
 import { extractJson } from './extract';
-import { appendLesson, asCopy, backupFile, documentFile, lessonFile, lessonText, readImport } from './files';
+import { appendLesson, asCopy, backupFile, documentFile, groupFile, lessonFile, lessonText, readImport } from './files';
 import { CREATE_KINDS, buildFixPrompt, buildPrompt, defaultRequest, example, promptFileName } from './prompt';
 import { repairImport, slugify } from './repair';
 
@@ -333,6 +333,49 @@ describe('buildPrompt with choices left to the model', () => {
     const lesson = buildPrompt({ ...defaultRequest, kind: 'lesson', topic: 'x', level: 'auto' });
     expect(lesson).toContain('choose "beginner", "intermediate" or "advanced"');
     expect(lesson).not.toContain('set `level` to it');
+  });
+});
+
+describe('groups in files', () => {
+  const quiz = () => {
+    const outcome = readImport(JSON.stringify(example('quiz')));
+    if (!outcome.ok || outcome.kind !== 'document') throw new Error('example did not import');
+    return outcome.document;
+  };
+
+  it('names the group in an item file, and reads it back', () => {
+    const file = documentFile(quiz(), 'Physics');
+    expect(file.text.indexOf('"group"')).toBeLessThan(file.text.indexOf('"title"'));
+    expect(readImport(file.text)).toMatchObject({ ok: true, kind: 'document', group: 'Physics' });
+    expect(readImport(documentFile(quiz()).text)).toMatchObject({ ok: true, group: null });
+  });
+
+  it('exports and imports a whole group', () => {
+    const deck = readImport(JSON.stringify(example('deck')));
+    if (!deck.ok || deck.kind !== 'document') throw new Error('example did not import');
+    const file = groupFile('Physics basics', [quiz(), deck.document]);
+    expect(file.name).toBe('physics-basics.group.json');
+    const outcome = readImport(file.text);
+    expect(outcome).toMatchObject({ ok: true, kind: 'group', name: 'Physics basics' });
+    if (outcome.ok && outcome.kind === 'group') expect(outcome.documents.map((document) => document.format)).toEqual(['quiz/1', 'deck/1']);
+  });
+
+  it('repairs each item of a group and names the item that cannot be imported', () => {
+    const broken = { ...example('quiz'), assessment: { id: 'a', mode: 'practice', questions: [{ id: 'q', type: 'single_choice', prompt: 'Which?', options: ['Only one'], answer: 3 }] } };
+    const missingIds = { ...example('deck'), id: undefined };
+    const outcome = readImport(JSON.stringify({ format: 'group/1', name: 'Mixed', items: [missingIds, broken] }));
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok && outcome.stage === 'content') {
+      expect(outcome.issues.every((issue) => issue.path.startsWith('items[1]'))).toBe(true);
+    }
+    const fine = readImport(JSON.stringify({ format: 'group/1', name: 'Mixed', items: [missingIds] }));
+    expect(fine).toMatchObject({ ok: true, kind: 'group', fixes: [{ code: 'addedIds', count: 1 }] });
+  });
+
+  it('needs a name and at least one item', () => {
+    const outcome = readImport(JSON.stringify({ format: 'group/1', items: [] }));
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok && outcome.stage === 'content') expect(outcome.issues.map((issue) => issue.path)).toEqual(['name', 'items']);
   });
 });
 

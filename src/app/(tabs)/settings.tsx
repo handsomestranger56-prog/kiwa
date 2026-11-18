@@ -41,6 +41,7 @@ export default function SettingsScreen() {
   const rows: { key: string; icon: IconName; label: string; onPress: () => void }[] = [
     { key: 'backup', icon: 'share', label: t('settings.backup'), onPress: backUp },
     { key: 'import', icon: 'importFile', label: t('settings.importOrRestore'), onPress: () => router.push('/import') },
+    { key: 'groups', icon: 'folder', label: t('settings.openGroups'), onPress: () => router.push('/groups') },
     { key: 'trash', icon: 'trash', label: t('settings.openTrash'), onPress: () => router.push('/trash') },
   ];
 

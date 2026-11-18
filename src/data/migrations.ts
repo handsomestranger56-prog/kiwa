@@ -126,6 +126,16 @@ export const migrations: readonly string[] = [
   );
   CREATE INDEX review_cards_due ON review_cards (due_at);
   `,
+  // 7: groups the person sorts their items into. An item is in one group or none.
+  `
+  CREATE TABLE groups (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  ALTER TABLE items ADD COLUMN group_id TEXT;
+  CREATE INDEX items_group ON items (group_id);
+  `,
 ];
 
 export const LATEST_VERSION = migrations.length;

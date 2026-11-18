@@ -2,6 +2,8 @@ import { COURSE_FORMAT, DECK_FORMAT, QUIZ_FORMAT } from '../schema';
 
 export const LESSON_FORMAT = 'lesson/1';
 export const BACKUP_FORMAT = 'backup/1';
+/** A named group of courses, quizzes and flashcards, exported together. */
+export const GROUP_FORMAT = 'group/1';
 
 /** Something that was put right automatically. Shown to the user so nothing changes silently. */
 export type Fix =

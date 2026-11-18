@@ -39,6 +39,8 @@ const glyphs = {
   up: { ios: 'chevron.up', material: 'keyboard_arrow_up' },
   down: { ios: 'chevron.down', material: 'keyboard_arrow_down' },
   drag: { ios: 'line.3.horizontal', material: 'drag_indicator' },
+  folder: { ios: 'folder', material: 'folder' },
+  image: { ios: 'photo', material: 'image' },
 } as const satisfies Record<string, Glyph>;
 
 export type IconName = keyof typeof glyphs;

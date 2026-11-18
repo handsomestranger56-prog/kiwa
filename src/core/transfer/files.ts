@@ -16,7 +16,7 @@ import {
   parseDocument,
 } from '../schema';
 import { extractJson } from './extract';
-import { type Fix, BACKUP_FORMAT, LESSON_FORMAT, repairImport, slugify } from './repair';
+import { type Fix, BACKUP_FORMAT, GROUP_FORMAT, LESSON_FORMAT, repairImport, slugify } from './repair';
 
 /** One lesson on its own, for moving a lesson between courses or generating one with AI. */
 export const lessonFileSchema = z.object({
@@ -28,6 +28,8 @@ export const lessonFileSchema = z.object({
 
 const backupItemSchema = z.object({
   document: z.unknown(),
+  /** The group the item was in. Missing in backups made before groups existed. */
+  groupId: z.string().nullable().default(null),
   source: z.enum(['manual', 'sample', 'imported', 'generated']).default('imported'),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
@@ -67,6 +69,7 @@ export const backupSchema = z.object({
   createdAt: z.number().int(),
   items: z.array(backupItemSchema),
   settings: z.record(z.string(), z.string()).default({}),
+  groups: z.array(z.object({ id: z.string().min(1), name: z.string(), createdAt: z.number().int() })).default([]),
   /** Provider settings without their API keys. Keys never leave the device's secure store. */
   reviewCards: z
     .array(
@@ -114,7 +117,9 @@ export type Backup = Omit<z.infer<typeof backupSchema>, 'items'> & { items: Back
 export type JsonProblem = 'empty' | 'noJson' | 'cutOff' | 'invalid';
 
 export type ImportOutcome =
-  | { ok: true; kind: 'document'; document: LibraryDocument; fixes: Fix[] }
+  /** `group` is the name of the group the item was in when exported, if any. */
+  | { ok: true; kind: 'document'; document: LibraryDocument; group: string | null; fixes: Fix[] }
+  | { ok: true; kind: 'group'; name: string; documents: LibraryDocument[]; fixes: Fix[] }
   | { ok: true; kind: 'lesson'; lesson: Lesson; courseId: string | null; fixes: Fix[] }
   | { ok: true; kind: 'backup'; backup: Backup }
   /** The text is not JSON at all. */
@@ -126,6 +131,8 @@ export type ImportOutcome =
 export function readImport(text: string): ImportOutcome {
   const extracted = extractJson(text);
   if (!extracted.ok) return { ok: false, stage: 'json', problem: extracted.reason, detail: extracted.detail };
+
+  if (isGroupFile(extracted.value)) return readGroup(extracted.value);
 
   const { value, fixes } = repairImport(extracted.value);
 
@@ -141,7 +148,45 @@ export function readImport(text: string): ImportOutcome {
 
   const parsed = parseDocument(value);
   if (!parsed.ok) return { ok: false, stage: 'content', issues: parsed.issues };
-  return { ok: true, kind: 'document', document: parsed.document, fixes };
+  return { ok: true, kind: 'document', document: parsed.document, group: groupName(value.group), fixes };
+}
+
+const groupName = (value: unknown): string | null => {
+  const name = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, 60) : '';
+  return name || null;
+};
+
+function isGroupFile(value: Record<string, unknown>): boolean {
+  const format = typeof value.format === 'string' ? value.format.trim().toLowerCase() : '';
+  return format.split('/')[0] === GROUP_FORMAT.split('/')[0];
+}
+
+/** A group file: each item is repaired and checked on its own, and problems name the item. */
+function readGroup(value: Record<string, unknown>): ImportOutcome {
+  const issues: ParseIssue[] = [];
+  const name = groupName(value.name);
+  if (!name) issues.push({ path: 'name', message: 'The group needs a name.' });
+  const items = Array.isArray(value.items) ? value.items : [];
+  if (items.length === 0) issues.push({ path: 'items', message: 'The group has no items.' });
+
+  const documents: LibraryDocument[] = [];
+  const totals = new Map<Fix['code'], number>();
+  items.forEach((item, index) => {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      issues.push({ path: `items[${index}]`, message: 'Expected a course, quiz or set of flashcards.' });
+      return;
+    }
+    const repaired = repairImport(item as Record<string, unknown>);
+    for (const fix of repaired.fixes) totals.set(fix.code, (totals.get(fix.code) ?? 0) + ('count' in fix ? fix.count : 1));
+    const parsed = parseDocument(repaired.value);
+    if (parsed.ok) documents.push(parsed.document);
+    else for (const issue of parsed.issues) issues.push({ path: `items[${index}]${issue.path ? `.${issue.path}` : ''}`, message: issue.message });
+  });
+  if (issues.length > 0) return { ok: false, stage: 'content', issues };
+
+  const fixes: Fix[] = [];
+  for (const [code, count] of totals) if (code !== 'inferredFormat') fixes.push({ code, count } as Fix);
+  return { ok: true, kind: 'group', name: name as string, documents, fixes };
 }
 
 function readBackup(value: unknown): ImportOutcome {
@@ -190,12 +235,27 @@ export type TextFile = { name: string; text: string; mimeType: string };
 
 const KIND_SUFFIX: Record<DocumentKind, string> = { course: 'course', quiz: 'quiz', deck: 'deck' };
 
-/** A course, quiz or deck as a shareable file. Carries content only, never marks or results. */
-export function documentFile(document: LibraryDocument): TextFile {
+/**
+ * A course, quiz or deck as a shareable file. Carries content only, never marks or results.
+ * The name of its group travels with it, so an import can put it back in a group of that name.
+ */
+export function documentFile(document: LibraryDocument, group?: string | null): TextFile {
   const kind = kindOf(document);
+  // "group" right after "format", so a person opening the file sees it near the top.
+  const { format, ...rest } = document;
+  const content = group ? { format, group, ...rest } : document;
   return {
     name: `${slugify(document.title) || kind}.${KIND_SUFFIX[kind]}.json`,
-    text: `${JSON.stringify(document, null, 2)}\n`,
+    text: `${JSON.stringify(content, null, 2)}\n`,
+    mimeType: 'application/json',
+  };
+}
+
+/** Every item of a group in one file. Content only, like a single item's file. */
+export function groupFile(name: string, documents: LibraryDocument[]): TextFile {
+  return {
+    name: `${slugify(name) || 'group'}.group.json`,
+    text: `${JSON.stringify({ format: GROUP_FORMAT, name, items: documents }, null, 2)}\n`,
     mimeType: 'application/json',
   };
 }
