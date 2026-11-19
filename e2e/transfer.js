@@ -235,7 +235,7 @@ const broken = JSON.stringify({ format: 'deck/1', id: 'bad-deck', title: 'Broken
     }
     const git = data.items.find((item) => item.document.id === 'sample-git');
     if (!git.marks.some((mark) => mark.kind === 'favorite')) throw new Error('favorite not in backup');
-    await seen('Saved as anki-backup-');
+    await seen('Saved as kiwa-backup-');
   });
 
   await step('restore: a change made after the backup is undone', async () => {

@@ -191,8 +191,9 @@ Work one step at a time, in this order.
 - Review queue: missed questions join flashcards and return after growing gaps. Flashcard ratings
   are already recorded in attempts and only need scheduling. Add the Review tab.
 - Streaks and study statistics, first-run walkthrough, accessibility pass, store builds with EAS.
-- The app's display name is "Anki" and the icons are Expo's placeholders. "Anki" is the name of
-  an existing flashcard app, so raise the name with the user before any store work.
+- The app is named KIWA (Keep Improving With AI), slug and scheme `kiwa`. Icons come from
+  `tools/make-icons.js`. The database file stays `anki.db` and the web key prefix `anki.secret.`, so
+  existing data and keys survive the rename: do not change them.
 
 ## How to work
 
@@ -251,9 +252,9 @@ Work one step at a time, in this order.
 
 The plan is complete. Before a store release, the user has to decide, and has not yet:
 
-1. The app's name. `app.json` says "Anki", which is an existing flashcard app. Ask before changing.
+1. Whether "KIWA" is free to use in the stores. The user chose it; nobody has checked for clashes.
 2. `ios.bundleIdentifier` and `android.package`. Do not invent them: they are permanent.
-3. Icons and splash art. The files in `assets/` are Expo placeholders.
+3. Final icon art. The current icons are the simple KIWA mark from the project page.
 4. A privacy policy, because text goes to the AI providers the user adds.
 
 Then, on real phones (nothing native has run yet): tab bar spacing, keyboard behaviour, drag and drop,

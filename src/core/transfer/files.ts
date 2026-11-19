@@ -284,7 +284,7 @@ export function lessonFile(lesson: Lesson, courseId: string): TextFile {
 
 export function backupFile(backup: Backup): TextFile {
   const date = new Date(backup.createdAt).toISOString().slice(0, 10);
-  return { name: `anki-backup-${date}.json`, text: `${JSON.stringify(backup)}\n`, mimeType: 'application/json' };
+  return { name: `kiwa-backup-${date}.json`, text: `${JSON.stringify(backup)}\n`, mimeType: 'application/json' };
 }
 
 /** The same content under a fresh id, for keeping an import next to the item it would replace. */

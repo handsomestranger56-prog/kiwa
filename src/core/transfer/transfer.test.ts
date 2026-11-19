@@ -240,7 +240,7 @@ describe('files', () => {
     const outcome = readImport(JSON.stringify(backup));
     if (!outcome.ok || outcome.kind !== 'backup') throw new Error(JSON.stringify(outcome));
     expect(outcome.backup.items[0]).toMatchObject({ source: 'imported', deletedAt: null, marks: [], attempts: [], lastLesson: null });
-    expect(backupFile(outcome.backup).name).toBe('anki-backup-2023-11-14.json');
+    expect(backupFile(outcome.backup).name).toBe('kiwa-backup-2023-11-14.json');
 
     const broken = clone(backup) as any;
     broken.items[0].document.cards[2].back = '';

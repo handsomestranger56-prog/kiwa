@@ -1,5 +1,6 @@
-# anki
+# KIWA
 
+Keep Improving With AI. 
 A mobile app for building, studying and sharing courses, standalone quizzes and flashcards.
 Everything is stored on the device. There is no backend.
 
@@ -100,11 +101,11 @@ npx eas-cli@latest build --profile preview --platform android
 
 Before a store build, decide and fill in:
 
-- **The app's name.** It is `Anki` in `app.json` today, taken from the repository. Anki is also the
-  name of an established flashcard app, so a store listing under that name is likely to be refused.
+- **The app's name** is KIWA (Keep Improving With AI). Check the stores for clashes before release.
 - **Identifiers**: `ios.bundleIdentifier` and `android.package` in `app.json`, for example
   `com.yourname.studyapp`. They cannot change after the first release.
-- **Icons and splash**: the files in `assets/` are Expo's placeholders.
+- **Icons and splash** are drawn from the KIWA mark by `node tools/make-icons.js`. The iOS icon is an
+  Icon Composer bundle, `assets/kiwa.icon`.
 - **A privacy policy.** The app stores everything on the phone, but it sends text to the AI providers
   the user adds. Both stores ask for a policy that says so.
 
