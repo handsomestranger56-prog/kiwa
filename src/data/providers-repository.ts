@@ -1,3 +1,4 @@
+import { type ModelTask, canDo, profileOf } from '@/core/ai/catalog';
 import type { ModelInfo, ProviderKind } from '@/core/ai/types';
 import { newId } from '@/core/ids';
 
@@ -78,17 +79,25 @@ export class ProvidersRepository {
     this.changes.notify();
   }
 
-  /** Every ticked model of every provider, in the order the providers were added. */
-  async choices(): Promise<ModelChoice[]> {
+  /**
+   * Every ticked model of every provider that can do the task, in the order the providers were
+   * added. Writing is the default: it is what generating, checking and explaining need.
+   */
+  async choices(task: ModelTask = 'write'): Promise<ModelChoice[]> {
     const providers = await this.list();
     return providers.flatMap((provider) =>
-      provider.enabled.map((model) => ({
-        providerId: provider.id,
-        providerLabel: provider.label,
-        kind: provider.kind,
-        model,
-        label: provider.models.find((info) => info.id === model)?.label ?? model,
-      })),
+      provider.enabled
+        .filter((model) => {
+          const info = provider.models.find((entry) => entry.id === model) ?? { id: model, label: model };
+          return canDo(profileOf(provider.kind, info, provider.baseUrl), task);
+        })
+        .map((model) => ({
+          providerId: provider.id,
+          providerLabel: provider.label,
+          kind: provider.kind,
+          model,
+          label: provider.models.find((info) => info.id === model)?.label ?? model,
+        })),
     );
   }
 

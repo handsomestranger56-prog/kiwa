@@ -1,4 +1,4 @@
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useDeferredValue, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -35,13 +35,20 @@ function Library() {
   const [filter, setFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
+  // The group filter lives in the address, so other screens can open the library on one group.
+  const params = useLocalSearchParams<{ group?: string }>();
+  const groups = useQuery('groups:list', ({ groups }) => groups.list());
+  const groupList = groups.data ?? [];
+  const group = params.group === 'none' || groupList.some((entry) => entry.id === params.group) ? (params.group as string) : 'all';
+  const setGroup = (value: string) => router.setParams({ group: value === 'all' ? undefined : value });
 
   const query: LibraryFilter = {
     search: deferredSearch,
     kind: filter === 'all' || filter === 'favorites' ? undefined : filter,
     favorite: filter === 'favorites',
+    groupId: group === 'all' ? undefined : group,
   };
-  const items = useQuery(`library:${filter}:${deferredSearch}`, ({ library }) => library.list(query));
+  const items = useQuery(`library:${filter}:${group}:${deferredSearch}`, ({ library }) => library.list(query));
   const trash = useQuery('library:trash-count', ({ library }) => library.trashCount());
 
   const actions = useItemActions();
@@ -62,7 +69,7 @@ function Library() {
     router.push('/trash');
   };
 
-  const filtering = filter !== 'all' || deferredSearch.trim() !== '';
+  const filtering = filter !== 'all' || group !== 'all' || deferredSearch.trim() !== '';
   const trashCount = trash.data ?? 0;
 
   return (
@@ -103,6 +110,16 @@ function Library() {
                 />
               ))}
             </ScrollView>
+            {groupList.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, styles.centered]}>
+                <Chip label={t('groups.all')} selected={group === 'all'} onPress={() => setGroup('all')} />
+                {groupList.map((entry) => (
+                  <Chip key={entry.id} label={entry.name} selected={group === entry.id} onPress={() => setGroup(entry.id)} />
+                ))}
+                <Chip label={t('groups.none')} selected={group === 'none'} onPress={() => setGroup('none')} />
+                <IconButton icon="folder" label={t('groups.manage')} onPress={() => router.push('/groups')} />
+              </ScrollView>
+            ) : null}
             <JobsBanner />
           </View>
         }
@@ -159,6 +176,7 @@ const styles = StyleSheet.create({
   header: { gap: spacing.md, paddingBottom: spacing.lg },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   chips: { gap: spacing.sm, paddingRight: spacing.lg },
+  centered: { alignItems: 'center' },
   separator: { height: spacing.sm },
   trashLink: {
     minHeight: MIN_TOUCH,

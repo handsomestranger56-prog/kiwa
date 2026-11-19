@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>KIWA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="KIWA (Keep Improving With AI) is a study app: courses, quizzes and flashcards made with any chatbot or your own API key, studied in short lessons and reviewed before you forget.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@500;700&display=swap">
+<style>
+  /* Layout: a hero, then the study loop (create, keys, learn, remember, organize) as alternating text-and-phone rows, a scrolling gallery, a privacy band. */
+  :root {
+    --bg: #f2f4f7;
+    --surface: #ffffff;
+    --sunk: #e7ecf2;
+    --ink: #17212e;
+    --muted: #586475;
+    --line: #c9d2dd;
+    --accent: #0a6e7a;
+    --accent-soft: #d8eef0;
+    --on-accent: #ffffff;
+    --warm: #9a5200;
+    --warm-soft: #f6e8d3;
+    --frame: #17212e;
+    --shadow: 0 30px 60px -28px rgba(23, 33, 46, 0.35), 0 10px 20px -12px rgba(23, 33, 46, 0.18);
+    --display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+    --body: 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --step--1: 0.875rem;
+    --step-0: 1rem;
+    --step-1: 1.1875rem;
+    --step-2: 1.5rem;
+    --step-3: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+    --step-4: clamp(2.25rem, 1.3rem + 4.2vw, 4.25rem);
+    --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+    --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141b; --surface: #171e28; --sunk: #1c2531; --ink: #e5eaf1; --muted: #98a4b5; --line: #303c4c;
+      --accent: #4cc3cf; --accent-soft: #12343a; --on-accent: #06262b; --warm: #e7a552; --warm-soft: #3a2a12; --frame: #323e4e;
+      --shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 10px 20px -12px rgba(0, 0, 0, 0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141b; --surface: #171e28; --sunk: #1c2531; --ink: #e5eaf1; --muted: #98a4b5; --line: #303c4c;
+    --accent: #4cc3cf; --accent-soft: #12343a; --on-accent: #06262b; --warm: #e7a552; --warm-soft: #3a2a12; --frame: #323e4e;
+    --shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 10px 20px -12px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: var(--step-0); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+  a { color: var(--accent); }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.08; letter-spacing: -0.02em; text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r); }
+
+  /* Header */
+  .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  .top .wrap { display: flex; align-items: center; gap: 20px; padding-block: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+  .brand b { font-family: var(--display); font-size: 1.15rem; letter-spacing: 0.04em; }
+  .mark { width: 30px; height: 30px; flex: none; }
+  .nav { display: flex; gap: 22px; margin-left: auto; }
+  .nav a { color: var(--muted); text-decoration: none; font-weight: 500; font-size: var(--step--1); }
+  .nav a:hover { color: var(--ink); }
+  .langs { display: flex; padding: 3px; border-radius: 999px; background: var(--sunk); }
+  .langs button { border: 0; background: transparent; color: var(--muted); font: 600 0.8125rem/1 var(--body); padding: 8px 11px; border-radius: 999px; cursor: pointer; letter-spacing: 0.04em; }
+  .langs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+  @media (max-width: 720px) { .nav { display: none; } .langs { margin-left: auto; } }
+
+  /* Hero */
+  .hero { padding-block: clamp(40px, 7vw, 96px) clamp(48px, 7vw, 88px); overflow: hidden; }
+  .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: var(--step--1); font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 6px 12px; border-radius: 999px; }
+  .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .hero h1 { font-size: var(--step-4); margin-top: 22px; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .lead { font-size: var(--step-1); color: var(--muted); margin-top: 20px; max-width: 34em; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 12px; font-weight: 600; text-decoration: none; transition: transform 0.2s, background 0.2s; }
+  .btn.primary { background: var(--accent); color: var(--on-accent); }
+  .btn.ghost { color: var(--ink); background: var(--surface); border: 1px solid var(--line); }
+  .btn:hover { transform: translateY(-2px); }
+  .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; margin-top: 38px; padding: 0; list-style: none; max-width: 30em; }
+  .facts li { display: flex; gap: 10px; align-items: baseline; font-size: var(--step--1); color: var(--muted); }
+  .facts strong { font-family: var(--display); font-weight: 700; color: var(--ink); font-size: var(--step-0); white-space: nowrap; }
+
+  .stage { position: relative; display: flex; justify-content: center; align-items: flex-end; min-height: 520px; }
+  .stage::before { content: ""; position: absolute; width: 92%; aspect-ratio: 1; border-radius: 50%; border: 38px solid var(--accent-soft); top: 50%; left: 50%; transform: translate(-50%, -50%); }
+  .stage .phone { position: absolute; width: min(42%, 230px); }
+  .stage .p1 { left: 4%; bottom: 6%; transform: rotate(-7deg); z-index: 1; }
+  .stage .p2 { z-index: 3; width: min(48%, 260px); bottom: 0; position: relative; }
+  .stage .p3 { right: 4%; bottom: 8%; transform: rotate(6deg); z-index: 2; }
+  @media (max-width: 860px) {
+    .hero .wrap { grid-template-columns: 1fr; }
+    .stage { min-height: 0; margin-top: 8px; height: min(118vw, 560px); }
+  }
+
+  .phone { margin: 0; aspect-ratio: 390 / 844; max-width: 100%; border-radius: 34px; border: 9px solid var(--frame); background: var(--frame); box-shadow: var(--shadow); overflow: hidden; }
+  .phone img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+  /* Sections */
+  section.row { padding-block: clamp(56px, 8vw, 110px); }
+  section.row + section.row { border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent); }
+  .row .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 80px); align-items: center; }
+  .row.flip .copy { order: 2; }
+  .kicker { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); }
+  .copy h2 { font-size: var(--step-3); margin-top: 12px; }
+  .copy > p { color: var(--muted); margin-top: 16px; font-size: var(--step-1); max-width: 32em; }
+  .points { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 14px; max-width: 34em; }
+  .points li { padding-left: 26px; position: relative; }
+  .points li::before { content: ""; position: absolute; left: 2px; top: 0.6em; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); transform: rotate(45deg); }
+  .points b { font-weight: 600; }
+  .steps { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 16px; counter-reset: step; }
+  .steps li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; align-items: start; counter-increment: step; }
+  .steps li::before { content: counter(step); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-family: var(--display); font-weight: 700; }
+  .steps b { display: block; font-weight: 600; }
+  .steps span { color: var(--muted); font-size: var(--step--1); }
+
+  .shots { display: flex; gap: clamp(14px, 2.5vw, 26px); justify-content: center; align-items: flex-start; }
+  .shots .phone { flex: 1 1 0; min-width: 0; max-width: 270px; }
+  .shots .phone:nth-child(2) { margin-top: 48px; }
+  .shots .phone:nth-child(3) { margin-top: 18px; }
+  @media (max-width: 860px) {
+    .row .wrap { grid-template-columns: 1fr; }
+    .row.flip .copy { order: 0; }
+    .shots .phone:nth-child(3) { display: none; }
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; padding: 0; list-style: none; }
+  .chips li { font-size: var(--step--1); padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+
+  /* The review rhythm: the real intervals the app's scheduler uses. */
+  .rhythm { margin-top: 30px; padding: 22px 22px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); max-width: 34em; }
+  .rhythm-track { position: relative; display: grid; grid-template-columns: 0.6fr 1fr 2fr 4fr; height: 34px; }
+  .rhythm-track::before { content: ""; position: absolute; left: 6px; right: 6px; top: 50%; height: 3px; background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 11px); transform: translateY(-50%); }
+  .rhythm-track span { position: relative; }
+  .rhythm-track span::after { content: ""; position: absolute; left: 0; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); transform: translate(-1px, -50%); box-shadow: 0 0 0 5px var(--accent-soft); }
+  .rhythm-track span:first-child::after { background: var(--warm); box-shadow: 0 0 0 5px var(--warm-soft); }
+  .rhythm-labels { display: grid; grid-template-columns: 0.6fr 1fr 2fr 4fr; font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .rhythm-labels span { white-space: nowrap; }
+  .rhythm p { font-size: var(--step--1); color: var(--muted); margin-top: 12px; }
+
+  /* Gallery */
+  .gallery { padding-block: clamp(56px, 8vw, 110px); background: var(--sunk); }
+  .gallery h2 { font-size: var(--step-3); }
+  .gallery .lead { margin-top: 12px; }
+  .strip { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(170px, 22vw, 230px); gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 30px max(16px, calc((100vw - 1160px) / 2 + 16px)) 26px; scrollbar-width: thin; }
+  .strip figure { margin: 0; scroll-snap-align: start; display: grid; gap: 12px; }
+  .strip figure .phone { border-width: 7px; border-radius: 28px; }
+  .strip figcaption { font-size: var(--step--1); color: var(--muted); }
+  .strip figcaption b { display: block; color: var(--ink); font-weight: 600; }
+  .strip-nav { display: flex; gap: 8px; margin-top: 18px; }
+  .strip-nav button { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 1.1rem; cursor: pointer; }
+  .gallery .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+
+  /* Privacy */
+  .privacy { padding-block: clamp(56px, 8vw, 100px); }
+  .privacy .wrap { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 40px; align-items: start; }
+  .privacy h2 { font-size: var(--step-3); }
+  .trust { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .trust div { padding: 20px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); }
+  .trust b { display: block; font-family: var(--display); font-size: var(--step-0); line-height: 1.25; margin-bottom: 8px; }
+  .trust p { font-size: var(--step--1); color: var(--muted); }
+  @media (max-width: 860px) { .privacy .wrap, .trust { grid-template-columns: 1fr; } }
+
+  footer { padding-block: 36px 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--step--1); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; }
+  footer b { font-family: var(--display); color: var(--ink); letter-spacing: 0.04em; }
+
+  /* Motion: everything is visible at rest. Phones settle in on load; rows drift in where the browser can tie it to scrolling. */
+  @keyframes rise { from { transform: translateY(26px) rotate(var(--r, 0deg)); } }
+  @keyframes bob { 50% { transform: translateY(-8px) rotate(var(--r, 0deg)); } }
+  .stage .p1 { --r: -7deg; } .stage .p3 { --r: 6deg; }
+  .stage .phone { animation: rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both, bob 7s ease-in-out 1s infinite; }
+  .stage .p1 { animation-delay: 0.08s, 1.4s; } .stage .p3 { animation-delay: 0.16s, 2.2s; }
+  @supports (animation-timeline: view()) {
+    @keyframes drift { from { transform: translateY(40px); } }
+    .row .shots, .row .copy { animation: drift linear both; animation-timeline: view(); animation-range: entry 0% cover 30%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .stage .phone, .row .shots, .row .copy { animation: none !important; }
+    .btn { transition: none; }
+  }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="KIWA">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M8 21 C11 13 14 11 16 11 C19 11 20 15 24 9" fill="none" stroke="var(--on-accent)" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="9" r="2.6" fill="var(--on-accent)"/><path d="M8 24 H24" stroke="var(--on-accent)" stroke-width="2" stroke-linecap="round" opacity=".55"/></svg>
+      <b>KIWA</b>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#create" data-k="nav.create">Create</a>
+      <a href="#learn" data-k="nav.learn">Learn</a>
+      <a href="#remember" data-k="nav.remember">Remember</a>
+      <a href="#screens" data-k="nav.screens">Screens</a>
+    </nav>
+    <div class="langs" role="group" aria-label="Language">
+      <button type="button" id="lang-en" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" id="lang-uz" data-lang="uz" aria-pressed="false">UZ</button>
+      <button type="button" id="lang-ru" data-lang="ru" aria-pressed="false">RU</button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow" data-k="hero.eyebrow">Study app for Android and iOS · in development</span>
+        <h1 data-k="hero.title" data-html>Keep improving <em>with AI</em></h1>
+        <p class="lead" data-k="hero.lead">Make courses, quizzes and flashcards with any chatbot or your own API key. Study them in short lessons, and let the app bring back what you missed before you forget it.</p>
+        <div class="actions">
+          <a class="btn primary" href="#screens" data-k="hero.cta1">See the app</a>
+          <a class="btn ghost" href="#create" data-k="hero.cta2">How it works</a>
+        </div>
+        <ul class="facts">
+          <li><strong>10</strong><span data-k="facts.types">question types, from multiple choice to drag and drop</span></li>
+          <li><strong>3</strong><span data-k="facts.langs">languages: English, Oʻzbekcha, Русский</span></li>
+          <li><strong data-k="facts.offlineBig">Offline</strong><span data-k="facts.offline">everything is stored on the phone</span></li>
+          <li><strong data-k="facts.keysBig">Your keys</strong><span data-k="facts.keys">Claude, Gemini, OpenAI and compatible</span></li>
+        </ul>
+      </div>
+      <div class="stage">
+        <figure class="phone p1"><img data-shot="library" src="screens/en/light/library.webp" alt="" width="390" height="844"></figure>
+        <figure class="phone p2"><img data-shot="lesson" src="screens/en/light/lesson.webp" alt="" width="390" height="844"></figure>
+        <figure class="phone p3"><img data-shot="quiz" src="screens/en/light/quiz.webp" alt="" width="390" height="844"></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="row" id="create">
+    <div class="wrap">
+      <div class="copy">
+        <span class="kicker" data-k="create.kicker">Create</span>
+        <h2 data-k="create.title">A course in minutes, written by the AI you already use</h2>
+        <p data-k="create.lead">Describe a topic, who it is for and, if you like, paste your own notes. KIWA turns that into a precise request for any chatbot.</p>
+        <ol class="steps">
+          <li><div><b data-k="create.s1t">Describe it</b><span data-k="create.s1">Pick a course, lesson, quiz or flashcards. Leave the level and size to the AI, or set them yourself.</span></div></li>
+          <li><div><b data-k="create.s2t">Ask any chatbot</b><span data-k="create.s2">Copy the prompt or share it as a file, and paste it into ChatGPT, Gemini, Claude or any other assistant.</span></div></li>
+          <li><div><b data-k="create.s3t">Import the reply</b><span data-k="create.s3">Paste the answer back. Small slips are fixed for you, and anything else comes with a ready-made correction prompt.</span></div></li>
+        </ol>
+      </div>
+      <div class="shots">
+        <figure class="phone"><img data-shot="create" src="screens/en/light/create.webp" alt="" width="390" height="844" loading="lazy"></figure>
+        <figure class="phone"><img data-shot="outline" src="screens/en/light/outline.webp" alt="" width="390" height="844" loading="lazy"></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="row flip" id="generate">
+    <div class="wrap">
+      <div class="copy">
+        <span class="kicker" data-k="gen.kicker">Generate</span>
+        <h2 data-k="gen.title">Or generate it right here with your own key</h2>
+        <p data-k="gen.lead">Add Claude, Gemini or any OpenAI-compatible service: OpenAI, Grok, OpenRouter, DeepSeek, Mistral or a local Ollama server.</p>
+        <ul class="points">
+          <li data-k="gen.b1" data-html><b>Every model your key reaches</b>, sorted by what it is for, with Free tier or Paid labels and what it can read.</li>
+          <li data-k="gen.b2" data-html><b>Check the outline first.</b> Rename, reorder or remove lessons before anything long is written.</li>
+          <li data-k="gen.b3" data-html><b>Limits handled for you.</b> A per-minute limit is waited out; a daily limit hands the rest of the course to another model.</li>
+          <li data-k="gen.b4" data-html><b>Keeps working in the background</b>, and picks up where it stopped if the phone closes the app.</li>
+        </ul>
+      </div>
+      <div class="shots">
+        <figure class="phone"><img data-shot="models" src="screens/en/light/models.webp" alt="" width="390" height="844" loading="lazy"></figure>
+        <figure class="phone"><img data-shot="settings" src="screens/en/light/settings.webp" alt="" width="390" height="844" loading="lazy"></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="row" id="learn">
+    <div class="wrap">
+      <div class="copy">
+        <span class="kicker" data-k="learn.kicker">Learn</span>
+        <h2 data-k="learn.title">Short lessons, then real practice</h2>
+        <p data-k="learn.lead">Lessons hold text, code, tips and pictures the AI draws as SVG, animated when motion explains the idea. Each one ends with questions on that lesson only.</p>
+        <ul class="chips" data-k="learn.types" data-list>
+          <li>Single choice</li><li>Multiple choice</li><li>True or false</li><li>Short answer</li><li>Fill in the gaps</li><li>Essay</li><li>Flashcards</li><li>Matching pairs</li><li>Put in order</li><li>Sort into groups</li>
+        </ul>
+        <ul class="points">
+          <li data-k="learn.b1" data-html><b>Practice, test or exam.</b> Feedback after every answer, or a score at the end with a pass mark and an optional timer.</li>
+          <li data-k="learn.b2" data-html><b>Check with AI</b> grades essays and written answers, and <b>Explain deeper</b> shows why an answer was wrong.</li>
+        </ul>
+      </div>
+      <div class="shots">
+        <figure class="phone"><img data-shot="lesson" src="screens/en/light/lesson.webp" alt="" width="390" height="844" loading="lazy"></figure>
+        <figure class="phone"><img data-shot="quiz" src="screens/en/light/quiz.webp" alt="" width="390" height="844" loading="lazy"></figure>
+        <figure class="phone"><img data-shot="result" src="screens/en/light/result.webp" alt="" width="390" height="844" loading="lazy"></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="row flip" id="remember">
+    <div class="wrap">
+      <div class="copy">
+        <span class="kicker" data-k="rem.kicker">Remember</span>
+        <h2 data-k="rem.title">What you miss comes back just before you forget it</h2>
+        <p data-k="rem.lead">Missed questions and the flashcards you study join a review queue. Each correct answer pushes the next review further out.</p>
+        <div class="rhythm" aria-label="Review intervals">
+          <div class="rhythm-track" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <div class="rhythm-labels"><span data-k="rem.today">today</span><span data-k="rem.d1">1 day</span><span data-k="rem.d3">3 days</span><span data-k="rem.w1">1 week</span></div>
+          <p data-k="rem.miss">Miss it again and it returns in 10 minutes.</p>
+        </div>
+        <ul class="points">
+          <li data-k="rem.b1" data-html><b>Focus rounds.</b> A Pomodoro timer and a focus view that shows only the lesson and keeps the screen on.</li>
+          <li data-k="rem.b2" data-html><b>Gentle reminders</b> that skip the days you have already studied, plus streaks and weekly progress.</li>
+        </ul>
+      </div>
+      <div class="shots">
+        <figure class="phone"><img data-shot="review" src="screens/en/light/review.webp" alt="" width="390" height="844" loading="lazy"></figure>
+        <figure class="phone"><img data-shot="focus" src="screens/en/light/focus.webp" alt="" width="390" height="844" loading="lazy"></figure>
+        <figure class="phone"><img data-shot="flashcard" src="screens/en/light/flashcard.webp" alt="" width="390" height="844" loading="lazy"></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="row" id="organize">
+    <div class="wrap">
+      <div class="copy">
+        <span class="kicker" data-k="org.kicker">Organize</span>
+        <h2 data-k="org.title">Your library, your way</h2>
+        <p data-k="org.lead">Courses, quizzes and flashcards live side by side, and can be edited on the phone down to a single question.</p>
+        <ul class="points">
+          <li data-k="org.b1" data-html><b>Groups</b> to sort everything by subject, exported and imported as one file.</li>
+          <li data-k="org.b2" data-html><b>Import and export</b> any course, lesson, quiz or deck, or back up everything at once.</li>
+          <li data-k="org.b3" data-html><b>Marks that matter:</b> favorites, completed lessons, bookmarks, and a trash with undo.</li>
+          <li data-k="org.b4" data-html><b>Three languages.</b> The app follows your phone, or you pick English, Oʻzbekcha or Русский.</li>
+        </ul>
+      </div>
+      <div class="shots">
+        <figure class="phone"><img data-shot="library" src="screens/en/light/library.webp" alt="" width="390" height="844" loading="lazy"></figure>
+        <figure class="phone"><img data-shot="course" src="screens/en/light/course.webp" alt="" width="390" height="844" loading="lazy"></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="gallery" id="screens" aria-labelledby="screens-title">
+    <div class="wrap head">
+      <div>
+        <h2 id="screens-title" data-k="screens.title">Every screen</h2>
+        <p class="lead" data-k="screens.lead">Real screenshots of the app. They follow the language you pick above and your light or dark setting.</p>
+      </div>
+      <div class="strip-nav">
+        <button type="button" id="strip-prev" aria-label="Previous screens">←</button>
+        <button type="button" id="strip-next" aria-label="Next screens">→</button>
+      </div>
+    </div>
+    <div class="strip" id="strip" tabindex="0" aria-label="Screenshots"></div>
+  </section>
+
+  <section class="privacy" id="privacy">
+    <div class="wrap">
+      <div>
+        <span class="kicker" data-k="priv.kicker">Privacy</span>
+        <h2 data-k="priv.title" style="margin-top:12px">Your studies stay on your phone</h2>
+      </div>
+      <div class="trust">
+        <div><b data-k="priv.t1">No account</b><p data-k="priv.p1">Content, results and settings are stored on the device. Nothing leaves it unless you share it.</p></div>
+        <div><b data-k="priv.t2">Keys locked away</b><p data-k="priv.p2">API keys sit in the phone's secure storage and go only to the provider you chose. Never in a backup or export.</p></div>
+        <div><b data-k="priv.t3">Works without AI</b><p data-k="priv.p3">Prompt for AI needs no key at all, and every course can be written or edited by hand.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><b>KIWA</b> · <span data-k="foot.name">Keep Improving With AI</span></span>
+    <span data-k="foot.built">Built with Expo and React Native. In development, 2026.</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const SHOTS = ['library', 'course', 'lesson', 'quiz', 'result', 'flashcard', 'create', 'outline', 'models', 'review', 'focus', 'settings', 'welcome'];
+  const T = {
+    en: {
+      'nav.create': 'Create', 'nav.learn': 'Learn', 'nav.remember': 'Remember', 'nav.screens': 'Screens',
+      'hero.eyebrow': 'Study app for Android and iOS · in development',
+      'hero.title': 'Keep improving <em>with AI</em>',
+      'hero.lead': 'Make courses, quizzes and flashcards with any chatbot or your own API key. Study them in short lessons, and let the app bring back what you missed before you forget it.',
+      'hero.cta1': 'See the app', 'hero.cta2': 'How it works',
+      'facts.types': 'question types, from multiple choice to drag and drop', 'facts.langs': 'languages: English, Oʻzbekcha, Русский',
+      'facts.offlineBig': 'Offline', 'facts.offline': 'everything is stored on the phone', 'facts.keysBig': 'Your keys', 'facts.keys': 'Claude, Gemini, OpenAI and compatible',
+      'create.kicker': 'Create', 'create.title': 'A course in minutes, written by the AI you already use',
+      'create.lead': 'Describe a topic, who it is for and, if you like, paste your own notes. KIWA turns that into a precise request for any chatbot.',
+      'create.s1t': 'Describe it', 'create.s1': 'Pick a course, lesson, quiz or flashcards. Leave the level and size to the AI, or set them yourself.',
+      'create.s2t': 'Ask any chatbot', 'create.s2': 'Copy the prompt or share it as a file, and paste it into ChatGPT, Gemini, Claude or any other assistant.',
+      'create.s3t': 'Import the reply', 'create.s3': 'Paste the answer back. Small slips are fixed for you, and anything else comes with a ready-made correction prompt.',
+      'gen.kicker': 'Generate', 'gen.title': 'Or generate it right here with your own key',
+      'gen.lead': 'Add Claude, Gemini or any OpenAI-compatible service: OpenAI, Grok, OpenRouter, DeepSeek, Mistral or a local Ollama server.',
+      'gen.b1': '<b>Every model your key reaches</b>, sorted by what it is for, with Free tier or Paid labels and what it can read.',
+      'gen.b2': '<b>Check the outline first.</b> Rename, reorder or remove lessons before anything long is written.',
+      'gen.b3': '<b>Limits handled for you.</b> A per-minute limit is waited out; a daily limit hands the rest of the course to another model.',
+      'gen.b4': '<b>Keeps working in the background</b>, and picks up where it stopped if the phone closes the app.',
+      'learn.kicker': 'Learn', 'learn.title': 'Short lessons, then real practice',
+      'learn.lead': 'Lessons hold text, code, tips and pictures the AI draws as SVG, animated when motion explains the idea. Each one ends with questions on that lesson only.',
+      'learn.types': ['Single choice', 'Multiple choice', 'True or false', 'Short answer', 'Fill in the gaps', 'Essay', 'Flashcards', 'Matching pairs', 'Put in order', 'Sort into groups'],
+      'learn.b1': '<b>Practice, test or exam.</b> Feedback after every answer, or a score at the end with a pass mark and an optional timer.',
+      'learn.b2': '<b>Check with AI</b> grades essays and written answers, and <b>Explain deeper</b> shows why an answer was wrong.',
+      'rem.kicker': 'Remember', 'rem.title': 'What you miss comes back just before you forget it',
+      'rem.lead': 'Missed questions and the flashcards you study join a review queue. Each correct answer pushes the next review further out.',
+      'rem.today': 'today', 'rem.d1': '1 day', 'rem.d3': '3 days', 'rem.w1': '1 week', 'rem.miss': 'Miss it again and it returns in 10 minutes.',
+      'rem.b1': '<b>Focus rounds.</b> A Pomodoro timer and a focus view that shows only the lesson and keeps the screen on.',
+      'rem.b2': '<b>Gentle reminders</b> that skip the days you have already studied, plus streaks and weekly progress.',
+      'org.kicker': 'Organize', 'org.title': 'Your library, your way',
+      'org.lead': 'Courses, quizzes and flashcards live side by side, and can be edited on the phone down to a single question.',
+      'org.b1': '<b>Groups</b> to sort everything by subject, exported and imported as one file.',
+      'org.b2': '<b>Import and export</b> any course, lesson, quiz or deck, or back up everything at once.',
+      'org.b3': '<b>Marks that matter:</b> favorites, completed lessons, bookmarks, and a trash with undo.',
+      'org.b4': '<b>Three languages.</b> The app follows your phone, or you pick English, Oʻzbekcha or Русский.',
+      'screens.title': 'Every screen', 'screens.lead': 'Real screenshots of the app. They follow the language you pick above and your light or dark setting.',
+      'priv.kicker': 'Privacy', 'priv.title': 'Your studies stay on your phone',
+      'priv.t1': 'No account', 'priv.p1': 'Content, results and settings are stored on the device. Nothing leaves it unless you share it.',
+      'priv.t2': 'Keys locked away', 'priv.p2': "API keys sit in the phone's secure storage and go only to the provider you chose. Never in a backup or export.",
+      'priv.t3': 'Works without AI', 'priv.p3': 'Prompt for AI needs no key at all, and every course can be written or edited by hand.',
+      'foot.name': 'Keep Improving With AI', 'foot.built': 'Built with Expo and React Native. In development, 2026.',
+      captions: {
+        library: ['Library', 'Courses, quizzes and flashcards, sorted into groups'], course: ['Course', 'Lessons with progress and bookmarks'],
+        lesson: ['Lesson', 'Text, tips and an animated SVG diagram'], quiz: ['Drag and drop', 'Put steps in order, or use the arrows'],
+        result: ['Result', 'Score, pass mark and a review of each answer'], flashcard: ['Flashcards', 'Rate how well you knew each card'],
+        create: ['Create with AI', 'Let the AI choose the level and size'], outline: ['Course outline', 'Edit the plan before lessons are written'],
+        models: ['AI models', 'Grouped, with Free tier and Paid labels'], review: ['Review', 'What is due, streaks and progress'],
+        focus: ['Focus', 'Pomodoro rounds with a focus view'], settings: ['Settings', 'Language, AI providers and reminders'],
+        welcome: ['Welcome', 'First launch in your language'],
+      },
+      prev: 'Previous screens', next: 'Next screens', review: 'Review intervals', sections: 'Sections', language: 'Language', screenshots: 'Screenshots',
+    },
+    uz: {
+      'nav.create': 'Yaratish', 'nav.learn': 'Oʻrganish', 'nav.remember': 'Takrorlash', 'nav.screens': 'Ekranlar',
+      'hero.eyebrow': 'Android va iOS uchun oʻqish ilovasi · ishlab chiqilmoqda',
+      'hero.title': 'SI bilan <em>tinmay oʻsing</em>',
+      'hero.lead': 'Istalgan chatbot yoki oʻz API kalitingiz bilan kurslar, testlar va kartochkalar yarating. Ularni qisqa darslarda oʻrganing, ilova esa xato qilganlaringizni unutishingizdan oldin qaytaradi.',
+      'hero.cta1': 'Ilovani koʻrish', 'hero.cta2': 'Qanday ishlaydi',
+      'facts.types': 'xil savol: bitta javobdan sudrab joylashgacha', 'facts.langs': 'til: English, Oʻzbekcha, Русский',
+      'facts.offlineBig': 'Oflayn', 'facts.offline': 'hammasi telefonda saqlanadi', 'facts.keysBig': 'Oʻz kalitlaringiz', 'facts.keys': 'Claude, Gemini, OpenAI va mos xizmatlar',
+      'create.kicker': 'Yaratish', 'create.title': 'Bir necha daqiqada kurs, siz foydalanadigan SI yozadi',
+      'create.lead': 'Mavzuni, kim uchunligini yozing va xohlasangiz oʻz qaydlaringizni joylang. KIWA buni istalgan chatbot uchun aniq soʻrovga aylantiradi.',
+      'create.s1t': 'Tasvirlang', 'create.s1': 'Kurs, dars, test yoki kartochkalarni tanlang. Daraja va hajmni SIga qoldiring yoki oʻzingiz belgilang.',
+      'create.s2t': 'Istalgan chatbotdan soʻrang', 'create.s2': 'Soʻrovni nusxalang yoki fayl sifatida ulashing va ChatGPT, Gemini, Claude yoki boshqa yordamchiga joylang.',
+      'create.s3t': 'Javobni import qiling', 'create.s3': 'Javobni qaytarib joylang. Kichik xatolar avtomatik tuzatiladi, qolganlari uchun tayyor tuzatish soʻrovi beriladi.',
+      'gen.kicker': 'Generatsiya', 'gen.title': 'Yoki shu yerning oʻzida oʻz kalitingiz bilan yarating',
+      'gen.lead': 'Claude, Gemini yoki OpenAI bilan mos istalgan xizmatni qoʻshing: OpenAI, Grok, OpenRouter, DeepSeek, Mistral yoki mahalliy Ollama serveri.',
+      'gen.b1': '<b>Kalitingiz yetadigan barcha modellar</b> vazifasiga koʻra saralanadi, “Bepul tarif” yoki “Pullik” belgisi va nimani tushunishi koʻrsatiladi.',
+      'gen.b2': '<b>Avval rejani tekshiring.</b> Uzun matn yozilishidan oldin darslarni qayta nomlang, tartibini oʻzgartiring yoki olib tashlang.',
+      'gen.b3': '<b>Limitlar bilan ilovaning oʻzi ishlaydi.</b> Daqiqalik limit kutib oʻtiladi, kunlik limitda kursning qolgan qismi boshqa modelga beriladi.',
+      'gen.b4': '<b>Fonda ishlashda davom etadi</b> va telefon ilovani yopsa, toʻxtagan joyidan davom ettiradi.',
+      'learn.kicker': 'Oʻrganish', 'learn.title': 'Qisqa darslar, keyin haqiqiy mashq',
+      'learn.lead': 'Darslarda matn, kod, maslahatlar va SI SVG koʻrinishida chizgan rasmlar bor, harakat gʻoyani tushuntirsa animatsiyali. Har bir dars faqat shu darsga oid savollar bilan tugaydi.',
+      'learn.types': ['Bitta javob', 'Bir nechta javob', 'Toʻgʻri yoki notoʻgʻri', 'Qisqa javob', 'Boʻsh joylarni toʻldirish', 'Insho', 'Kartochkalar', 'Juftlarni moslash', 'Tartibga solish', 'Guruhlarga ajratish'],
+      'learn.b1': '<b>Mashq, test yoki imtihon.</b> Har bir javobdan keyin izoh yoki oxirida oʻtish bali va ixtiyoriy taymer bilan baho.',
+      'learn.b2': '<b>SI bilan tekshirish</b> insho va yozma javoblarni baholaydi, <b>Batafsil tushuntirish</b> esa javob nega notoʻgʻri ekanini koʻrsatadi.',
+      'rem.kicker': 'Takrorlash', 'rem.title': 'Xato qilganingiz unutishingizdan sal oldin qaytadi',
+      'rem.lead': 'Xato qilingan savollar va oʻrganilgan kartochkalar takrorlash navbatiga qoʻshiladi. Har bir toʻgʻri javob keyingi takrorlashni uzoqroqqa suradi.',
+      'rem.today': 'bugun', 'rem.d1': '1 kun', 'rem.d3': '3 kun', 'rem.w1': '1 hafta', 'rem.miss': 'Yana xato qilsangiz, 10 daqiqadan keyin qaytadi.',
+      'rem.b1': '<b>Diqqat davralari.</b> Pomodoro taymeri va faqat darsni koʻrsatib, ekranni oʻchirmaydigan diqqat rejimi.',
+      'rem.b2': '<b>Yumshoq eslatmalar</b> allaqachon shugʻullangan kunlaringizda kelmaydi, ketma-ketlik va haftalik natija ham bor.',
+      'org.kicker': 'Tartib', 'org.title': 'Kutubxonangiz, oʻz tartibingizda',
+      'org.lead': 'Kurslar, testlar va kartochkalar yonma-yon turadi va telefonning oʻzida bitta savolgacha tahrirlanadi.',
+      'org.b1': '<b>Guruhlar</b> bilan hammasini fanlar boʻyicha saralang, bitta fayl sifatida eksport va import qiling.',
+      'org.b2': 'Istalgan kurs, dars, test yoki kartochkalarni <b>import va eksport</b> qiling yoki hammasini birdan zaxiralang.',
+      'org.b3': '<b>Kerakli belgilar:</b> sevimlilar, tugatilgan darslar, xatchoʻplar va qaytarish mumkin boʻlgan savat.',
+      'org.b4': '<b>Uchta til.</b> Ilova telefoningiz tiliga moslashadi yoki English, Oʻzbekcha, Русский dan birini tanlaysiz.',
+      'screens.title': 'Barcha ekranlar', 'screens.lead': 'Ilovaning haqiqiy skrinshotlari. Ular yuqorida tanlagan tilingiz va yorugʻ yoki qorongʻi rejimingizga moslashadi.',
+      'priv.kicker': 'Maxfiylik', 'priv.title': 'Oʻqishingiz telefoningizda qoladi',
+      'priv.t1': 'Akkaunt shart emas', 'priv.p1': 'Materiallar, natijalar va sozlamalar qurilmada saqlanadi. Oʻzingiz ulashmaguningizcha hech narsa chiqmaydi.',
+      'priv.t2': 'Kalitlar himoyada', 'priv.p2': 'API kalitlari telefonning himoyalangan xotirasida turadi va faqat siz tanlagan provayderga yuboriladi. Zaxira yoki eksportga hech qachon kirmaydi.',
+      'priv.t3': 'SIsiz ham ishlaydi', 'priv.p3': 'SI uchun soʻrov kalitsiz ishlaydi, har bir kursni qoʻlda yozish yoki tahrirlash mumkin.',
+      'foot.name': 'Keep Improving With AI', 'foot.built': 'Expo va React Native bilan yaratilgan. Ishlab chiqilmoqda, 2026.',
+      captions: {
+        library: ['Kutubxona', 'Guruhlarga ajratilgan kurslar, testlar va kartochkalar'], course: ['Kurs', 'Jarayon va xatchoʻplar bilan darslar'],
+        lesson: ['Dars', 'Matn, maslahat va animatsiyali SVG chizma'], quiz: ['Sudrab joylash', 'Bosqichlarni tartibga soling yoki strelkalardan foydalaning'],
+        result: ['Natija', 'Ball, oʻtish bali va har bir javob tahlili'], flashcard: ['Kartochkalar', 'Har birini qanchalik bilganingizni baholang'],
+        create: ['SI bilan yaratish', 'Daraja va hajmni SI tanlaydi'], outline: ['Kurs rejasi', 'Darslar yozilishidan oldin rejani tahrirlang'],
+        models: ['SI modellari', 'Guruhlangan, “Bepul tarif” va “Pullik” belgilari bilan'], review: ['Takrorlash', 'Navbatdagilar, ketma-ketlik va natija'],
+        focus: ['Diqqat', 'Diqqat rejimi bilan Pomodoro davralari'], settings: ['Sozlamalar', 'Til, SI provayderlari va eslatmalar'],
+        welcome: ['Xush kelibsiz', 'Birinchi ishga tushirish oʻz tilingizda'],
+      },
+      prev: 'Oldingi ekranlar', next: 'Keyingi ekranlar', review: 'Takrorlash oraliqlari', sections: 'Boʻlimlar', language: 'Til', screenshots: 'Skrinshotlar',
+    },
+    ru: {
+      'nav.create': 'Создание', 'nav.learn': 'Обучение', 'nav.remember': 'Повторение', 'nav.screens': 'Экраны',
+      'hero.eyebrow': 'Приложение для учёбы на Android и iOS · в разработке',
+      'hero.title': 'Учитесь лучше <em>с ИИ</em>',
+      'hero.lead': 'Создавайте курсы, тесты и карточки с любым чат-ботом или своим API-ключом. Учите их короткими уроками, а приложение вернёт ошибки до того, как вы их забудете.',
+      'hero.cta1': 'Посмотреть приложение', 'hero.cta2': 'Как это работает',
+      'facts.types': 'типов вопросов: от выбора ответа до перетаскивания', 'facts.langs': 'языка: English, Oʻzbekcha, Русский',
+      'facts.offlineBig': 'Офлайн', 'facts.offline': 'всё хранится на телефоне', 'facts.keysBig': 'Свои ключи', 'facts.keys': 'Claude, Gemini, OpenAI и совместимые',
+      'create.kicker': 'Создание', 'create.title': 'Курс за несколько минут от ИИ, которым вы уже пользуетесь',
+      'create.lead': 'Опишите тему, для кого она и, если хотите, вставьте свои заметки. KIWA превратит это в точный запрос для любого чат-бота.',
+      'create.s1t': 'Опишите', 'create.s1': 'Выберите курс, урок, тест или карточки. Уровень и объём можно доверить ИИ или задать самому.',
+      'create.s2t': 'Спросите любой чат-бот', 'create.s2': 'Скопируйте запрос или отправьте его файлом и вставьте в ChatGPT, Gemini, Claude или другого ассистента.',
+      'create.s3t': 'Импортируйте ответ', 'create.s3': 'Вставьте ответ обратно. Мелкие ошибки исправятся сами, а для остального будет готовый запрос на исправление.',
+      'gen.kicker': 'Генерация', 'gen.title': 'Или создайте прямо здесь со своим ключом',
+      'gen.lead': 'Добавьте Claude, Gemini или любой сервис, совместимый с OpenAI: OpenAI, Grok, OpenRouter, DeepSeek, Mistral или локальный сервер Ollama.',
+      'gen.b1': '<b>Все модели, доступные вашему ключу</b>, разложены по назначению, с метками «Есть бесплатный тариф» или «Платно» и тем, что они понимают.',
+      'gen.b2': '<b>Сначала проверьте план.</b> Переименуйте, переставьте или удалите уроки до того, как будет написано что-то длинное.',
+      'gen.b3': '<b>Лимиты под контролем.</b> Минутный лимит приложение переждёт, а при дневном передаст остаток курса другой модели.',
+      'gen.b4': '<b>Работает в фоне</b> и продолжает с того же места, если телефон закроет приложение.',
+      'learn.kicker': 'Обучение', 'learn.title': 'Короткие уроки и настоящая практика',
+      'learn.lead': 'В уроках есть текст, код, советы и рисунки, которые ИИ рисует в SVG, с анимацией, когда движение помогает понять. Каждый урок заканчивается вопросами только по нему.',
+      'learn.types': ['Один ответ', 'Несколько ответов', 'Верно или неверно', 'Краткий ответ', 'Заполнение пропусков', 'Эссе', 'Карточки', 'Сопоставление', 'Порядок', 'Распределение по группам'],
+      'learn.b1': '<b>Практика, тест или экзамен.</b> Отзыв после каждого ответа или оценка в конце с проходным баллом и таймером по желанию.',
+      'learn.b2': '<b>Проверка с ИИ</b> оценивает эссе и письменные ответы, а <b>Объяснить подробнее</b> показывает, почему ответ неверен.',
+      'rem.kicker': 'Повторение', 'rem.title': 'Ошибки возвращаются прямо перед тем, как вы их забудете',
+      'rem.lead': 'Вопросы с ошибками и изученные карточки попадают в очередь повторения. Каждый верный ответ отодвигает следующее повторение.',
+      'rem.today': 'сегодня', 'rem.d1': '1 день', 'rem.d3': '3 дня', 'rem.w1': '1 неделя', 'rem.miss': 'Ошиблись снова, и вопрос вернётся через 10 минут.',
+      'rem.b1': '<b>Фокус-раунды.</b> Таймер Pomodoro и режим фокуса, где виден только урок, а экран не гаснет.',
+      'rem.b2': '<b>Ненавязчивые напоминания</b>, которые не приходят в дни, когда вы уже занимались, а ещё серии и прогресс за неделю.',
+      'org.kicker': 'Порядок', 'org.title': 'Ваша библиотека, ваш порядок',
+      'org.lead': 'Курсы, тесты и карточки лежат рядом, и всё можно редактировать прямо на телефоне, вплоть до одного вопроса.',
+      'org.b1': '<b>Группы</b>, чтобы разложить всё по предметам, с экспортом и импортом одним файлом.',
+      'org.b2': '<b>Импорт и экспорт</b> любого курса, урока, теста или набора карточек, или резервная копия всего сразу.',
+      'org.b3': '<b>Полезные отметки:</b> избранное, пройденные уроки, закладки и корзина с отменой.',
+      'org.b4': '<b>Три языка.</b> Приложение следует языку телефона, или выберите English, Oʻzbekcha или Русский.',
+      'screens.title': 'Все экраны', 'screens.lead': 'Настоящие скриншоты приложения. Они меняются вместе с выбранным выше языком и светлой или тёмной темой.',
+      'priv.kicker': 'Конфиденциальность', 'priv.title': 'Ваша учёба остаётся на телефоне',
+      'priv.t1': 'Без аккаунта', 'priv.p1': 'Материалы, результаты и настройки хранятся на устройстве. Ничего не уходит, пока вы сами не поделитесь.',
+      'priv.t2': 'Ключи под замком', 'priv.p2': 'API-ключи лежат в защищённом хранилище телефона и отправляются только выбранному провайдеру. Никогда не попадают в копии и экспорт.',
+      'priv.t3': 'Работает и без ИИ', 'priv.p3': 'Запрос для ИИ не требует ключа, а любой курс можно написать или отредактировать вручную.',
+      'foot.name': 'Keep Improving With AI', 'foot.built': 'Создано на Expo и React Native. В разработке, 2026.',
+      captions: {
+        library: ['Библиотека', 'Курсы, тесты и карточки, разложенные по группам'], course: ['Курс', 'Уроки с прогрессом и закладками'],
+        lesson: ['Урок', 'Текст, совет и анимированная SVG-схема'], quiz: ['Перетаскивание', 'Расставьте шаги по порядку или используйте стрелки'],
+        result: ['Результат', 'Баллы, проходной балл и разбор каждого ответа'], flashcard: ['Карточки', 'Оцените, насколько хорошо вы знали каждую'],
+        create: ['Создать с ИИ', 'Уровень и объём выбирает ИИ'], outline: ['План курса', 'Правьте план до того, как уроки будут написаны'],
+        models: ['Модели ИИ', 'По группам, с метками бесплатного тарифа и платных'], review: ['Повторение', 'Что пора повторить, серии и прогресс'],
+        focus: ['Фокус', 'Раунды Pomodoro с режимом фокуса'], settings: ['Настройки', 'Язык, ИИ-провайдеры и напоминания'],
+        welcome: ['Добро пожаловать', 'Первый запуск на вашем языке'],
+      },
+      prev: 'Предыдущие экраны', next: 'Следующие экраны', review: 'Интервалы повторения', sections: 'Разделы', language: 'Язык', screenshots: 'Скриншоты',
+    },
+  };
+
+  const store = {
+    get() { try { return localStorage.getItem('kiwa.lang'); } catch { return null; } },
+    set(value) { try { localStorage.setItem('kiwa.lang', value); } catch { /* not kept */ } },
+  };
+  const guess = () => {
+    const wanted = (navigator.languages || [navigator.language || 'en']).map((code) => String(code).slice(0, 2).toLowerCase());
+    return wanted.find((code) => T[code]) || 'en';
+  };
+  let lang = T[store.get()] ? store.get() : guess();
+
+  const root = document.documentElement;
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  const theme = () => (root.dataset.theme === 'dark' || root.dataset.theme === 'light' ? root.dataset.theme : media.matches ? 'dark' : 'light');
+  const src = (name) => `screens/${lang}/${theme()}/${name}.webp`;
+
+  const strip = document.getElementById('strip');
+  strip.innerHTML = SHOTS.map((name) => `<figure><div class="phone"><img data-shot="${name}" src="${src(name)}" alt="" width="390" height="844" loading="lazy"></div><figcaption><b data-cap="${name}"></b><span data-capd="${name}"></span></figcaption></figure>`).join('');
+
+  function paint() {
+    const t = T[lang];
+    root.lang = lang;
+    document.querySelectorAll('[data-k]').forEach((node) => {
+      const value = t[node.dataset.k];
+      if (value === undefined) return;
+      if (node.hasAttribute('data-list')) node.innerHTML = value.map((item) => `<li>${item}</li>`).join('');
+      else if (node.hasAttribute('data-html')) node.innerHTML = value;
+      else node.textContent = value;
+    });
+    document.querySelectorAll('[data-shot]').forEach((image) => {
+      const name = image.dataset.shot;
+      const next = src(name);
+      if (!image.getAttribute('src').endsWith(next)) image.setAttribute('src', next);
+      image.alt = t.captions[name] ? `${t.captions[name][0]}: ${t.captions[name][1]}` : '';
+    });
+    document.querySelectorAll('[data-cap]').forEach((node) => { node.textContent = t.captions[node.dataset.cap][0]; });
+    document.querySelectorAll('[data-capd]').forEach((node) => { node.textContent = t.captions[node.dataset.capd][1]; });
+    document.querySelectorAll('.langs button').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.lang === lang)));
+    document.getElementById('strip-prev').setAttribute('aria-label', t.prev);
+    document.getElementById('strip-next').setAttribute('aria-label', t.next);
+    strip.setAttribute('aria-label', t.screenshots);
+    document.querySelector('.rhythm').setAttribute('aria-label', t.review);
+    document.querySelector('.nav').setAttribute('aria-label', t.sections);
+    document.querySelector('.langs').setAttribute('aria-label', t.language);
+  }
+
+  document.querySelectorAll('.langs button').forEach((button) =>
+    button.addEventListener('click', () => {
+      lang = button.dataset.lang;
+      store.set(lang);
+      paint();
+    }),
+  );
+  const page = () => Math.max(200, strip.clientWidth * 0.8);
+  document.getElementById('strip-prev').addEventListener('click', () => strip.scrollBy({ left: -page(), behavior: 'smooth' }));
+  document.getElementById('strip-next').addEventListener('click', () => strip.scrollBy({ left: page(), behavior: 'smooth' }));
+  media.addEventListener('change', paint);
+  new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  paint();
+})();
+</script>
+
+</body>
+</html>

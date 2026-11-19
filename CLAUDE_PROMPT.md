@@ -63,8 +63,26 @@ Assumptions the user was told about and has not objected to. Keep them unless to
 
 - A score given by the model through "Check" counts toward a test result, marked as AI-graded.
 - Without an API key, essays fall back to showing the model answer for self-rating. Already built.
-- Text, code and images in the first version. No audio or video.
-- English only at launch. All strings already go through `src/i18n/en.ts`.
+- Text, code, images and SVG pictures. No audio or video. SVG pictures are a lesson block (`svg`)
+  that a chatbot writes as code. They are cleaned by `src/core/svg.ts` (no scripts, handlers or
+  outside links) and drawn in an `<img>` on the web and in a web view with JavaScript and network
+  off on phones, so CSS and SMIL animation plays. The create form's "Pictures" toggle asks for them.
+- Create with AI can leave the level and the size (lessons, questions, cards) to the model ("Let AI
+  choose"). The model then picks within the usual limits, guided by the topic and notes.
+- Groups: an item is in one group or none (`groups` table, `items.group_id`). An exported item
+  names its group; a whole group exports as a `group/1` file. Backups carry groups.
+- Model catalog: `src/core/ai/catalog.json` holds ordered id patterns per provider (group,
+  modalities, free tier or paid) and `catalog.ts` combines them with what the provider reports
+  (Gemini's methods, OpenRouter's modalities and prices). Every listed model is kept; the provider
+  screen groups them and only models that can write get a checkbox. Pickers ask for a task
+  (`choices('write')`). Free and paid are a guide with a date; update the JSON when they change.
+- Per-minute limits are waited out (with "Use another model now"); daily limits and used-up credit
+  stop the run at once and suggest another model. Every HTTP request is logged; "N failed" opens
+  the list (`state.failures`).
+- Generation waits out rate limits and busy servers (Retry-After or Google's retryDelay, up to
+  90 s, three times per request) and counts every request, failed ones too. A failed run can be
+  retried with another model.
+- English, Uzbek (Latin) and Russian (`src/i18n/en.ts`, `uz.ts`, `ru.ts`). The app follows the phone's language until one is chosen in Settings or on the welcome screen (setting `app.language`). Reminders are rescheduled in the new language.
 - Typed answers ignore case, spacing and punctuation but keep accents.
 - Completing a lesson is a manual button and does not require passing its test.
 
@@ -188,7 +206,8 @@ Work one step at a time, in this order.
   SQLite through `src/data/testing/memory-driver.ts`.
 - Schema changes are new entries at the end of `migrations` in `src/data/migrations.ts`. Never
   edit one that has shipped. Add new tables to the backup in `src/data/backup.ts` too.
-- Every user-facing string goes in `src/i18n/en.ts`.
+- Every user-facing string goes in `src/i18n/en.ts`, with the same key in `uz.ts` and `ru.ts` (Russian also needs `_few` and `_many` plural forms). `src/i18n/i18n.test.ts` fails if a key or placeholder is missing.
+- After creating, importing or generating an item, open it with `openNewItem` (`src/features/library/open-item.ts`) so Back goes to the library.
 - Run `npm run check` (lint, types, tests) before calling a step done.
 - Report plainly: what works, how it was checked, what was not verified, and choices the user may
   want changed. The user reads on a phone, so keep reports short and concrete.
@@ -240,6 +259,15 @@ The plan is complete. Before a store release, the user has to decide, and has no
 Then, on real phones (nothing native has run yet): tab bar spacing, keyboard behaviour, drag and drop,
 the file picker and share sheet, secure storage of keys, notification permission and delivery, keeping
 the screen awake, and a real Generate run with each provider.
+
+## Project page
+
+- The website is named KIWA (Keep Improving With AI); the app's own display name is not changed yet.
+- Source: `site/index.html` (a page fragment, trilingual, theme-aware). `npm run site:build` writes
+  `docs/index.html` for GitHub Pages (only once the repo is public, or on a paid plan).
+- Screenshots: `npm run site:screens` rebuilds the web app and captures every screen in EN/UZ/RU,
+  light and dark, into `docs/screens/<lang>/<theme>/*.webp`, using `tools/showcase.js` content.
+- A private preview is published at https://claude.ai/artifact/JR28VjR1uw51FgyaZEh3Yj.
 
 ## Things that will trip you up
 

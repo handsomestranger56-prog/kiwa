@@ -3,6 +3,8 @@
  */
 import { documentJsonSchema } from '../schema';
 import { type Connection, type FetchLike, AiError, generate, listModels, strictSchema } from './index';
+import { rateLimitOf, retryDelay } from './http';
+import { retryWait } from './retry';
 
 type Call = { url: string; method: string; headers: Record<string, string>; body: any };
 
@@ -67,7 +69,7 @@ describe('Claude', () => {
       { id: 'claude-opus-5-5', label: 'Claude Opus 5.5' },
       { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' },
     ]);
-    expect(calls[0].url).toBe('https://api.anthropic.com/v1/models?limit=100');
+    expect(calls[0].url).toBe('https://api.anthropic.com/v1/models?limit=1000');
     expect(calls[0].headers['x-api-key']).toBe('sk-ant-test');
     expect(calls[0].headers['anthropic-version']).toBe('2026-10-21');
     expect(calls[0].headers['anthropic-dangerous-direct-browser-access']).toBe('true');
@@ -116,12 +118,12 @@ describe('Claude', () => {
 });
 
 describe('Gemini', () => {
-  it('lists only models that write text, across pages', async () => {
+  it('lists every model with what Gemini says about it, across pages', async () => {
     const { fetchImpl, calls } = fakeFetch(
       {
         body: {
           models: [
-            { name: 'models/gemini-3-pro', displayName: 'Gemini 3 Pro', supportedGenerationMethods: ['generateContent', 'countTokens'] },
+            { name: 'models/gemini-3-pro', displayName: 'Gemini 3 Pro', description: 'Pro', inputTokenLimit: 1048576, outputTokenLimit: 65536, supportedGenerationMethods: ['generateContent', 'countTokens'] },
             { name: 'models/text-embedding-004', displayName: 'Embedding', supportedGenerationMethods: ['embedContent'] },
           ],
           nextPageToken: 'next',
@@ -130,8 +132,9 @@ describe('Gemini', () => {
       { body: { models: [{ name: 'models/gemini-3-flash', supportedGenerationMethods: ['generateContent'] }] } },
     );
     expect(await listModels(gemini, fetchImpl)).toEqual([
-      { id: 'gemini-3-pro', label: 'Gemini 3 Pro' },
-      { id: 'gemini-3-flash', label: 'gemini-3-flash' },
+      { id: 'gemini-3-pro', label: 'Gemini 3 Pro', description: 'Pro', methods: ['generateContent', 'countTokens'], inputLimit: 1048576, outputLimit: 65536 },
+      { id: 'text-embedding-004', label: 'Embedding', methods: ['embedContent'] },
+      { id: 'gemini-3-flash', label: 'gemini-3-flash', methods: ['generateContent'] },
     ]);
     expect(calls[0].url).toBe('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000');
     expect(calls[0].headers['x-goog-api-key']).toBe('gm-test');
@@ -168,14 +171,32 @@ describe('Gemini', () => {
 });
 
 describe('OpenAI-compatible', () => {
-  it('lists text models from the configured address, sorted', async () => {
-    const { fetchImpl, calls } = fakeFetch({ body: { data: [{ id: 'gpt-5' }, { id: 'text-embedding-3-large' }, { id: 'whisper-1' }, { id: 'gpt-5-mini' }, { id: 'dall-e-3' }] } });
+  it('lists every model from the configured address, sorted, with what the service says', async () => {
+    const { fetchImpl, calls } = fakeFetch({
+      body: {
+        data: [
+          { id: 'gpt-5' },
+          { id: 'whisper-1' },
+          { id: 'vendor/free-model', name: 'Free model', context_length: 32000, architecture: { input_modalities: ['text', 'image', 'file'], output_modalities: ['text'] }, pricing: { prompt: '0', completion: '0' } },
+        ],
+      },
+    });
     expect(await listModels(openai, fetchImpl)).toEqual([
       { id: 'gpt-5', label: 'gpt-5' },
-      { id: 'gpt-5-mini', label: 'gpt-5-mini' },
+      { id: 'vendor/free-model', label: 'Free model', inputLimit: 32000, input: ['text', 'image', 'pdf'], output: ['text'], free: true },
+      { id: 'whisper-1', label: 'whisper-1' },
     ]);
     expect(calls[0].url).toBe('https://api.openai.com/v1/models');
     expect(calls[0].headers.authorization).toBe('Bearer sk-test');
+  });
+
+  it('follows further pages when a service pages its model list', async () => {
+    const { fetchImpl, calls } = fakeFetch(
+      { body: { data: [{ id: 'model-a' }], has_more: true, last_id: 'model-a' } },
+      { body: { data: [{ id: 'model-b' }], has_more: false } },
+    );
+    expect((await listModels(openai, fetchImpl)).map((model) => model.id)).toEqual(['model-a', 'model-b']);
+    expect(calls[1].url).toBe('https://api.openai.com/v1/models?after=model-a');
   });
 
   it('uses the right length parameter for OpenAI and for other services', async () => {
@@ -213,6 +234,46 @@ describe('OpenAI-compatible', () => {
       throw new TypeError('Network request failed');
     };
     expect(await failure(listModels({ kind: 'openai', apiKey: '', baseUrl: 'http://localhost:11434/v1' }, offline))).toMatchObject({ kind: 'network' });
+  });
+});
+
+describe('retry hints', () => {
+  it('reads how long to wait from Google\'s RetryInfo and from Retry-After', async () => {
+    const gemini = { kind: 'gemini' as const, apiKey: 'k' };
+    const limited = fakeFetch({
+      status: 429,
+      body: { error: { code: 429, message: 'Quota exceeded', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '37s' }] } },
+    });
+    expect(await failure(generate(gemini, { model: 'm', prompt: 'p' }, limited.fetchImpl))).toMatchObject({ kind: 'rate', retryAfterMs: 37000 });
+    expect(retryDelay({ headers: new Headers({ 'retry-after': '12' }) }, null)).toBe(12000);
+    expect(retryDelay({ headers: new Headers() }, null)).toBe(0);
+  });
+
+  it('tells a per-minute limit from a daily limit and from used-up credit', () => {
+    const google = (quotaId: string) => ({ error: { code: 429, message: 'Quota exceeded', details: [{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId }] }] } });
+    expect(rateLimitOf(429, google('GenerateRequestsPerMinutePerProjectPerModel-FreeTier'))).toBe('minute');
+    expect(rateLimitOf(429, google('GenerateRequestsPerDayPerProjectPerModel-FreeTier'))).toBe('day');
+    expect(rateLimitOf(429, { error: { message: 'Rate limit reached for gpt-x on requests per day (RPD): Limit 200' } })).toBe('day');
+    expect(rateLimitOf(429, { error: { message: 'Rate limit reached on requests per min (RPM)' } })).toBe('minute');
+    expect(rateLimitOf(429, { error: { code: 'insufficient_quota', message: 'You exceeded your current quota' } })).toBe('quota');
+    expect(rateLimitOf(402, null)).toBe('quota');
+    expect(rateLimitOf(429, { error: { message: 'Slow down' } })).toBeUndefined();
+    expect(rateLimitOf(500, null)).toBeUndefined();
+  });
+
+  it('does not wait out a daily limit or used-up credit', async () => {
+    const daily = fakeFetch({ status: 429, body: { error: { message: 'Quota exceeded', details: [{ violations: [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' }] }, { retryDelay: '20s' }] } } });
+    const error = await failure(generate({ kind: 'gemini', apiKey: 'k' }, { model: 'm', prompt: 'p' }, daily.fetchImpl));
+    expect(error).toMatchObject({ kind: 'rate', limit: 'day' });
+    expect(retryWait(error, 0)).toBeNull();
+    expect(retryWait(new AiError('rate', 'slow', undefined, 2000, 'minute'), 0)).toBe(3000);
+  });
+
+  it('marks only rate limits and busy servers as worth retrying', async () => {
+    const busy = fakeFetch({ status: 529, body: { error: { message: 'Overloaded' } } });
+    expect(await failure(generate({ kind: 'claude', apiKey: 'k' }, { model: 'm', prompt: 'p' }, busy.fetchImpl))).toMatchObject({ kind: 'server', retryAfterMs: 0 });
+    const noCredit = fakeFetch({ status: 402, body: { error: { message: 'No credit' } } });
+    expect((await failure(generate({ kind: 'claude', apiKey: 'k' }, { model: 'm', prompt: 'p' }, noCredit.fetchImpl))).retryAfterMs).toBeUndefined();
   });
 });
 

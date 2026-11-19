@@ -88,7 +88,14 @@ const broken = JSON.stringify({ format: 'deck/1', id: 'bad-deck', title: 'Broken
     await button('Check').click();
     await seen('Correct');
     await page.goBack();
-    await page.goBack();
+  });
+
+  await step('back from the imported item goes to the library, not the import screen', async () => {
+    await page.getByRole('link', { name: 'Go back' }).filter({ visible: true }).first().click();
+    await page.waitForTimeout(500);
+    const path = new URL(page.url()).pathname;
+    if (path !== '/') throw new Error(`Back went to ${path} instead of the library`);
+    await seen('Library');
   });
 
   await step('import: the same item again offers replace or keep both', async () => {

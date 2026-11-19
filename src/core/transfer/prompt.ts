@@ -28,11 +28,14 @@ export const PROMPT_QUESTION_TYPES = [
   'categorize',
 ] as const satisfies readonly QuestionType[];
 
+/** "auto" leaves the choice to the model, guided by the topic and the person's notes. */
+export type LevelChoice = Level | 'auto';
+
 export type CreateRequest = {
   kind: CreateKind;
   topic: string;
   audience?: string;
-  level: Level;
+  level: LevelChoice;
   /** Language the content is written in, as a tag such as "en". */
   language: string;
   /** Lessons in a course. */
@@ -41,6 +44,10 @@ export type CreateRequest = {
   questions: number;
   /** Cards in a deck. */
   cards: number;
+  /** The model decides how many lessons, questions or cards, within LIMITS. Ignores the numbers above. */
+  autoSize?: boolean;
+  /** Lessons may include SVG pictures. Missing in requests saved before pictures existed: off. */
+  pictures?: boolean;
   questionTypes: QuestionType[];
   /** How a standalone quiz behaves. */
   quizMode: AssessmentMode;
@@ -60,9 +67,25 @@ export const defaultRequest: CreateRequest = {
   cards: 20,
   questionTypes: ['single_choice', 'multiple_choice', 'true_false', 'short_answer'],
   quizMode: 'practice',
+  pictures: true,
 };
 
 export const LIMITS = { lessons: [1, 20], questions: [1, 30], cards: [5, 100] } as const;
+
+/** Questions in each lesson's practice when the model picks the size. */
+const AUTO_LESSON_QUESTIONS = [2, 8] as const;
+
+/** Final exam size: two questions per lesson, between 5 and 15. With no lesson count yet, the full range. */
+export function examSizeText(lessons: number | null): string {
+  return lessons === null ? '5 to 15' : String(Math.min(15, Math.max(5, lessons * 2)));
+}
+
+/** The level line of a prompt. */
+export function levelLine(level: LevelChoice, field: boolean): string {
+  if (level !== 'auto') return `- Level: ${level}`;
+  const set = field ? ', and set `level` to it' : '';
+  return `- Level: choose "beginner", "intermediate" or "advanced" to suit the topic, the audience and any notes${set}`;
+}
 
 const QUESTION_RULES: Record<QuestionType, string> = {
   single_choice: '`single_choice`: `options` is 2 to 8 strings, `answer` is the position of the one correct option, counting from 0.',
@@ -85,7 +108,7 @@ export function buildPrompt(request: CreateRequest): string {
     request.source?.trim() ? source(request.source) : null,
     writingRules(request),
     formatRules(request, types),
-    `## Example\n\nThis shows the shape only. Write your own content.\n\n${fence(JSON.stringify(example(request.kind), null, 2))}`,
+    `## Example\n\nThis shows the shape only. Write your own content.\n\n${fence(JSON.stringify(example(request.kind, request.pictures), null, 2))}`,
     `## JSON Schema\n\nYour reply must be valid against this schema.\n\n${fence(JSON.stringify(schemaFor(request.kind)))}`,
     'Reply with the JSON object only. Start with `{` and end with `}`.',
   ];
@@ -107,11 +130,18 @@ function effectiveTypes(request: CreateRequest): QuestionType[] {
 }
 
 function task(request: CreateRequest): string {
+  const auto = request.autoSize;
   const what = {
-    course: `a course of ${request.lessons} ${plural(request.lessons, 'lesson')}`,
+    course: auto
+      ? `a course. Choose how many lessons it needs, from ${LIMITS.lessons[0]} to ${LIMITS.lessons[1]}: few for a narrow topic or a request for something brief, more for a broad one`
+      : `a course of ${request.lessons} ${plural(request.lessons, 'lesson')}`,
     lesson: 'one lesson',
-    quiz: `a quiz of ${request.questions} ${plural(request.questions, 'question')}`,
-    deck: `a set of ${request.cards} flashcards`,
+    quiz: auto
+      ? `a quiz. Choose how many questions it needs, from ${LIMITS.questions[0]} to ${LIMITS.questions[1]}, to fit the topic and any request for something brief or thorough`
+      : `a quiz of ${request.questions} ${plural(request.questions, 'question')}`,
+    deck: auto
+      ? `a set of flashcards. Choose how many cards it needs, from ${LIMITS.cards[0]} to ${LIMITS.cards[1]}, to fit the topic and any request for something brief or thorough`
+      : `a set of ${request.cards} flashcards`,
   }[request.kind];
 
   const lines = [
@@ -121,7 +151,7 @@ function task(request: CreateRequest): string {
     '',
     request.topic.trim(),
     '',
-    `- Level: ${request.level}`,
+    levelLine(request.level, request.kind !== 'lesson'),
     `- Language: write all content in the language with the tag \`${request.language}\`, and set \`language\` to it`,
   ];
   if (request.audience?.trim()) lines.push(`- Audience: ${request.audience.trim()}`);
@@ -150,7 +180,9 @@ function source(text: string): string {
 
 function writingRules(request: CreateRequest): string {
   const rules: string[] = [];
-  const perLesson = `${request.questions} ${plural(request.questions, 'question')}`;
+  const perLesson = request.autoSize
+    ? `${AUTO_LESSON_QUESTIONS[0]} to ${AUTO_LESSON_QUESTIONS[1]} questions, as many as the lesson needs,`
+    : `${request.questions} ${plural(request.questions, 'question')}`;
 
   if (request.kind === 'course' || request.kind === 'lesson') {
     rules.push(
@@ -158,9 +190,16 @@ function writingRules(request: CreateRequest): string {
       'Give each lesson a one-sentence `summary` and an estimate of reading time in `minutes`.',
       `End each lesson with one assessment in mode "practice" holding ${perLesson} that test that lesson only.`,
     );
+    if (request.pictures) {
+      rules.push(
+        'Where a picture makes an idea clearer, such as a diagram, a labelled figure, a simple chart or a process step by step, add an `svg` block. Use at most two per lesson, and none where words are enough.',
+        `Each picture: a root \`<svg>\` with \`xmlns="http://www.w3.org/2000/svg"\` and a \`viewBox\`, under ${PICTURE_SIZE} characters, no scripts, no links, no external images or fonts. Labels are short and in the content's language. Use colours that read well on a light background. A simple CSS or SMIL animation is welcome when motion explains the idea.`,
+        'The SVG code is one JSON string: write its attributes with single quotes so no escaping is needed.',
+      );
+    }
   }
   if (request.kind === 'course') {
-    const examSize = Math.min(15, Math.max(5, request.lessons * 2));
+    const examSize = examSizeText(request.autoSize ? null : request.lessons);
     rules.push(
       'Order the lessons so each one builds on the ones before it.',
       `Add a \`finalExam\` in mode "exam" with ${examSize} new questions drawn from across the whole course.`,
@@ -192,7 +231,9 @@ function formatRules(request: CreateRequest, types: QuestionType[]): string {
   if (request.kind === 'lesson' && request.course) rules.push(`Set \`courseId\` to "${request.course.id}".`);
   if (request.kind === 'course' || request.kind === 'lesson') {
     rules.push(
-      'Lesson `blocks` come in three types: `text` with `markdown`; `code` with `language` and `code`; `callout` with `tone` ("note", "tip" or "warning") and `markdown`. Do not use image blocks.',
+      request.pictures
+        ? 'Lesson `blocks` come in four types: `text` with `markdown`; `code` with `language` and `code`; `callout` with `tone` ("note", "tip" or "warning") and `markdown`; `svg` with `svg` (the code of one SVG picture), `alt` (what the picture shows, for people who cannot see it) and an optional `caption`. Do not use image blocks.'
+        : 'Lesson `blocks` come in three types: `text` with `markdown`; `code` with `language` and `code`; `callout` with `tone` ("note", "tip" or "warning") and `markdown`. Do not use image or svg blocks.',
     );
   }
 
@@ -205,6 +246,16 @@ function schemaFor(kind: CreateKind): Record<string, unknown> {
   if (kind === 'lesson') return z.toJSONSchema(lessonFileSchema, { io: 'input' }) as Record<string, unknown>;
   return documentJsonSchema(kind);
 }
+
+/** The longest SVG picture asked for, in characters. The app accepts up to SVG_MAX_LENGTH. */
+const PICTURE_SIZE = 6000;
+
+const examplePicture = {
+  type: 'svg',
+  svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120'><rect x='10' y='60' width='60' height='50' fill='#9ecae1'/><text x='40' y='52' font-size='12' text-anchor='middle'>100 °C</text><rect x='170' y='60' width='60' height='50' fill='#9ecae1'/><text x='200' y='52' font-size='12' text-anchor='middle'>90 °C</text><path d='M150 110 L200 20 L240 110 Z' fill='#bbb' opacity='0.5'/></svg>",
+  alt: 'Water boils at 100 °C at sea level and at about 90 °C on a mountain.',
+  caption: 'Boiling point at sea level and at 3000 m.',
+};
 
 const exampleLesson = {
   id: 'boiling-point',
@@ -234,7 +285,8 @@ const exampleLesson = {
 };
 
 /** A small valid file of each kind. Tests check that every example really imports. */
-export function example(kind: CreateKind): Record<string, unknown> {
+export function example(kind: CreateKind, pictures = false): Record<string, unknown> {
+  const lesson = pictures ? { ...exampleLesson, blocks: [...exampleLesson.blocks, examplePicture] } : exampleLesson;
   switch (kind) {
     case 'course':
       return {
@@ -245,7 +297,7 @@ export function example(kind: CreateKind): Record<string, unknown> {
         language: 'en',
         level: 'beginner',
         tags: ['physics'],
-        lessons: [exampleLesson],
+        lessons: [lesson],
         finalExam: {
           id: 'final',
           mode: 'exam',
@@ -255,7 +307,7 @@ export function example(kind: CreateKind): Record<string, unknown> {
         },
       };
     case 'lesson':
-      return { format: LESSON_FORMAT, lesson: exampleLesson };
+      return { format: LESSON_FORMAT, lesson };
     case 'quiz':
       return {
         format: 'quiz/1',

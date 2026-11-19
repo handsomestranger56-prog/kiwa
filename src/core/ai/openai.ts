@@ -1,5 +1,5 @@
 import { requestJson, trimSlash } from './http';
-import { type Adapter, type Connection, type FetchLike, type GenerateRequest, AiError, DEFAULT_MAX_TOKENS } from './types';
+import { type Adapter, type Connection, type FetchLike, type GenerateRequest, type Modality, type ModelInfo, AiError, DEFAULT_MAX_TOKENS } from './types';
 
 export const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 
@@ -13,8 +13,23 @@ export const OPENAI_COMPATIBLE_PRESETS = [
   { label: 'Ollama', baseUrl: 'http://localhost:11434/v1' },
 ] as const;
 
-/** Model ids that cannot write text: embeddings, speech, images, moderation. */
-const NOT_TEXT = /embed|whisper|tts|dall-e|image|moderation|audio|transcri|realtime|sora|speech/i;
+type ListedModel = {
+  id?: string;
+  name?: string;
+  description?: string;
+  context_length?: number;
+  /** OpenRouter: what the model reads and writes. */
+  architecture?: { input_modalities?: string[]; output_modalities?: string[] };
+  /** OpenRouter: price per token, as strings. "0" everywhere means free. */
+  pricing?: Record<string, string | number>;
+};
+
+const MODALITIES: readonly Modality[] = ['text', 'image', 'audio', 'video', 'pdf'];
+const modalities = (values?: string[]): Modality[] | undefined => {
+  if (!Array.isArray(values)) return undefined;
+  const known = values.map((value) => (value === 'file' ? 'pdf' : value)).filter((value): value is Modality => MODALITIES.includes(value as Modality));
+  return known.length > 0 ? [...new Set(known)] : undefined;
+};
 
 const base = (connection: Connection) => trimSlash(connection.baseUrl || OPENAI_BASE_URL);
 const headers = (connection: Connection): Record<string, string> =>
@@ -22,11 +37,36 @@ const headers = (connection: Connection): Record<string, string> =>
 
 export const openaiAdapter: Adapter = {
   async listModels(connection, fetchImpl) {
-    const data = await requestJson(fetchImpl, `${base(connection)}/models`, { headers: headers(connection) });
-    const entries = (data.data as { id?: string; name?: string }[] | undefined) ?? [];
+    // Most services list every model at once. Some page the list the way OpenAI pages others,
+    // with `has_more` and `last_id`: follow those pages too.
+    const entries: ListedModel[] = [];
+    let after = '';
+    for (let page = 0; page < 20; page += 1) {
+      const url = `${base(connection)}/models${after ? `?after=${encodeURIComponent(after)}` : ''}`;
+      const data = await requestJson(fetchImpl, url, { headers: headers(connection) });
+      const batch = (data.data as ListedModel[] | undefined) ?? [];
+      entries.push(...batch);
+      const next = typeof data.last_id === 'string' ? data.last_id : batch.at(-1)?.id;
+      if (data.has_more !== true || !next || next === after) break;
+      after = next;
+    }
+    // Every model is kept. The catalog (catalog.ts) decides which ones can write a course.
     return entries
-      .filter((entry): entry is { id: string; name?: string } => typeof entry.id === 'string' && !NOT_TEXT.test(entry.id))
-      .map((entry) => ({ id: entry.id, label: entry.name || entry.id }))
+      .filter((entry): entry is ListedModel & { id: string } => typeof entry.id === 'string')
+      .map((entry): ModelInfo => {
+        const prices = entry.pricing ? Object.values(entry.pricing).map(Number).filter(Number.isFinite) : [];
+        const input = modalities(entry.architecture?.input_modalities);
+        const output = modalities(entry.architecture?.output_modalities);
+        return {
+          id: entry.id,
+          label: entry.name || entry.id,
+          ...(entry.description ? { description: entry.description.slice(0, 300) } : {}),
+          ...(entry.context_length ? { inputLimit: entry.context_length } : {}),
+          ...(input ? { input } : {}),
+          ...(output ? { output } : {}),
+          ...(prices.length > 0 && prices.every((price) => price === 0) ? { free: true } : {}),
+        };
+      })
       .sort((a, b) => a.id.localeCompare(b.id));
   },
 

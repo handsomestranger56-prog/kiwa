@@ -20,6 +20,10 @@ async function mockAi(page, options = {}) {
     reply: options.reply ?? (() => '{}'),
     /** Milliseconds to wait before answering a generation request. */
     delay: 0,
+    /** Error replies, { status, body }, given to the next generation requests before any answer. */
+    failures: [],
+    /** Returns an error reply, { status, body }, for a generation request, or null to answer it. */
+    failFor: () => null,
     usage: { input: 1200, output: 800 },
   };
 
@@ -67,6 +71,8 @@ async function mockAi(page, options = {}) {
       return json(route, 200, { data: [{ id: 'llama4' }, { id: 'nomic-embed-text' }, { id: 'qwen3' }] });
     }
 
+    const failure = state.failures.shift() ?? state.failFor({ kind, body });
+    if (failure) return json(route, failure.status, failure.body);
     if (state.delay) await new Promise((resolve) => setTimeout(resolve, state.delay));
     let text;
     try {

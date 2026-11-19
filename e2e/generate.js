@@ -104,7 +104,7 @@ function goodModel({ prompt }) {
     await button('Add provider').click();
     await field('API key').fill('sk-ant-good');
     await button('Test and detect models').click();
-    await seen('Connected. Found 2 models.');
+    await seen('Connected. Found 2 models. 2 can write courses and quizzes.');
     await button('Save').click();
     await seen('Claude · 1 model on');
     await button('Add provider').click();
@@ -112,7 +112,7 @@ function goodModel({ prompt }) {
     await field('Address').fill(MOCK_OPENAI_URL);
     await field('Name').fill('My server');
     await button('Test and detect models').click();
-    await seen('Connected. Found 2 models.');
+    await seen('Connected. Found 3 models. 2 can write courses and quizzes.');
     await button('Save').click();
     await seen('OpenAI-compatible · 1 model on');
   });
@@ -167,6 +167,81 @@ function goodModel({ prompt }) {
     ai.reply = goodModel;
     await button('Try again').click();
     await seen('Ready to review');
+  });
+
+  await step('a rate limit is waited out, and the failed request is counted', async () => {
+    ai.failures = [{ status: 429, body: { error: { code: 429, message: 'Quota exceeded', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '1s' }] } } }];
+    await openCreate();
+    await button('Quiz').click();
+    await field('Topic').fill('Patience');
+    await button('Generate').click();
+    await seen('The provider asked to slow down. Trying again in');
+    await shot('waiting');
+    await seen('Ready to review');
+    await seen('2 requests, 1 failed');
+    await button('1 failed').click();
+    await seen('Failed requests');
+    await seen('HTTP 429');
+    await seen('Quota exceeded');
+    await shot('failed-list');
+  });
+
+  await step('while waiting on a limit, another model can take over at once', async () => {
+    ai.failures = [{ status: 429, body: { error: { code: 429, message: 'Slow down', details: [{ violations: [{ quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' }] }, { retryDelay: '60s' }] } } }];
+    await openCreate();
+    await button('Quiz').click();
+    await field('Topic').fill('Impatient');
+    await button('Generate').click();
+    await seen('Trying again in');
+    await button('Use another model now').click();
+    const before = ai.log.length;
+    await button('llama4 · My server').click();
+    await seen('Ready to review');
+    await seen('With llama4');
+    const call = ai.log.slice(before).find((entry) => entry.method === 'POST');
+    if (call?.kind !== 'openai') throw new Error(`took over with ${call?.kind}`);
+  });
+
+  await step('a daily limit stops at once and suggests another model', async () => {
+    ai.failFor = ({ kind }) =>
+      kind === 'claude' ? { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: 'Daily request limit reached for this model (requests per day).' } } } : null;
+    await openCreate();
+    await button('Quiz').click();
+    await field('Topic').fill('Tomorrow');
+    const started = Date.now();
+    await button('Generate').click();
+    await seen("This model's daily limit is used up");
+    if (Date.now() - started > 6000) throw new Error('waited on a daily limit');
+    await button('llama4 · My server').click();
+    await button('Try again').click();
+    await seen('Ready to review');
+    ai.failFor = () => null;
+  });
+
+  await step('a failing model can be swapped for another on the error card', async () => {
+    ai.failFor = ({ kind }) => (kind === 'claude' ? { status: 401, body: { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } } } : null);
+    await openCreate();
+    await button('Quiz').click();
+    await field('Topic').fill('Second chance');
+    await button('Generate').click();
+    await seen('This stopped');
+    await seen('The key was not accepted');
+    await seen('Try again with');
+    await shot('failed-pick-model');
+    await button('llama4 · My server').click();
+    const before = ai.log.length;
+    await button('Try again').click();
+    await seen('Ready to review');
+    await seen('With llama4');
+    const call = ai.log.slice(before).find((entry) => entry.method === 'POST');
+    if (call?.kind !== 'openai') throw new Error(`retried with ${call?.kind}`);
+    ai.failFor = () => null;
+  });
+
+  await step('Back from a run returns to the form, still filled in', async () => {
+    await page.getByRole('link', { name: 'Create with AI, back' }).filter({ visible: true }).first().click();
+    await seen('What to create');
+    if ((await field('Topic').inputValue()) !== 'Second chance') throw new Error('the form lost its topic');
   });
 
   await step('a course starts with an outline the user can edit', async () => {

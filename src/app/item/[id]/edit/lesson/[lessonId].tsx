@@ -12,18 +12,21 @@ import { EmptyState, Loading, Page } from '@/ui/layout';
 import { ActionSheet, Snackbar } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { monoFont, radius, spacing, useTheme } from '@/ui/theme';
+import { cleanSvg } from '@/core/svg';
+import { SvgPicture } from '@/features/study/svg-picture';
 
 /** A block while it is being typed. Every field is text and may still be empty. */
-type BlockDraft = { type: BlockType; markdown: string; language: string; code: string; url: string; alt: string; caption: string; tone: 'note' | 'tip' | 'warning' };
+type BlockDraft = { type: BlockType; markdown: string; language: string; code: string; url: string; svg: string; alt: string; caption: string; tone: 'note' | 'tip' | 'warning' };
 
-const BLOCK_TYPES: BlockType[] = ['text', 'code', 'callout', 'image'];
-const emptyBlock = (type: BlockType): BlockDraft => ({ type, markdown: '', language: '', code: '', url: '', alt: '', caption: '', tone: 'note' });
+const BLOCK_TYPES: BlockType[] = ['text', 'code', 'callout', 'image', 'svg'];
+const emptyBlock = (type: BlockType): BlockDraft => ({ type, markdown: '', language: '', code: '', url: '', svg: '', alt: '', caption: '', tone: 'note' });
 
 function toDraft(block: Block): BlockDraft {
   const draft = emptyBlock(block.type);
   if (block.type === 'text') return { ...draft, markdown: block.markdown };
   if (block.type === 'code') return { ...draft, code: block.code, language: block.language ?? '' };
   if (block.type === 'callout') return { ...draft, markdown: block.markdown, tone: block.tone };
+  if (block.type === 'svg') return { ...draft, svg: block.svg, alt: block.alt ?? '', caption: block.caption ?? '' };
   return { ...draft, url: block.url, alt: block.alt ?? '', caption: block.caption ?? '' };
 }
 
@@ -36,6 +39,16 @@ function fromDrafts(drafts: BlockDraft[]): Block[] {
     if (draft.type === 'code' && draft.code.trim()) {
       blocks.push({ type: 'code', code: draft.code, ...(draft.language.trim() ? { language: draft.language.trim() } : {}) });
     }
+    if (draft.type === 'svg' && draft.svg.trim()) {
+      const cleaned = cleanSvg(draft.svg);
+      blocks.push({
+        type: 'svg',
+        // Unusable code is kept as typed, so the save reports the problem instead of losing it.
+        svg: cleaned.ok ? cleaned.svg : draft.svg,
+        ...(draft.alt.trim() ? { alt: draft.alt.trim() } : {}),
+        ...(draft.caption.trim() ? { caption: draft.caption.trim() } : {}),
+      });
+    }
     if (draft.type === 'image' && draft.url.trim()) {
       blocks.push({
         type: 'image',
@@ -46,6 +59,34 @@ function fromDrafts(drafts: BlockDraft[]): Block[] {
     }
   }
   return blocks;
+}
+
+/** SVG code pasted from a chatbot, with a preview of what the lesson will show. */
+function SvgDraft({ name, block, onChange }: { name: string; block: BlockDraft; onChange: (changes: Partial<BlockDraft>) => void }) {
+  const { t } = useTranslation();
+  const cleaned = block.svg.trim() ? cleanSvg(block.svg) : null;
+  return (
+    <>
+      <TextField
+        value={block.svg}
+        onChangeText={(svg) => onChange({ svg })}
+        placeholder={t('editor.lesson.svgCode')}
+        accessibilityLabel={`${name}: ${t('editor.lesson.svgCode')}`}
+        multiline
+        textAlignVertical="top"
+        autoCapitalize="none"
+        autoCorrect={false}
+        style={[styles.large, { fontFamily: monoFont }]}
+      />
+      <AppText variant="small" color="textSecondary">
+        {t('editor.lesson.svgHint')}
+      </AppText>
+      {cleaned?.ok ? <SvgPicture svg={cleaned.svg} alt={block.alt} /> : null}
+      {cleaned && !cleaned.ok ? <AppText color="danger">{t(`editor.lesson.svgProblem.${cleaned.reason}`)}</AppText> : null}
+      <TextField value={block.alt} onChangeText={(alt) => onChange({ alt })} placeholder={t('editor.lesson.imageAlt')} accessibilityLabel={`${name}: ${t('editor.lesson.imageAlt')}`} />
+      <TextField value={block.caption} onChangeText={(caption) => onChange({ caption })} placeholder={t('editor.lesson.imageCaption')} accessibilityLabel={`${name}: ${t('editor.lesson.imageCaption')}`} />
+    </>
+  );
 }
 
 export default function EditLessonScreen() {
@@ -223,6 +264,7 @@ function LessonEditor({ course, lesson, save }: Props) {
                     />
                   </>
                 ) : null}
+                {block.type === 'svg' ? <SvgDraft name={name} block={block} onChange={(changes) => setBlock(index, changes)} /> : null}
                 {block.type === 'image' ? (
                   <>
                     <TextField

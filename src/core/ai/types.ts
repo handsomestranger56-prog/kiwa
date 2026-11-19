@@ -4,7 +4,23 @@ export const PROVIDER_KINDS = ['claude', 'gemini', 'openai'] as const satisfies 
 /** What is needed to talk to one provider. The key comes from the device's secure store. */
 export type Connection = { kind: ProviderKind; apiKey: string; baseUrl?: string };
 
-export type ModelInfo = { id: string; label: string };
+export type Modality = 'text' | 'image' | 'audio' | 'video' | 'pdf';
+
+/** A model as the provider listed it. Everything but the id and label is optional: few providers say much. */
+export type ModelInfo = {
+  id: string;
+  label: string;
+  description?: string;
+  /** Gemini: what the model can be asked to do, such as "generateContent" or "embedContent". */
+  methods?: string[];
+  inputLimit?: number;
+  outputLimit?: number;
+  /** OpenRouter and similar: what the model reads and writes. */
+  input?: Modality[];
+  output?: Modality[];
+  /** The service lists it at no cost. */
+  free?: boolean;
+};
 
 export type GenerateRequest = {
   model: string;
@@ -37,12 +53,21 @@ export type AiErrorKind =
   /** The provider had a problem on its side. */
   | 'server';
 
+export type RateLimit = 'minute' | 'day' | 'quota';
+
 export class AiError extends Error {
   constructor(
     public readonly kind: AiErrorKind,
     message: string,
     /** Tokens already spent when the error happened, if the provider said. */
     public readonly usage?: Usage,
+    /**
+     * Set when the same request may succeed later: a rate limit or a busy server. Holds how long
+     * the provider asked to wait, in milliseconds, or 0 when it did not say.
+     */
+    public readonly retryAfterMs?: number,
+    /** Which limit a rate error hit, when the provider said: per minute, per day, or credit used up. */
+    public readonly limit?: RateLimit,
   ) {
     super(message);
     this.name = 'AiError';
@@ -64,6 +89,11 @@ export function kindForStatus(status: number): AiErrorKind {
   if (status === 402 || status === 429) return 'rate';
   if (status >= 500) return 'server';
   return 'badRequest';
+}
+
+/** Statuses worth trying again after a pause: too many requests, or a busy or failing server. */
+export function isRetryableStatus(status: number): boolean {
+  return status === 429 || status === 500 || status === 502 || status === 503 || status === 504 || status === 529;
 }
 
 export const DEFAULT_MAX_TOKENS = 16000;

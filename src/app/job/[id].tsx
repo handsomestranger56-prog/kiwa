@@ -1,21 +1,23 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { type Job, type Outline, approveOutline, missingLessons, nextStep } from '@/core/generate/plan';
+import { type FailedRequest, type Job, type Outline, approveOutline, missingLessons, nextStep } from '@/core/generate/plan';
 import { type Course, type LibraryDocument, COURSE_FORMAT, kindOf, unitCount } from '@/core/schema';
 import { appendLesson, asCopy } from '@/core/transfer/files';
 import { useData, useQuery } from '@/data/provider';
 import { Field } from '@/features/editor/parts';
-import { useJobRunner } from '@/features/ai/job-runner';
-import { formatUsage } from '@/features/ai/model-picker';
+import { useJobRunner, useJobWait } from '@/features/ai/job-runner';
+import { ModelPicker, formatUsage, useModelChoices } from '@/features/ai/model-picker';
+import type { ModelChoice } from '@/data/providers-repository';
 import { Button, IconButton, Tag, TextField } from '@/ui/controls';
 import { EmptyState, Loading, Page } from '@/ui/layout';
 import { ConfirmDialog } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { monoFont, radius, spacing, useTheme } from '@/ui/theme';
+import { openNewItem } from '@/features/library/open-item';
 
 export default function JobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,14 +41,31 @@ function JobView({ job }: { job: Job }) {
   const runner = useJobRunner();
   const [failed, setFailed] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const models = useModelChoices();
+  const [nextModel, setNextModel] = useState<ModelChoice | null>(null);
+  const [switching, setSwitching] = useState(false);
+  const [showFailures, setShowFailures] = useState(false);
+  const current = models?.choices.find((choice) => choice.providerId === job.model.providerId && choice.model === job.model.model) ?? null;
+  const asModel = (choice: ModelChoice) => ({ providerId: choice.providerId, model: choice.model, label: choice.label });
+
+  /** While a run waits on a limit, hands it to another model at once. */
+  const switchNow = (choice: ModelChoice) => {
+    setSwitching(false);
+    runner.switchModel(job.id, asModel(choice)).catch(() => setFailed(true));
+  };
+  const waitingUntil = useJobWait(job.id);
+  const secondsLeft = useSecondsUntil(waitingUntil);
 
   const { request, state, status } = job;
   const topic = request.topic.split('\n')[0];
+  const usage = state.usage;
 
+  /** Tries again from the last finished step, with another model if one was picked. */
   const retry = () => {
     setFailed(false);
+    const model = nextModel ? { providerId: nextModel.providerId, model: nextModel.model, label: nextModel.label } : undefined;
     data.jobs
-      .update(job.id, { status: state.outline && state.lessons.length === 0 ? 'outline' : 'running', error: null })
+      .update(job.id, { status: state.outline && state.lessons.length === 0 ? 'outline' : 'running', error: null, model })
       .then(() => runner.start(job.id))
       .catch(() => setFailed(true));
   };
@@ -75,7 +94,7 @@ function JobView({ job }: { job: Job }) {
         itemId = (await data.library.add(document, 'generated')).id;
       }
       await data.jobs.update(job.id, { status: 'saved', savedItemId: itemId });
-      router.replace({ pathname: '/item/[id]', params: { id: itemId } });
+      openNewItem(itemId);
     } catch {
       setFailed(true);
     }
@@ -109,7 +128,23 @@ function JobView({ job }: { job: Job }) {
         {status === 'running' ? (
           <View style={styles.running} accessibilityLiveRegion="polite">
             <ActivityIndicator color={colors.accent} />
-            <AppText>{progress}</AppText>
+            <AppText style={styles.grow}>{progress}</AppText>
+          </View>
+        ) : null}
+        {status === 'running' && secondsLeft !== null ? (
+          <View style={styles.list}>
+            <AppText color="warm" accessibilityLiveRegion="polite">
+              {t('job.waiting', { seconds: secondsLeft })}
+            </AppText>
+            {models && models.choices.length > 1 ? (
+              switching ? (
+                <ModelPicker options={models} value={current} onChange={switchNow} />
+              ) : (
+                <View style={styles.start}>
+                  <Button kind="secondary" icon="ai" label={t('job.switchNow')} onPress={() => setSwitching(true)} />
+                </View>
+              )
+            ) : null}
           </View>
         ) : null}
         {status === 'running' ? <AppText color="textSecondary">{t('job.background')}</AppText> : null}
@@ -155,7 +190,7 @@ function JobView({ job }: { job: Job }) {
         {status === 'saved' && job.savedItemId ? (
           <View style={styles.row}>
             <AppText color="accent">{t('job.saved')}</AppText>
-            <Button kind="secondary" label={t('job.open')} onPress={() => router.replace({ pathname: '/item/[id]', params: { id: job.savedItemId ?? '' } })} />
+            <Button kind="secondary" label={t('job.open')} onPress={() => openNewItem(job.savedItemId ?? '')} />
           </View>
         ) : null}
 
@@ -171,7 +206,16 @@ function JobView({ job }: { job: Job }) {
                 {issue.path}: {issue.message}
               </AppText>
             ))}
+            {job.error.kind === 'rate' ? <AppText>{t(`job.limit.${job.error.limit ?? 'minute'}`)}</AppText> : null}
             <AppText color="textSecondary">{t('job.keptSteps')}</AppText>
+            {models && models.choices.length > 1 ? (
+              <View style={styles.list}>
+                <AppText variant="label" color="textSecondary">
+                  {t('job.retryWith')}
+                </AppText>
+                <ModelPicker options={models} value={nextModel ?? current} onChange={setNextModel} />
+              </View>
+            ) : null}
             <View style={styles.row}>
               <Button icon="restore" label={t('job.retry')} onPress={retry} />
               <Button kind="secondary" label={t('job.discard')} onPress={() => setConfirmingDiscard(true)} />
@@ -179,11 +223,22 @@ function JobView({ job }: { job: Job }) {
           </View>
         ) : null}
 
-        {state.usage.requests > 0 ? (
-          <AppText variant="small" color="textSecondary">
-            {formatUsage(state.usage)} · {t('job.requests', { count: state.usage.requests })}
-          </AppText>
+        {usage.requests > 0 ? (
+          <View style={styles.usage}>
+            <AppText variant="small" color="textSecondary">
+              {formatUsage(usage)} · {t('job.requests', { count: usage.requests })}
+              {usage.failed ? ', ' : ''}
+            </AppText>
+            {usage.failed ? (
+              <Pressable accessibilityRole="button" accessibilityState={{ expanded: showFailures }} onPress={() => setShowFailures(!showFailures)} hitSlop={8}>
+                <AppText variant="small" color="accent" style={styles.link}>
+                  {t('job.requestsFailed', { count: usage.failed })}
+                </AppText>
+              </Pressable>
+            ) : null}
+          </View>
         ) : null}
+        {showFailures ? <FailureList failures={state.failures ?? []} /> : null}
         {state.fixes.length > 0 ? (
           <AppText variant="small" color="textSecondary">
             {t('job.fixes', { count: state.fixes.length })}
@@ -204,6 +259,49 @@ function JobView({ job }: { job: Job }) {
       />
     </>
   );
+}
+
+/** What went wrong with each failed request, newest first. */
+function FailureList({ failures }: { failures: FailedRequest[] }) {
+  const { t, i18n } = useTranslation();
+  const { colors } = useTheme();
+  if (failures.length === 0) return <AppText variant="small" color="textSecondary">{t('job.noFailureDetails')}</AppText>;
+  return (
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <AppText variant="label" color="textSecondary">
+        {t('job.failedRequests')}
+      </AppText>
+      {[...failures].reverse().map((failure, index) => {
+        const what = [failure.status ? `HTTP ${failure.status}` : null, failure.kind ? t(`ai.error.${failure.kind as 'network'}`, { defaultValue: failure.kind }) : null, failure.limit ? t(`job.limitName.${failure.limit}`) : null]
+          .filter(Boolean)
+          .join(' · ');
+        return (
+          <View key={`${failure.at}-${index}`} style={styles.failure}>
+            <AppText variant="small" color="textSecondary">
+              {new Date(failure.at).toLocaleTimeString(i18n.language)} · {failure.model}
+            </AppText>
+            {what ? <AppText variant="small">{what}</AppText> : null}
+            {failure.message ? (
+              <AppText variant="small" color="textSecondary" selectable style={{ fontFamily: monoFont }}>
+                {failure.message}
+              </AppText>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Whole seconds until a time, ticking once a second. Null when there is no time to count to. */
+function useSecondsUntil(until: number | null): number | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (until === null) return;
+    const timer = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(timer);
+  }, [until]);
+  return until === null ? null : Math.max(0, Math.ceil((until - now) / 1000));
 }
 
 /** The planned lessons, editable before anything expensive runs. */
@@ -284,4 +382,7 @@ const styles = StyleSheet.create({
   outlineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   grow: { flex: 1, minWidth: 0, gap: spacing.xs },
   start: { alignItems: 'flex-start' },
+  usage: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
+  link: { textDecorationLine: 'underline' },
+  failure: { gap: 2 },
 });

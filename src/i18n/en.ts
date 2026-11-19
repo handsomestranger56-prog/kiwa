@@ -1,4 +1,4 @@
-/** English strings. Add a language by copying this file and registering it in ./index.ts. */
+/** English strings, the source for every other language. Register a new language in ./index.ts. */
 export const en = {
   tabs: {
     library: 'Library',
@@ -51,6 +51,12 @@ export const en = {
     close: 'Close',
     completed: 'Completed',
     sample: 'Sample',
+    loading: 'Loading',
+  },
+  language: {
+    title: 'Language',
+    system: 'Same as phone',
+    hint: 'The language of the app. The language of courses you create is set on the create form.',
   },
   library: {
     title: 'Library',
@@ -97,6 +103,15 @@ export const en = {
     },
     level: 'Level',
     size: 'Size',
+    auto: 'Let AI choose',
+    autoLevelHint: 'The AI picks the level from your topic, audience and notes.',
+    autoSizeHint: {
+      course: 'The AI decides how many lessons and questions, from your topic and notes. Ask for "brief" in the topic to keep it short.',
+      lesson: 'The AI decides how many questions the lesson needs.',
+      quiz: 'The AI decides how many questions, from your topic and notes.',
+      deck: 'The AI decides how many cards, from your topic and notes.',
+    },
+    setSize: 'Set the size',
     lessons: 'Lessons',
     questionsPerLesson: 'Questions per lesson',
     questions: 'Questions',
@@ -111,6 +126,9 @@ export const en = {
     source: 'Your own material (optional)',
     sourcePlaceholder: 'Paste notes or an article to build from',
     sourceHint: 'With material added, the content is built from it instead of from general knowledge.',
+    pictures: 'Pictures',
+    picturesOn: 'Draw SVG diagrams where they help',
+    picturesHint: 'Simple drawn pictures, some animated. They make replies longer, so they use more tokens.',
     promptForAi: 'Prompt for AI',
     generate: 'Generate',
     nameTitle: { course: 'Name your course', quiz: 'Name your quiz', deck: 'Name your flashcards' },
@@ -140,7 +158,7 @@ export const en = {
   },
   import: {
     title: 'Import',
-    intro: 'Bring in a course, lesson, quiz, flashcards or a backup. Files and pasted chatbot replies both work.',
+    intro: 'Bring in a course, lesson, quiz, flashcards, a group or a backup. Files and pasted chatbot replies both work.',
     chooseFile: 'Choose file',
     pasteClipboard: 'Paste from clipboard',
     pastePlaceholder: 'Or paste the text here',
@@ -153,6 +171,12 @@ export const en = {
     replace: 'Replace',
     addLesson: 'Add lesson',
     lessonCourse: 'Add to which course?',
+    group: 'Group: {{name}}',
+    groupTag: 'Group',
+    addAll_one: 'Add {{count}} item',
+    addAll_other: 'Add {{count}} items',
+    groupConflict_one: '{{count}} of these is already in your library',
+    groupConflict_other: '{{count}} of these are already in your library',
     restored_one: 'Restored {{count}} item.',
     restored_other: 'Restored {{count}} items.',
     conflict: {
@@ -209,6 +233,10 @@ export const en = {
     markNotCompleted: 'Mark as not completed',
     moveToTrash: 'Move to trash',
     more: 'More actions',
+    moveToGroup: 'Move to group',
+    moveTitle: 'Move "{{title}}" to',
+    movedTo: 'Moved to {{group}}',
+    ungrouped: 'Taken out of its group',
   },
   item: {
     notFound: 'This item no longer exists.',
@@ -374,6 +402,27 @@ export const en = {
     found_one: 'Connected. Found {{count}} model.',
     found_other: 'Connected. Found {{count}} models.',
     models: 'Models',
+    writers_one: '{{count}} can write courses and quizzes.',
+    writers_other: '{{count}} can write courses and quizzes.',
+    group: {
+      text: 'Write text: courses, quizzes, feedback',
+      image: 'Images',
+      speech: 'Speech and audio',
+      live: 'Live voice',
+      video: 'Video',
+      embedding: 'Embeddings (search)',
+      special: 'Special purpose',
+    },
+    tier: { free: 'Free', freeTier: 'Free tier', local: 'On this device', paid: 'Paid', unknown: 'Unknown' },
+    status: { stable: 'Stable', preview: 'Preview', experimental: 'Experimental', deprecated: 'Being retired' },
+    modality: { text: 'text', image: 'images', audio: 'audio', video: 'video', pdf: 'PDF' },
+    reads: 'Reads {{list}}',
+    multimodal: 'Multimodal',
+    showOthers_one: 'Show {{count}} other model',
+    showOthers_other: 'Show {{count}} other models',
+    hideOthers: 'Hide other models',
+    othersHint: 'The app does not use these yet. They are listed so you can see everything your key reaches.',
+    tierNote: 'Free and paid are the app\'s guide, checked {{date}}. Your own plan and limits decide: see your provider\'s console.',
     modelsHint: 'Ticked models are offered when you generate or ask for feedback.',
     useModel: 'Use {{model}}',
     needKey: 'Enter an API key first.',
@@ -528,6 +577,19 @@ export const en = {
     failed: 'This stopped',
     invalid: 'The model\'s reply did not match the format, even after one correction.',
     keptSteps: 'Finished steps are kept. Trying again continues from where it stopped.',
+    retryWith: 'Try again with',
+    limit: {
+      minute: 'Too many requests per minute for this model. The app waits and tries again by itself, or you can switch model.',
+      day: 'This model\'s daily limit is used up. Continue with another model now, or try again tomorrow.',
+      quota: 'There is no credit or quota left with this provider. Continue with a model from another provider.',
+    },
+    limitName: { minute: 'per-minute limit', day: 'daily limit', quota: 'no credit left' },
+    switchNow: 'Use another model now',
+    failedRequests: 'Failed requests',
+    noFailureDetails: 'No details were kept for these requests.',
+    waiting: 'The provider asked to slow down. Trying again in {{seconds}} s.',
+    requestsFailed_one: '{{count}} failed',
+    requestsFailed_other: '{{count}} failed',
     retry: 'Try again',
     requests_one: '{{count}} request',
     requests_other: '{{count}} requests',
@@ -574,7 +636,10 @@ export const en = {
       minutes: 'Reading time in minutes',
       blocks: 'Content',
       noBlocks: 'No content yet. Add a block below.',
-      block: { text: 'Text', code: 'Code', callout: 'Callout', image: 'Image' },
+      block: { text: 'Text', code: 'Code', callout: 'Callout', image: 'Image', svg: 'Picture (SVG)' },
+      svgCode: 'SVG code, from <svg> to </svg>',
+      svgHint: 'Paste a picture a chatbot drew as SVG. Animation works. Scripts and links to other sites are removed.',
+      svgProblem: { empty: 'Paste the SVG code.', notSvg: 'This is not SVG code yet. It should start with <svg and end with </svg>.', tooLarge: 'This picture is too large. Ask for a simpler one.' },
       markdown: 'Text. Markdown such as **bold** and lists works.',
       codeLanguage: 'Language, for example python',
       code: 'Code',
@@ -642,6 +707,25 @@ export const en = {
       points: 'Points',
     },
   },
+  groups: {
+    title: 'Groups',
+    all: 'All groups',
+    none: 'No group',
+    manage: 'Manage groups',
+    new: 'New group',
+    namePlaceholder: 'Group name',
+    empty: { title: 'No groups yet', body: 'Make a group here, or move a course, quiz or set of flashcards into one from its ⋯ menu.' },
+    items_one: '{{count}} item',
+    items_other: '{{count}} items',
+    show: 'Show its items',
+    rename: 'Rename group',
+    export: 'Export group',
+    exportEmpty: 'This group has no items to export.',
+    remove: 'Delete group',
+    removeTitle: 'Delete "{{name}}"?',
+    removeBody: 'Its items stay in your library, without a group.',
+    actions: 'Actions for {{name}}',
+  },
   trash: {
     title: 'Trash',
     empty: { title: 'Trash is empty', body: 'Items you remove stay here until you delete them for good.' },
@@ -666,6 +750,7 @@ export const en = {
     saved: 'Saved',
     data: 'Your data',
     openTrash: 'Trash',
+    openGroups: 'Groups',
     backup: 'Back up everything',
     backupHint: 'Saves your content, marks and results to one file. API keys are never included.',
     importOrRestore: 'Import or restore',
@@ -683,7 +768,10 @@ export const en = {
   },
 } as const;
 
-type Widen<T> = T extends string ? string : { [K in keyof T]: Widen<T[K]> };
+/** Languages such as Russian need more plural forms than English: allow them next to any `_one`. */
+type ExtraPlurals<T> = { [K in keyof T as K extends `${infer Base}_one` ? `${Base}_${'zero' | 'two' | 'few' | 'many'}` : never]?: string };
+
+type Widen<T> = T extends string ? string : { [K in keyof T]: Widen<T[K]> } & ExtraPlurals<T>;
 
 /** The shape every language file must have. */
 export type Translation = Widen<typeof en>;

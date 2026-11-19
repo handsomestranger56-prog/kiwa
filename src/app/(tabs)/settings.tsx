@@ -8,6 +8,7 @@ import { backupFile } from '@/core/transfer/files';
 import { useData, useQuery } from '@/data/provider';
 import { ProvidersSection } from '@/features/ai/providers-section';
 import { RemindersSection } from '@/features/focus/reminders-section';
+import { LanguagePicker } from '@/features/settings/language';
 import { shareTextFile } from '@/platform/files';
 import { TextField } from '@/ui/controls';
 import { type IconName, Icon } from '@/ui/icon';
@@ -40,6 +41,7 @@ export default function SettingsScreen() {
   const rows: { key: string; icon: IconName; label: string; onPress: () => void }[] = [
     { key: 'backup', icon: 'share', label: t('settings.backup'), onPress: backUp },
     { key: 'import', icon: 'importFile', label: t('settings.importOrRestore'), onPress: () => router.push('/import') },
+    { key: 'groups', icon: 'folder', label: t('settings.openGroups'), onPress: () => router.push('/groups') },
     { key: 'trash', icon: 'trash', label: t('settings.openTrash'), onPress: () => router.push('/trash') },
   ];
 
@@ -59,6 +61,8 @@ export default function SettingsScreen() {
           {/* Mounted once the stored name is known, so the field starts with it. */}
           {name.loading ? null : <NameField stored={name.data ?? ''} />}
         </View>
+
+        <LanguagePicker />
 
         <ProvidersSection />
 

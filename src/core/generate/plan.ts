@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { type GenerateRequest, type Usage, AiError, strictSchema } from '../ai';
+import { type GenerateRequest, type RateLimit, type Usage, AiError, strictSchema } from '../ai';
 import { newId } from '../ids';
 import {
   type Assessment,
@@ -10,11 +10,12 @@ import {
   type ParseIssue,
   COURSE_FORMAT,
   documentJsonSchema,
+  levelSchema,
   parseDocument,
 } from '../schema';
 import { extractJson } from '../transfer/extract';
 import { type ImportOutcome, appendLesson, lessonFileSchema, readImport } from '../transfer/files';
-import { type CreateRequest, buildFixPrompt, buildPrompt } from '../transfer/prompt';
+import { type CreateRequest, LIMITS, buildFixPrompt, buildPrompt, levelLine } from '../transfer/prompt';
 import type { Fix } from '../transfer/repair';
 import { slugify } from '../transfer/repair';
 
@@ -29,6 +30,8 @@ import { slugify } from '../transfer/repair';
 export const outlineSchema = z.object({
   title: z.string().trim().min(1),
   description: z.string().optional(),
+  /** Set by the model when the person let it choose the level. */
+  level: levelSchema.optional(),
   lessons: z
     .array(z.object({ title: z.string().trim().min(1), summary: z.string().optional() }))
     .min(1)
@@ -56,11 +59,20 @@ export type JobState = {
   finalExam?: Assessment | null;
   /** What the run produced: a document, or a lesson when a lesson was asked for. */
   result: { document: LibraryDocument } | { lesson: Lesson } | null;
-  usage: Usage & { requests: number };
+  /** Every request sent, including ones that failed. `failed` is missing in runs saved before it was counted. */
+  usage: Usage & { requests: number; failed?: number };
   fixes: Fix[];
+  /** The most recent failed requests, newest last, for showing what went wrong. */
+  failures?: FailedRequest[];
 };
 
-export type JobError = { kind: string; message: string; issues?: ParseIssue[] };
+/** One request that did not work: an HTTP error, no connection, or a reply the model cut off or refused. */
+export type FailedRequest = { at: number; model: string; status?: number; kind?: string; limit?: RateLimit; message: string };
+
+/** How many failed requests a run keeps. Older ones are dropped. */
+export const MAX_FAILURES_KEPT = 30;
+
+export type JobError = { kind: string; message: string; issues?: ParseIssue[]; limit?: RateLimit };
 
 export type Job = {
   id: string;
@@ -206,7 +218,7 @@ export async function runStep(step: Step, job: Pick<Job, 'request' | 'state'>, a
 
     case 'outline': {
       const { value, spent: after } = await askWithRepair(ask, outlinePrompt(request), strictSchema(z.toJSONSchema(outlineSchema, { io: 'input' }) as Record<string, unknown>), 4000, readOutline, spent);
-      const outline = { ...value, lessons: value.lessons.slice(0, request.lessons) };
+      const outline = { ...value, lessons: value.lessons.slice(0, request.autoSize ? LIMITS.lessons[1] : request.lessons) };
       return { state: { ...state, ...after, outline, lessons: outline.lessons.map(() => null) }, status: 'outline' };
     }
 
@@ -215,6 +227,7 @@ export async function runStep(step: Step, job: Pick<Job, 'request' | 'state'>, a
       const planned = outline.lessons[step.index];
       const prompt = buildPrompt({
         ...request,
+        level: courseLevel(request, outline) ?? 'auto',
         kind: 'lesson',
         topic: planned.summary ? `${planned.title}\n\n${planned.summary}` : planned.title,
         course: {
@@ -237,6 +250,8 @@ export async function runStep(step: Step, job: Pick<Job, 'request' | 'state'>, a
           ask,
           buildPrompt({
             ...request,
+            level: courseLevel(request, outline) ?? 'auto',
+            autoSize: false,
             kind: 'quiz',
             topic: `Final exam for the course "${outline.title}"`,
             questions: Math.min(15, Math.max(5, outline.lessons.length * 2)),
@@ -262,15 +277,23 @@ export async function runStep(step: Step, job: Pick<Job, 'request' | 'state'>, a
   }
 }
 
+/** The course's level: the one asked for, or the one the model chose in the outline. */
+function courseLevel(request: CreateRequest, outline: Outline | null) {
+  return request.level === 'auto' ? outline?.level : request.level;
+}
+
 function outlinePrompt(request: CreateRequest): string {
+  const size = request.autoSize
+    ? `a course about the topic below. Choose how many lessons it needs, from ${LIMITS.lessons[0]} to ${LIMITS.lessons[1]}: few for a narrow topic or a request for something brief, more for a broad one`
+    : `a course of ${request.lessons} lessons about:`;
   const lines = [
     '# Task',
     '',
-    `Plan a course of ${request.lessons} lessons about:`,
+    `Plan ${size}`,
     '',
     request.topic.trim(),
     '',
-    `- Level: ${request.level}`,
+    levelLine(request.level, true),
     `- Language: write all text in the language with the tag \`${request.language}\``,
   ];
   if (request.audience?.trim()) lines.push(`- Audience: ${request.audience.trim()}`);
@@ -279,8 +302,8 @@ function outlinePrompt(request: CreateRequest): string {
     '',
     '## Reply',
     '',
-    'Reply with one JSON object and nothing else: `title` (the course), `description` (one or two sentences), and `lessons`, a list of',
-    `exactly ${request.lessons} objects with \`title\` and a one-sentence \`summary\`. Each lesson teaches one idea and builds on the ones before it.`,
+    `Reply with one JSON object and nothing else: \`title\` (the course), \`description\` (one or two sentences),${request.level === 'auto' ? ' `level`,' : ''} and \`lessons\`, a list of`,
+    `${request.autoSize ? 'the' : `exactly ${request.lessons}`} objects with \`title\` and a one-sentence \`summary\`. Each lesson teaches one idea and builds on the ones before it.`,
   );
   return `${lines.join('\n')}\n`;
 }
@@ -310,7 +333,7 @@ export function assembleCourse(request: CreateRequest, state: JobState, random?:
     title: outline.title,
     ...(outline.description?.trim() ? { description: outline.description.trim() } : {}),
     language: request.language,
-    level: request.level,
+    ...(courseLevel(request, outline) ? { level: courseLevel(request, outline) } : {}),
     tags: [],
     lessons: [],
   };

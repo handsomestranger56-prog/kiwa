@@ -1,7 +1,7 @@
 import { type Course, type Lesson, parseDocument } from '../schema';
 import { sampleCourseInput, sampleDeckInput, sampleInputs, sampleQuizInput } from '../templates/samples';
 import { extractJson } from './extract';
-import { appendLesson, asCopy, backupFile, documentFile, lessonFile, lessonText, readImport } from './files';
+import { appendLesson, asCopy, backupFile, documentFile, groupFile, lessonFile, lessonText, readImport } from './files';
 import { CREATE_KINDS, buildFixPrompt, buildPrompt, defaultRequest, example, promptFileName } from './prompt';
 import { repairImport, slugify } from './repair';
 
@@ -252,9 +252,33 @@ describe('files', () => {
 describe('buildPrompt', () => {
   it('ships examples that really import', () => {
     for (const kind of CREATE_KINDS) {
-      const outcome = readImport(JSON.stringify(example(kind)));
-      expect(outcome).toMatchObject({ ok: true, fixes: [] });
+      for (const pictures of [false, true]) {
+        const outcome = readImport(JSON.stringify(example(kind, pictures)));
+        expect(outcome).toMatchObject({ ok: true, fixes: [] });
+      }
     }
+  });
+
+  it('asks for SVG pictures only when they are wanted', () => {
+    const withPictures = buildPrompt({ ...defaultRequest, topic: 'x' });
+    expect(withPictures).toContain('add an `svg` block');
+    expect(withPictures).toContain("viewBox='0 0 240 120'");
+    const without = buildPrompt({ ...defaultRequest, topic: 'x', pictures: false });
+    expect(without).toContain('Do not use image or svg blocks.');
+    expect(without).not.toContain('<svg');
+    expect(buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x' })).not.toContain('svg');
+  });
+
+  it('cleans an imported picture and refuses one that is not SVG', () => {
+    const lesson = (svg: string) => JSON.stringify({ format: 'lesson/1', lesson: { id: 'l', title: 'L', blocks: [{ type: 'svg', svg, alt: 'A drawing' }], assessments: [] } });
+    const cleaned = readImport(lesson('<svg viewBox="0 0 1 1" onload="x()"><script>x()</script><rect/></svg>'));
+    if (!cleaned.ok || cleaned.kind !== 'lesson') throw new Error('should import');
+    const block = cleaned.lesson.blocks[0] as { svg: string };
+    expect(block.svg).not.toContain('script');
+    expect(block.svg).not.toContain('onload');
+    const fromCode = readImport(JSON.stringify({ format: 'lesson/1', lesson: { id: 'l', title: 'L', blocks: [{ type: 'svg', code: '<svg><rect/></svg>' }], assessments: [] } }));
+    expect(fromCode).toMatchObject({ ok: true, kind: 'lesson' });
+    expect(readImport(lesson('<div>not a picture</div>'))).toMatchObject({ ok: false, stage: 'content', issues: [{ path: 'lesson.blocks[0].svg' }] });
   });
 
   it('states the request, the rules and the schema', () => {
@@ -313,6 +337,69 @@ describe('buildPrompt', () => {
   it('names the prompt file after the topic', () => {
     expect(promptFileName({ ...defaultRequest, topic: 'How Vaccines Work!' })).toBe('how-vaccines-work.prompt.md');
     expect(promptFileName({ ...defaultRequest, kind: 'deck', topic: '日本語' })).toBe('deck.prompt.md');
+  });
+});
+
+describe('buildPrompt with choices left to the model', () => {
+  it('asks the model to size a quiz, deck or course and pick the level', () => {
+    const quiz = buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x', level: 'auto', autoSize: true, questions: 7 });
+    expect(quiz).toContain('Choose how many questions it needs, from 1 to 30');
+    expect(quiz).toContain('set `level` to it');
+    expect(quiz).not.toContain('7 questions');
+    expect(buildPrompt({ ...defaultRequest, kind: 'deck', topic: 'x', autoSize: true })).toContain('Choose how many cards it needs, from 5 to 100');
+    const course = buildPrompt({ ...defaultRequest, topic: 'x', autoSize: true });
+    expect(course).toContain('Choose how many lessons it needs');
+    expect(course).toContain('2 to 8 questions, as many as the lesson needs');
+    expect(course).toContain('`finalExam` in mode "exam" with 5 to 15 new questions');
+  });
+
+  it('never asks for a level field in a lesson file', () => {
+    const lesson = buildPrompt({ ...defaultRequest, kind: 'lesson', topic: 'x', level: 'auto' });
+    expect(lesson).toContain('choose "beginner", "intermediate" or "advanced"');
+    expect(lesson).not.toContain('set `level` to it');
+  });
+});
+
+describe('groups in files', () => {
+  const quiz = () => {
+    const outcome = readImport(JSON.stringify(example('quiz')));
+    if (!outcome.ok || outcome.kind !== 'document') throw new Error('example did not import');
+    return outcome.document;
+  };
+
+  it('names the group in an item file, and reads it back', () => {
+    const file = documentFile(quiz(), 'Physics');
+    expect(file.text.indexOf('"group"')).toBeLessThan(file.text.indexOf('"title"'));
+    expect(readImport(file.text)).toMatchObject({ ok: true, kind: 'document', group: 'Physics' });
+    expect(readImport(documentFile(quiz()).text)).toMatchObject({ ok: true, group: null });
+  });
+
+  it('exports and imports a whole group', () => {
+    const deck = readImport(JSON.stringify(example('deck')));
+    if (!deck.ok || deck.kind !== 'document') throw new Error('example did not import');
+    const file = groupFile('Physics basics', [quiz(), deck.document]);
+    expect(file.name).toBe('physics-basics.group.json');
+    const outcome = readImport(file.text);
+    expect(outcome).toMatchObject({ ok: true, kind: 'group', name: 'Physics basics' });
+    if (outcome.ok && outcome.kind === 'group') expect(outcome.documents.map((document) => document.format)).toEqual(['quiz/1', 'deck/1']);
+  });
+
+  it('repairs each item of a group and names the item that cannot be imported', () => {
+    const broken = { ...example('quiz'), assessment: { id: 'a', mode: 'practice', questions: [{ id: 'q', type: 'single_choice', prompt: 'Which?', options: ['Only one'], answer: 3 }] } };
+    const missingIds = { ...example('deck'), id: undefined };
+    const outcome = readImport(JSON.stringify({ format: 'group/1', name: 'Mixed', items: [missingIds, broken] }));
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok && outcome.stage === 'content') {
+      expect(outcome.issues.every((issue) => issue.path.startsWith('items[1]'))).toBe(true);
+    }
+    const fine = readImport(JSON.stringify({ format: 'group/1', name: 'Mixed', items: [missingIds] }));
+    expect(fine).toMatchObject({ ok: true, kind: 'group', fixes: [{ code: 'addedIds', count: 1 }] });
+  });
+
+  it('needs a name and at least one item', () => {
+    const outcome = readImport(JSON.stringify({ format: 'group/1', items: [] }));
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok && outcome.stage === 'content') expect(outcome.issues.map((issue) => issue.path)).toEqual(['name', 'items']);
   });
 });
 

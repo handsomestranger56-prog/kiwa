@@ -9,7 +9,9 @@ export type SettingKey =
   | 'focus.timer'
   | 'notify.settings'
   | 'notify.scheduled'
-  | 'onboarding.done';
+  | 'onboarding.done'
+  | 'app.language'
+  | 'notify.language';
 
 /** Small non-secret values. API keys never go here. They belong in the device's secure store. */
 export class SettingsRepository {

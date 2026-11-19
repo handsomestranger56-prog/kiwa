@@ -107,7 +107,8 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
     try {
       const job = await jobs.create(await completeRequest(), { providerId: model.providerId, model: model.model, label: model.label });
       runner.start(job.id);
-      router.replace({ pathname: '/job/[id]', params: { id: job.id } });
+      // Pushed, not replaced: Back returns to this form with everything still filled in.
+      router.push({ pathname: '/job/[id]', params: { id: job.id } });
     } catch {
       setFailed(true);
     }
@@ -163,17 +164,32 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
 
         <Field label={t('create.level')}>
           <View style={styles.chips}>
+            <Chip label={t('create.auto')} selected={request.level === 'auto'} onPress={() => set({ level: 'auto' })} />
             {levelSchema.options.map((level: Level) => (
               <Chip key={level} label={t(`level.${level}`)} selected={request.level === level} onPress={() => set({ level })} />
             ))}
           </View>
+          {request.level === 'auto' ? (
+            <AppText variant="small" color="textSecondary">
+              {t('create.autoLevelHint')}
+            </AppText>
+          ) : null}
         </Field>
 
         <Field label={t('create.size')}>
-          {request.kind === 'course' ? (
+          <View style={styles.chips}>
+            <Chip label={t('create.auto')} selected={!!request.autoSize} onPress={() => set({ autoSize: true })} />
+            <Chip label={t('create.setSize')} selected={!request.autoSize} onPress={() => set({ autoSize: false })} />
+          </View>
+          {request.autoSize ? (
+            <AppText variant="small" color="textSecondary">
+              {t(`create.autoSizeHint.${request.kind}`)}
+            </AppText>
+          ) : null}
+          {request.autoSize ? null : request.kind === 'course' ? (
             <Stepper label={t('create.lessons')} value={request.lessons} min={LIMITS.lessons[0]} max={LIMITS.lessons[1]} onChange={(lessons) => set({ lessons })} />
           ) : null}
-          {request.kind === 'deck' ? (
+          {request.autoSize ? null : request.kind === 'deck' ? (
             <Stepper label={t('create.cards')} value={request.cards} min={LIMITS.cards[0]} max={LIMITS.cards[1]} onChange={(cards) => set({ cards })} />
           ) : (
             <Stepper
@@ -185,6 +201,17 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
             />
           )}
         </Field>
+
+        {request.kind === 'course' || request.kind === 'lesson' ? (
+          <Field label={t('create.pictures')}>
+            <View style={styles.chips}>
+              <Chip label={t('create.picturesOn')} selected={!!request.pictures} onPress={() => set({ pictures: !request.pictures })} />
+            </View>
+            <AppText variant="small" color="textSecondary">
+              {t('create.picturesHint')}
+            </AppText>
+          </Field>
+        ) : null}
 
         {request.kind === 'quiz' ? (
           <Field label={t('create.quizMode')}>

@@ -6,7 +6,7 @@ import type { ItemSource, LibraryRepository } from './library-repository';
 import type { ProvidersRepository } from './providers-repository';
 import type { SqlDriver } from './sql';
 
-type ItemMeta = { id: string; source: ItemSource; created_at: number; updated_at: number; deleted_at: number | null };
+type ItemMeta = { id: string; source: ItemSource; group_id: string | null; created_at: number; updated_at: number; deleted_at: number | null };
 type MarkRow = { lesson_id: string; kind: BackupItem['marks'][number]['kind']; created_at: number };
 type AttemptRow = {
   id: string;
@@ -22,7 +22,7 @@ type AttemptRow = {
 };
 
 /** Settings that describe this install and should not travel to another device. */
-const LOCAL_SETTINGS = new Set(['samples.seeded', 'focus.timer', 'notify.scheduled', 'onboarding.done']);
+const LOCAL_SETTINGS = new Set(['samples.seeded', 'focus.timer', 'notify.scheduled', 'notify.language', 'onboarding.done']);
 
 /**
  * Copies everything on the device into one file and back: content, marks, results and settings.
@@ -39,7 +39,7 @@ export class BackupService {
 
   async create(): Promise<Backup> {
     const metas = await this.db.all<ItemMeta>(
-      'SELECT id, source, created_at, updated_at, deleted_at FROM items ORDER BY created_at, id',
+      'SELECT id, source, group_id, created_at, updated_at, deleted_at FROM items ORDER BY created_at, id',
     );
 
     const items: BackupItem[] = [];
@@ -60,6 +60,7 @@ export class BackupService {
 
       items.push({
         document,
+        groupId: meta.group_id,
         source: meta.source,
         createdAt: meta.created_at,
         updatedAt: meta.updated_at,
@@ -91,10 +92,14 @@ export class BackupService {
     const focusSessions = await this.db.all<{ id: string; item_id: string | null; started_at: number; ended_at: number; minutes: number; interruptions: number }>(
       'SELECT * FROM focus_sessions ORDER BY ended_at',
     );
+    const groups = (await this.db.all<{ id: string; name: string; created_at: number }>('SELECT id, name, created_at FROM groups ORDER BY created_at, id')).map(
+      (row) => ({ id: row.id, name: row.name, createdAt: row.created_at }),
+    );
     return {
       format: BACKUP_FORMAT,
       createdAt: this.now(),
       items,
+      groups,
       settings,
       providers,
       reviewCards: (
@@ -113,6 +118,13 @@ export class BackupService {
    */
   async restore(backup: Backup): Promise<{ items: number }> {
     await this.db.transaction(async () => {
+      for (const group of backup.groups) {
+        await this.db.run(
+          'INSERT INTO groups (id, name, created_at) VALUES (?, ?, ?) ON CONFLICT (id) DO UPDATE SET name = excluded.name',
+          [group.id, group.name.trim() || group.id, group.createdAt],
+        );
+      }
+      const knownGroups = new Set(backup.groups.map((group) => group.id));
       for (const item of backup.items) {
         const id = item.document.id;
         // Deleting the item removes its lessons, marks, results and position with it.
@@ -122,6 +134,7 @@ export class BackupService {
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
           deletedAt: item.deletedAt,
+          groupId: item.groupId && knownGroups.has(item.groupId) ? item.groupId : null,
         });
 
         for (const mark of item.marks) {

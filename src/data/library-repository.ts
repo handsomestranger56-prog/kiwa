@@ -34,6 +34,8 @@ export type LibraryItem = {
   tags: string[];
   /** Lessons in a course, questions in a quiz, cards in a deck. */
   unitCount: number;
+  /** The group the item is sorted into, or null. */
+  groupId: string | null;
   source: ItemSource;
   favorite: boolean;
   completed: boolean;
@@ -57,6 +59,8 @@ export type LibraryFilter = {
   /** Matches title, description and tags. */
   search?: string;
   favorite?: boolean;
+  /** Items in this group, or in no group for "none". */
+  groupId?: string;
   /** List the trash instead of the library. */
   trashed?: boolean;
 };
@@ -79,6 +83,7 @@ type ItemRow = {
   body: string;
   unit_count: number;
   source: ItemSource;
+  group_id: string | null;
   deleted_at: number | null;
   created_at: number;
   updated_at: number;
@@ -97,7 +102,7 @@ type LessonRow = {
 };
 
 const ITEM_COLUMNS = `
-  i.id, i.kind, i.title, i.description, i.language, i.level, i.tags, i.body, i.unit_count, i.source,
+  i.id, i.kind, i.title, i.description, i.language, i.level, i.tags, i.body, i.unit_count, i.source, i.group_id,
   i.deleted_at, i.created_at, i.updated_at,
   EXISTS (SELECT 1 FROM marks m WHERE m.item_id = i.id AND m.lesson_id = '' AND m.kind = 'favorite') AS favorite,
   EXISTS (SELECT 1 FROM marks m WHERE m.item_id = i.id AND m.lesson_id = '' AND m.kind = 'completed') AS completed
@@ -117,6 +122,12 @@ export class LibraryRepository {
     if (filter.kind) {
       where.push('i.kind = ?');
       params.push(filter.kind);
+    }
+    if (filter.groupId === 'none') {
+      where.push('i.group_id IS NULL');
+    } else if (filter.groupId) {
+      where.push('i.group_id = ?');
+      params.push(filter.groupId);
     }
     if (filter.favorite) {
       where.push(
@@ -224,11 +235,11 @@ export class LibraryRepository {
   }
 
   /** Adds a validated document to the library. Fails if its id is already taken. */
-  async add(document: LibraryDocument, source: ItemSource = 'manual'): Promise<LibraryItem> {
+  async add(document: LibraryDocument, source: ItemSource = 'manual', groupId: string | null = null): Promise<LibraryItem> {
     const timestamp = this.now();
     await this.db.transaction(async () => {
       if (await this.exists(document.id)) throw new DuplicateItemError(document.id);
-      await this.insertRows(document, { source, createdAt: timestamp, updatedAt: timestamp, deletedAt: null });
+      await this.insertRows(document, { source, createdAt: timestamp, updatedAt: timestamp, deletedAt: null, groupId });
     });
     this.changes.notify();
     return (await this.get(document.id)) as LibraryItem;
@@ -287,11 +298,11 @@ export class LibraryRepository {
    */
   async insertRows(
     document: LibraryDocument,
-    meta: { source: ItemSource; createdAt: number; updatedAt: number; deletedAt: number | null },
+    meta: { source: ItemSource; createdAt: number; updatedAt: number; deletedAt: number | null; groupId?: string | null },
   ): Promise<void> {
     await this.db.run(
-      `INSERT INTO items (id, kind, title, description, language, level, tags, body, unit_count, source, deleted_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO items (id, kind, title, description, language, level, tags, body, unit_count, source, deleted_at, created_at, updated_at, group_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         document.id,
         kindOf(document),
@@ -306,6 +317,7 @@ export class LibraryRepository {
         meta.deletedAt,
         meta.createdAt,
         meta.updatedAt,
+        meta.groupId ?? null,
       ],
     );
     await this.insertLessons(document);
@@ -327,6 +339,13 @@ export class LibraryRepository {
         ],
       );
     }
+  }
+
+  /** Puts items into a group, or takes them out of any group with null. Content is untouched. */
+  async setGroup(ids: string[], groupId: string | null): Promise<void> {
+    if (ids.length === 0) return;
+    await this.db.run(`UPDATE items SET group_id = ? WHERE id IN (${ids.map(() => '?').join(', ')})`, [groupId, ...ids]);
+    this.changes.notify();
   }
 
   async rename(id: string, title: string): Promise<void> {
@@ -423,6 +442,7 @@ function toItem(row: ItemRow): LibraryItem {
     level: row.level,
     tags: JSON.parse(row.tags) as string[],
     unitCount: row.unit_count,
+    groupId: row.group_id ?? null,
     source: row.source,
     favorite: row.favorite === 1,
     completed: row.completed === 1,

@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useData } from '@/data/provider';
+import { LanguagePicker } from '@/features/settings/language';
 import { Button, TextField } from '@/ui/controls';
 import { type IconName, Icon } from '@/ui/icon';
 import { Page } from '@/ui/layout';
@@ -40,6 +41,8 @@ export default function WelcomeScreen() {
           {t('welcome.title')}
         </AppText>
         <AppText color="textSecondary">{t('welcome.intro')}</AppText>
+
+        <LanguagePicker showHint={false} />
 
         {POINTS.map((point) => (
           <View key={point.key} style={styles.point}>

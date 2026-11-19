@@ -32,7 +32,7 @@ describe('migrate', () => {
     await migrate(db);
     expect(await db.first('PRAGMA user_version')).toEqual({ user_version: LATEST_VERSION });
     const tables = await db.all<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name");
-    expect(tables.map((table) => table.name)).toEqual(['attempts', 'focus_sessions', 'items', 'jobs', 'lessons', 'marks', 'progress', 'providers', 'review_cards', 'settings']);
+    expect(tables.map((table) => table.name)).toEqual(['attempts', 'focus_sessions', 'groups', 'items', 'jobs', 'lessons', 'marks', 'progress', 'providers', 'review_cards', 'settings']);
   });
 
   it('does nothing when already up to date', async () => {

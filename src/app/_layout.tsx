@@ -12,6 +12,7 @@ import { DataProvider } from '@/data/provider';
 import { JobRunnerProvider } from '@/features/ai/job-runner';
 import { FocusProvider } from '@/features/focus/focus-provider';
 import { NotificationsSync } from '@/features/focus/notifications-sync';
+import { LanguageSync } from '@/features/settings/language';
 import { AppText } from '@/ui/text';
 import { monoFont, spacing, useTheme } from '@/ui/theme';
 
@@ -44,6 +45,7 @@ export default function RootLayout() {
         >
           <JobRunnerProvider>
             <FocusProvider>
+              <LanguageSync />
               <NotificationsSync />
               <Stack
                 screenOptions={{
@@ -56,6 +58,7 @@ export default function RootLayout() {
               >
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="trash" options={{ title: t('trash.title') }} />
+                <Stack.Screen name="groups" options={{ title: t('groups.title') }} />
                 <Stack.Screen name="create" options={{ title: t('create.screenTitle') }} />
                 <Stack.Screen name="import" options={{ title: t('import.title') }} />
                 <Stack.Screen name="review-session" options={{ title: t('review.title') }} />

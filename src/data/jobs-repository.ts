@@ -54,7 +54,7 @@ export class JobsRepository {
     return rows.map(toJob);
   }
 
-  async update(id: string, changes: { status?: JobStatus; state?: JobState; error?: JobError | null; savedItemId?: string }): Promise<void> {
+  async update(id: string, changes: { status?: JobStatus; state?: JobState; error?: JobError | null; savedItemId?: string; model?: Job['model'] }): Promise<void> {
     const sets: string[] = ['updated_at = ?'];
     const params: (string | number | null)[] = [this.now()];
     if (changes.status) {
@@ -68,6 +68,10 @@ export class JobsRepository {
     if (changes.error !== undefined) {
       sets.push('error = ?');
       params.push(changes.error ? JSON.stringify(changes.error) : null);
+    }
+    if (changes.model) {
+      sets.push('model = ?');
+      params.push(JSON.stringify(changes.model));
     }
     if (changes.savedItemId) {
       sets.push('saved_item_id = ?');

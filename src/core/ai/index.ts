@@ -5,6 +5,9 @@ import type { Adapter, Connection, FetchLike, GenerateRequest, GenerateResult, M
 
 export * from './types';
 export { strictSchema } from './schema';
+export { CATALOG_UPDATED, MODEL_GROUPS, canDo, groupModels, profileOf } from './catalog';
+export type { ModelGroup, ModelProfile, ModelStatus, ModelTask, ModelTier } from './catalog';
+export { MAX_RETRIES, MAX_WAIT_MS, retryWait } from './retry';
 export { GEMINI_BASE_URL } from './gemini';
 export { OPENAI_BASE_URL, OPENAI_COMPATIBLE_PRESETS } from './openai';
 
