@@ -260,6 +260,15 @@ Then, on real phones (nothing native has run yet): tab bar spacing, keyboard beh
 the file picker and share sheet, secure storage of keys, notification permission and delivery, keeping
 the screen awake, and a real Generate run with each provider.
 
+## Project page
+
+- The website is named KIWA (Keep Improving With AI); the app's own display name is not changed yet.
+- Source: `site/index.html` (a page fragment, trilingual, theme-aware). `npm run site:build` writes
+  `docs/index.html` for GitHub Pages (only once the repo is public, or on a paid plan).
+- Screenshots: `npm run site:screens` rebuilds the web app and captures every screen in EN/UZ/RU,
+  light and dark, into `docs/screens/<lang>/<theme>/*.webp`, using `tools/showcase.js` content.
+- A private preview is published at https://claude.ai/artifact/JR28VjR1uw51FgyaZEh3Yj.
+
 ## Things that will trip you up
 
 - `npx expo install` cannot reach Expo's servers from the cloud environment. Install with npm at

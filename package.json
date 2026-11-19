@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "check": "npm run lint && npm run typecheck && npm test",
-    "e2e": "expo export --platform web && node e2e/run.js"
+    "e2e": "expo export --platform web && node e2e/run.js",
+    "site:screens": "expo export --platform web && node tools/capture-screens.js && node tools/build-site.js",
+    "site:build": "node tools/build-site.js"
   },
   "dependencies": {
     "expo": "~58.0.25",
