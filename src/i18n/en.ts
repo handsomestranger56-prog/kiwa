@@ -104,6 +104,7 @@ export const en = {
     level: 'Level',
     size: 'Size',
     auto: 'Let AI choose',
+    autoShort: 'AI picks',
     autoLevelHint: 'The AI picks the level from your topic, audience and notes.',
     autoSizeHint: {
       course: 'The AI decides how many lessons and questions, from your topic and notes. Ask for "brief" in the topic to keep it short.',
@@ -111,7 +112,6 @@ export const en = {
       quiz: 'The AI decides how many questions, from your topic and notes.',
       deck: 'The AI decides how many cards, from your topic and notes.',
     },
-    setSize: 'Set the size',
     lessons: 'Lessons',
     questionsPerLesson: 'Questions per lesson',
     questions: 'Questions',

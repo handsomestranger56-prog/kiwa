@@ -117,30 +117,48 @@ export function Tag({ label, tone = 'neutral' }: TagProps) {
   );
 }
 
-type StepperProps = { label: string; value: number; min: number; max: number; step?: number; onChange: (value: number) => void };
+type StepperProps = {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  onChange: (value: number) => void;
+  /** Greyed out and fixed, for a number something else decides. */
+  disabled?: boolean;
+  /** Shown just before the number, such as a toggle that disables it. */
+  accessory?: ReactNode;
+};
 
 /** A number with minus and plus buttons, for small counts. */
-export function Stepper({ label, value, min, max, step = 1, onChange }: StepperProps) {
+export function Stepper({ label, value, min, max, step = 1, onChange, disabled, accessory }: StepperProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   return (
     <View style={styles.stepper}>
       <AppText style={styles.stepperLabel}>{label}</AppText>
-      <View style={[styles.stepperBox, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+      {accessory}
+      <View
+        aria-disabled={disabled}
+        style={[styles.stepperBox, { borderColor: colors.border, backgroundColor: disabled ? colors.surfaceAlt : colors.surface }, disabled && styles.stepperOff]}>
         <IconButton
           icon="minus"
           label={t('common.fewer', { label })}
-          color={value <= min ? 'border' : 'text'}
-          onPress={() => onChange(Math.max(min, value - step))}
+          color={disabled || value <= min ? 'border' : 'text'}
+          onPress={() => {
+            if (!disabled) onChange(Math.max(min, value - step));
+          }}
         />
-        <AppText variant="bodyStrong" style={styles.stepperValue} accessibilityLabel={`${label}: ${value}`}>
+        <AppText variant="bodyStrong" color={disabled ? 'textSecondary' : 'text'} style={styles.stepperValue} accessibilityLabel={`${label}: ${value}`}>
           {value}
         </AppText>
         <IconButton
           icon="add"
           label={t('common.more', { label })}
-          color={value >= max ? 'border' : 'text'}
-          onPress={() => onChange(Math.min(max, value + step))}
+          color={disabled || value >= max ? 'border' : 'text'}
+          onPress={() => {
+            if (!disabled) onChange(Math.min(max, value + step));
+          }}
         />
       </View>
     </View>
@@ -219,8 +237,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   input: { flex: 1, fontSize: 16, paddingVertical: spacing.sm, minWidth: 0 },
-  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   stepperLabel: { flex: 1, minWidth: 0 },
   stepperBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: radius.md },
   stepperValue: { minWidth: 36, textAlign: 'center', fontVariant: ['tabular-nums'] },
+  stepperOff: { opacity: 0.55 },
 });

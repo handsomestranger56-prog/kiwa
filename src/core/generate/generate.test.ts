@@ -14,7 +14,7 @@ import { type CreateRequest, defaultRequest, example } from '../transfer/prompt'
 import { type Ask, type Job, GenerationError, approveOutline, assembleCourse, emptyState, missingLessons, nextStep, runStep } from './plan';
 
 const lessonReply = (n: number) => {
-  const lesson = structuredClone(example('lesson').lesson as Record<string, any>);
+  const lesson = structuredClone(example('lesson', false, defaultRequest.questionTypes).lesson as Record<string, any>);
   // Every lesson uses the same ids on purpose, as models often do. Assembly must rename them.
   lesson.title = `Lesson number ${n}`;
   return JSON.stringify({ format: 'lesson/1', lesson });
@@ -34,7 +34,7 @@ function scriptedModel(overrides: { lesson?: (n: number) => string; quiz?: () =>
       lessonCount += 1;
       return { text: (overrides.lesson ?? lessonReply)(lessonCount), usage };
     }
-    if (request.prompt.includes('Set `format` to "quiz/1".')) return { text: overrides.quiz ? overrides.quiz() : JSON.stringify(example('quiz')), usage };
+    if (request.prompt.includes('Set `format` to "quiz/1".')) return { text: overrides.quiz ? overrides.quiz() : JSON.stringify(example('quiz', false, defaultRequest.questionTypes)), usage };
     if (request.prompt.includes('Set `format` to "deck/1".')) return { text: `Here you go:\n\`\`\`json\n${JSON.stringify(example('deck'))}\n\`\`\``, usage };
     throw new Error(`unexpected prompt: ${request.prompt.slice(0, 80)}`);
   };
@@ -150,6 +150,35 @@ describe('generating a course', () => {
     const course = assembleCourse(request(), state, () => 0.5);
     expect(course.id.startsWith('unicode-course-')).toBe(true);
     expect(parseDocument(course)).toMatchObject({ ok: true });
+  });
+});
+
+describe('question types', () => {
+  it('asks again when a reply uses a type that was not chosen, and names it', async () => {
+    const prompts: string[] = [];
+    const replies = [JSON.stringify(example('quiz', false, ['single_choice'])), JSON.stringify(example('quiz', false, ['essay']))];
+    const ask: Ask = async (request) => {
+      prompts.push(request.prompt);
+      return { text: replies[prompts.length - 1], usage: { inputTokens: 1, outputTokens: 1 } };
+    };
+    const result = await runStep({ type: 'single' }, job({ kind: 'quiz', questionTypes: ['essay'] }), ask);
+    expect(prompts[0]).toContain('Every question, in every lesson and exam, is of type "essay".');
+    expect(prompts[0]).not.toContain('"single_choice"');
+    expect(prompts[1]).toContain('"single_choice" was not asked for. Use only these question types: essay.');
+    const quiz = (result.state.result as { document: { assessment: { questions: { type: string }[] } } }).document;
+    expect(quiz.assessment.questions.every((question) => question.type === 'essay')).toBe(true);
+  });
+
+  it('sends a schema that only allows the chosen types', async () => {
+    let schema = '';
+    const ask: Ask = async (request) => {
+      schema = JSON.stringify(request.schema);
+      return { text: JSON.stringify(example('quiz', false, ['essay', 'matching'])), usage: { inputTokens: 1, outputTokens: 1 } };
+    };
+    await runStep({ type: 'single' }, job({ kind: 'quiz', questionTypes: ['essay', 'matching'] }), ask);
+    expect(schema).toContain('"essay"');
+    expect(schema).toContain('"matching"');
+    expect(schema).not.toContain('"single_choice"');
   });
 });
 

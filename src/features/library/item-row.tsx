@@ -9,16 +9,18 @@ import { radius, spacing, useTheme } from '@/ui/theme';
 
 type Props = {
   item: LibraryItem;
+  /** The folder it is in, shown when items from several folders are listed together. */
+  folder?: string | null;
   onOpen: () => void;
   onToggleFavorite: () => void;
   onMore: () => void;
 };
 
-export function ItemRow({ item, onOpen, onToggleFavorite, onMore }: Props) {
+export function ItemRow({ item, folder, onOpen, onToggleFavorite, onMore }: Props) {
   const { t } = useTranslation();
   const { colors } = useTheme();
 
-  const meta = `${t(`kind.${item.kind}`)} · ${t(`units.${item.kind}`, { count: item.unitCount })}`;
+  const meta = [t(`kind.${item.kind}`), t(`units.${item.kind}`, { count: item.unitCount }), folder].filter(Boolean).join(' · ');
 
   return (
     <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -59,7 +61,37 @@ export function ItemRow({ item, onOpen, onToggleFavorite, onMore }: Props) {
   );
 }
 
+/** A group shown as a folder: tapping it opens the items inside. */
+export function FolderRow({ name, count, onOpen }: { name: string; count: number; onOpen: () => void }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const meta = t('groups.items', { count });
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${name}. ${meta}`}
+      onPress={onOpen}
+      style={({ pressed }) => [styles.row, styles.folder, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && styles.pressed]}>
+      <View style={styles.main}>
+        <View style={[styles.badge, { backgroundColor: colors.warmSoft }]}>
+          <Icon name="folder" color="warm" />
+        </View>
+        <View style={styles.text}>
+          <AppText variant="bodyStrong" numberOfLines={2}>
+            {name}
+          </AppText>
+          <AppText variant="small" color="textSecondary" numberOfLines={1}>
+            {meta}
+          </AppText>
+        </View>
+        <Icon name="chevron" size={20} color="textSecondary" />
+      </View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  folder: { paddingRight: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: radius.lg, paddingRight: spacing.xs },
   main: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   pressed: { opacity: 0.6 },

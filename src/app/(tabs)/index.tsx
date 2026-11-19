@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { DocumentKind } from '@/core/schema';
-import type { LibraryFilter } from '@/data/library-repository';
+import type { LibraryFilter, LibraryItem } from '@/data/library-repository';
 import { useQuery } from '@/data/provider';
 import { JobsBanner } from '@/features/ai/jobs-banner';
 import { useCreateFlow } from '@/features/library/create-flow';
 import { useItemActions } from '@/features/library/item-actions';
-import { ItemRow } from '@/features/library/item-row';
+import { FolderRow, ItemRow } from '@/features/library/item-row';
 import { Button, Chip, IconButton, TextField } from '@/ui/controls';
 import { Icon } from '@/ui/icon';
 import { EmptyState, Loading, Page, useTabScreenInsets } from '@/ui/layout';
@@ -39,16 +39,25 @@ function Library() {
   const params = useLocalSearchParams<{ group?: string }>();
   const groups = useQuery('groups:list', ({ groups }) => groups.list());
   const groupList = groups.data ?? [];
-  const group = params.group === 'none' || groupList.some((entry) => entry.id === params.group) ? (params.group as string) : 'all';
-  const setGroup = (value: string) => router.setParams({ group: value === 'all' ? undefined : value });
+  // The open folder, or none for the top of the library.
+  const folder = groupList.find((entry) => entry.id === params.group) ?? null;
+  const searching = deferredSearch.trim() !== '';
+  const openFolder = (id: string | null) => router.setParams({ group: id ?? undefined });
 
+  // The top of the library shows folders, then items in no folder. A search looks everywhere.
   const query: LibraryFilter = {
     search: deferredSearch,
     kind: filter === 'all' || filter === 'favorites' ? undefined : filter,
     favorite: filter === 'favorites',
-    groupId: group === 'all' ? undefined : group,
+    groupId: searching ? undefined : (folder?.id ?? 'none'),
   };
-  const items = useQuery(`library:${filter}:${group}:${deferredSearch}`, ({ library }) => library.list(query));
+  const items = useQuery(`library:${filter}:${folder?.id ?? 'top'}:${deferredSearch}`, ({ library }) => library.list(query));
+  const folderName = (id: string | null) => groupList.find((entry) => entry.id === id)?.name ?? null;
+  type Row = { type: 'folder'; id: string; name: string; count: number } | { type: 'item'; item: LibraryItem };
+  const rows: Row[] = [
+    ...(folder || searching ? [] : groupList.map((entry) => ({ type: 'folder' as const, id: entry.id, name: entry.name, count: entry.itemCount }))),
+    ...(items.data ?? []).map((item) => ({ type: 'item' as const, item })),
+  ];
   const trash = useQuery('library:trash-count', ({ library }) => library.trashCount());
 
   const actions = useItemActions();
@@ -69,14 +78,14 @@ function Library() {
     router.push('/trash');
   };
 
-  const filtering = filter !== 'all' || group !== 'all' || deferredSearch.trim() !== '';
+  const filtering = filter !== 'all' || folder !== null || searching;
   const trashCount = trash.data ?? 0;
 
   return (
     <Page>
       <FlatList
-        data={items.data ?? []}
-        keyExtractor={(item) => item.id}
+        data={rows}
+        keyExtractor={(row) => (row.type === 'folder' ? `folder:${row.id}` : row.item.id)}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.list, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
         ListHeaderComponent={
@@ -85,7 +94,10 @@ function Library() {
               <AppText variant="title" accessibilityRole="header">
                 {t('library.title')}
               </AppText>
-              <Button icon="add" label={t('library.new')} onPress={create.start} />
+              <View style={styles.titleButtons}>
+                <IconButton icon="folder" label={t('groups.manage')} onPress={() => router.push('/groups')} />
+                <Button icon="add" label={t('library.new')} onPress={create.start} />
+              </View>
             </View>
             <TextField
               value={search}
@@ -110,27 +122,33 @@ function Library() {
                 />
               ))}
             </ScrollView>
-            {groupList.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, styles.centered]}>
-                <Chip label={t('groups.all')} selected={group === 'all'} onPress={() => setGroup('all')} />
-                {groupList.map((entry) => (
-                  <Chip key={entry.id} label={entry.name} selected={group === entry.id} onPress={() => setGroup(entry.id)} />
-                ))}
-                <Chip label={t('groups.none')} selected={group === 'none'} onPress={() => setGroup('none')} />
-                <IconButton icon="folder" label={t('groups.manage')} onPress={() => router.push('/groups')} />
-              </ScrollView>
+            {folder && !searching ? (
+              <View style={styles.folderBar}>
+                <Button kind="plain" icon="back" label={t('library.title')} onPress={() => openFolder(null)} />
+                <View style={styles.folderTitle}>
+                  <Icon name="folder" color="warm" />
+                  <AppText variant="heading" numberOfLines={1} style={styles.grow}>
+                    {folder.name}
+                  </AppText>
+                </View>
+              </View>
             ) : null}
             <JobsBanner />
           </View>
         }
-        renderItem={({ item }) => (
-          <ItemRow
-            item={item}
-            onOpen={() => open(item.id)}
-            onToggleFavorite={() => actions.toggleFavorite(item)}
-            onMore={() => actions.open(item)}
-          />
-        )}
+        renderItem={({ item: row }) =>
+          row.type === 'folder' ? (
+            <FolderRow name={row.name} count={row.count} onOpen={() => openFolder(row.id)} />
+          ) : (
+            <ItemRow
+              item={row.item}
+              folder={searching ? folderName(row.item.groupId) : null}
+              onOpen={() => open(row.item.id)}
+              onToggleFavorite={() => actions.toggleFavorite(row.item)}
+              onMore={() => actions.open(row.item)}
+            />
+          )
+        }
         ItemSeparatorComponent={Separator}
         ListEmptyComponent={
           items.loading ? undefined : items.error ? (
@@ -176,7 +194,10 @@ const styles = StyleSheet.create({
   header: { gap: spacing.md, paddingBottom: spacing.lg },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   chips: { gap: spacing.sm, paddingRight: spacing.lg },
-  centered: { alignItems: 'center' },
+  folderBar: { gap: spacing.xs, alignItems: 'flex-start' },
+  folderTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'stretch' },
+  grow: { flex: 1, minWidth: 0 },
+  titleButtons: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   separator: { height: spacing.sm },
   trashLink: {
     minHeight: MIN_TOUCH,

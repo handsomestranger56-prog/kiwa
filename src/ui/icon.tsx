@@ -40,6 +40,7 @@ const glyphs = {
   down: { ios: 'chevron.down', material: 'keyboard_arrow_down' },
   drag: { ios: 'line.3.horizontal', material: 'drag_indicator' },
   folder: { ios: 'folder', material: 'folder' },
+  back: { ios: 'chevron.left', material: 'chevron_left' },
   image: { ios: 'photo', material: 'image' },
 } as const satisfies Record<string, Glyph>;
 

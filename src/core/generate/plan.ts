@@ -9,13 +9,13 @@ import {
   type LibraryDocument,
   type ParseIssue,
   COURSE_FORMAT,
-  documentJsonSchema,
   levelSchema,
   parseDocument,
 } from '../schema';
 import { extractJson } from '../transfer/extract';
-import { type ImportOutcome, appendLesson, lessonFileSchema, readImport } from '../transfer/files';
-import { type CreateRequest, LIMITS, buildFixPrompt, buildPrompt, levelLine } from '../transfer/prompt';
+import { type ImportOutcome, appendLesson, readImport } from '../transfer/files';
+import { disallowedQuestionIssues } from '../transfer/question-types';
+import { type CreateRequest, LIMITS, allowedTypes, buildFixPrompt, buildPrompt, isAuto, levelLine, schemaFor } from '../transfer/prompt';
 import type { Fix } from '../transfer/repair';
 import { slugify } from '../transfer/repair';
 
@@ -181,7 +181,19 @@ async function askCounting(ask: Ask, request: Omit<GenerateRequest, 'model'>, sp
   }
 }
 
-const lessonSchema = () => strictSchema(z.toJSONSchema(lessonFileSchema, { io: 'input' }) as Record<string, unknown>);
+type Reader<T> = (text: string) => { ok: true; value: T; fixes?: Fix[] } | { ok: false; outcome: Extract<ImportOutcome, { ok: false }> };
+
+/** A reply that uses question types nobody asked for goes back to the model with the problem named. */
+const onlyTypes =
+  <T>(request: CreateRequest, read: Reader<T>): Reader<T> =>
+  (text) => {
+    const reading = read(text);
+    if (!reading.ok) return reading;
+    const issues = disallowedQuestionIssues(reading.value, allowedTypes(request));
+    return issues.length > 0 ? { ok: false, outcome: { ok: false, stage: 'content', issues } } : reading;
+  };
+
+const lessonSchema = (request: CreateRequest) => strictSchema(schemaFor('lesson', allowedTypes(request)));
 
 const readDocument = (kind: 'course' | 'quiz' | 'deck') => (text: string) => {
   const outcome = readImport(text);
@@ -208,17 +220,17 @@ export async function runStep(step: Step, job: Pick<Job, 'request' | 'state'>, a
     case 'single': {
       const prompt = buildPrompt(request);
       if (request.kind === 'lesson') {
-        const { value, spent: after } = await askWithRepair(ask, prompt, lessonSchema(), 16000, readLesson, spent);
+        const { value, spent: after } = await askWithRepair(ask, prompt, lessonSchema(request), 16000, onlyTypes(request, readLesson), spent);
         return { state: { ...state, ...after, result: { lesson: value } }, status: 'ready' };
       }
       const kind = request.kind;
-      const { value, spent: after } = await askWithRepair(ask, prompt, strictSchema(documentJsonSchema(kind)), 16000, readDocument(kind), spent);
+      const { value, spent: after } = await askWithRepair(ask, prompt, strictSchema(schemaFor(kind, allowedTypes(request))), 16000, onlyTypes(request, readDocument(kind)), spent);
       return { state: { ...state, ...after, result: { document: value } }, status: 'ready' };
     }
 
     case 'outline': {
       const { value, spent: after } = await askWithRepair(ask, outlinePrompt(request), strictSchema(z.toJSONSchema(outlineSchema, { io: 'input' }) as Record<string, unknown>), 4000, readOutline, spent);
-      const outline = { ...value, lessons: value.lessons.slice(0, request.autoSize ? LIMITS.lessons[1] : request.lessons) };
+      const outline = { ...value, lessons: value.lessons.slice(0, isAuto(request, 'lessons') ? LIMITS.lessons[1] : request.lessons) };
       return { state: { ...state, ...after, outline, lessons: outline.lessons.map(() => null) }, status: 'outline' };
     }
 
@@ -236,7 +248,7 @@ export async function runStep(step: Step, job: Pick<Job, 'request' | 'state'>, a
           lessonTitles: outline.lessons.filter((_, index) => index !== step.index).map((lesson) => lesson.title),
         },
       });
-      const { value, spent: after } = await askWithRepair(ask, prompt, lessonSchema(), 16000, readLesson, spent);
+      const { value, spent: after } = await askWithRepair(ask, prompt, lessonSchema(request), 16000, onlyTypes(request, readLesson), spent);
       const lessons = [...state.lessons];
       lessons[step.index] = { ...value, title: value.title || planned.title };
       return { state: { ...state, ...after, lessons } };
@@ -252,15 +264,16 @@ export async function runStep(step: Step, job: Pick<Job, 'request' | 'state'>, a
             ...request,
             level: courseLevel(request, outline) ?? 'auto',
             autoSize: false,
+            auto: {},
             kind: 'quiz',
             topic: `Final exam for the course "${outline.title}"`,
             questions: Math.min(15, Math.max(5, outline.lessons.length * 2)),
             quizMode: 'test',
             source: `The course covers these lessons:\n\n${material}`,
           }),
-          strictSchema(documentJsonSchema('quiz')),
+          strictSchema(schemaFor('quiz', allowedTypes(request))),
           16000,
-          readDocument('quiz'),
+          onlyTypes(request, readDocument('quiz')),
           spent,
         );
         const quiz = value as Extract<LibraryDocument, { format: 'quiz/1' }>;
@@ -283,7 +296,7 @@ function courseLevel(request: CreateRequest, outline: Outline | null) {
 }
 
 function outlinePrompt(request: CreateRequest): string {
-  const size = request.autoSize
+  const size = isAuto(request, 'lessons')
     ? `a course about the topic below. Choose how many lessons it needs, from ${LIMITS.lessons[0]} to ${LIMITS.lessons[1]}: few for a narrow topic or a request for something brief, more for a broad one`
     : `a course of ${request.lessons} lessons about:`;
   const lines = [
@@ -303,7 +316,7 @@ function outlinePrompt(request: CreateRequest): string {
     '## Reply',
     '',
     `Reply with one JSON object and nothing else: \`title\` (the course), \`description\` (one or two sentences),${request.level === 'auto' ? ' `level`,' : ''} and \`lessons\`, a list of`,
-    `${request.autoSize ? 'the' : `exactly ${request.lessons}`} objects with \`title\` and a one-sentence \`summary\`. Each lesson teaches one idea and builds on the ones before it.`,
+    `${isAuto(request, 'lessons') ? 'the' : `exactly ${request.lessons}`} objects with \`title\` and a one-sentence \`summary\`. Each lesson teaches one idea and builds on the ones before it.`,
   );
   return `${lines.join('\n')}\n`;
 }
