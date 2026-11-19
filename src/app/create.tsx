@@ -14,6 +14,7 @@ import {
   PROMPT_QUESTION_TYPES,
   buildPrompt,
   defaultRequest,
+  isAuto,
   promptFileName,
 } from '@/core/transfer/prompt';
 import type { ModelChoice } from '@/data/providers-repository';
@@ -164,10 +165,10 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
 
         <Field label={t('create.level')}>
           <View style={styles.chips}>
-            <Chip label={t('create.auto')} selected={request.level === 'auto'} onPress={() => set({ level: 'auto' })} />
             {levelSchema.options.map((level: Level) => (
               <Chip key={level} label={t(`level.${level}`)} selected={request.level === level} onPress={() => set({ level })} />
             ))}
+            <Chip label={t('create.auto')} selected={request.level === 'auto'} onPress={() => set({ level: 'auto' })} />
           </View>
           {request.level === 'auto' ? (
             <AppText variant="small" color="textSecondary">
@@ -177,29 +178,19 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
         </Field>
 
         <Field label={t('create.size')}>
-          <View style={styles.chips}>
-            <Chip label={t('create.auto')} selected={!!request.autoSize} onPress={() => set({ autoSize: true })} />
-            <Chip label={t('create.setSize')} selected={!request.autoSize} onPress={() => set({ autoSize: false })} />
-          </View>
-          {request.autoSize ? (
+          {request.kind === 'course' ? (
+            <SizeRow request={request} field="lessons" label={t('create.lessons')} onChange={set} />
+          ) : null}
+          {request.kind === 'deck' ? (
+            <SizeRow request={request} field="cards" label={t('create.cards')} onChange={set} />
+          ) : (
+            <SizeRow request={request} field="questions" label={request.kind === 'quiz' ? t('create.questions') : t('create.questionsPerLesson')} onChange={set} />
+          )}
+          {(['lessons', 'questions', 'cards'] as const).some((field) => isAuto(request, field)) ? (
             <AppText variant="small" color="textSecondary">
               {t(`create.autoSizeHint.${request.kind}`)}
             </AppText>
           ) : null}
-          {request.autoSize ? null : request.kind === 'course' ? (
-            <Stepper label={t('create.lessons')} value={request.lessons} min={LIMITS.lessons[0]} max={LIMITS.lessons[1]} onChange={(lessons) => set({ lessons })} />
-          ) : null}
-          {request.autoSize ? null : request.kind === 'deck' ? (
-            <Stepper label={t('create.cards')} value={request.cards} min={LIMITS.cards[0]} max={LIMITS.cards[1]} onChange={(cards) => set({ cards })} />
-          ) : (
-            <Stepper
-              label={request.kind === 'quiz' ? t('create.questions') : t('create.questionsPerLesson')}
-              value={request.questions}
-              min={LIMITS.questions[0]}
-              max={LIMITS.questions[1]}
-              onChange={(questions) => set({ questions })}
-            />
-          )}
         </Field>
 
         {request.kind === 'course' || request.kind === 'lesson' ? (
@@ -309,6 +300,25 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 type PromptReadyProps = { prompt: Prompt; kind: CreateKind; courseId: string | null; onEdit: () => void };
+
+/** One number of the request, with a toggle that leaves it to the AI and greys the number out. */
+function SizeRow({ request, field, label, onChange }: { request: CreateRequest; field: 'lessons' | 'questions' | 'cards'; label: string; onChange: (changes: Partial<CreateRequest>) => void }) {
+  const { t } = useTranslation();
+  const auto = isAuto(request, field);
+  // An older request leaves every number to the AI at once; from here on each has its own toggle.
+  const flags = { lessons: isAuto(request, 'lessons'), questions: isAuto(request, 'questions'), cards: isAuto(request, 'cards') };
+  return (
+    <Stepper
+      label={label}
+      value={request[field]}
+      min={LIMITS[field][0]}
+      max={LIMITS[field][1]}
+      disabled={auto}
+      onChange={(value) => onChange({ [field]: value })}
+      accessory={<Chip label={t('create.autoShort')} selected={auto} onPress={() => onChange({ autoSize: undefined, auto: { ...flags, [field]: !auto } })} />}
+    />
+  );
+}
 
 function PromptReady({ prompt, kind, courseId, onEdit }: PromptReadyProps) {
   const { t } = useTranslation();

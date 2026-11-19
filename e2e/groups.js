@@ -35,21 +35,31 @@ const { start } = require('./harness');
     await moveTo('Everyday keyboard shortcuts', 'Dev tools', false);
   });
 
-  await step('the library filters by group', async () => {
+  await step('groups show as folders; a folder opens and closes', async () => {
     await home();
-    await button('Dev tools').click();
+    // At the top: the folder, then items in no folder. Grouped items are inside the folder.
+    await button('Dev tools. 2 items').waitFor();
+    await visibleText('How to study so it sticks').first().waitFor();
+    if (await visibleText('Git in ten minutes').count()) throw new Error('a grouped item is shown outside its folder');
+    await shot('folders');
+    await button('Dev tools. 2 items').click();
     await page.waitForURL(/group=/);
     await visibleText('Git in ten minutes').first().waitFor();
-    if (await visibleText('How to study so it sticks').count()) throw new Error('an ungrouped item is shown in the group');
-    await shot('filtered');
-    await button('No group').click();
+    await h.gone('How to study so it sticks');
+    await shot('folder-open');
+    await button('Library').click();
     await visibleText('How to study so it sticks').first().waitFor();
-    if (await visibleText('Git in ten minutes').count()) throw new Error('a grouped item is shown under No group');
-    await button('All groups').click();
-    await visibleText('Git in ten minutes').first().waitFor();
+  });
+
+  await step('a search looks inside folders and names the folder', async () => {
+    await page.getByPlaceholder('Search titles, descriptions and tags').filter({ visible: true }).fill('Git');
+    await page.getByRole('button', { name: /^Git in ten minutes\. Quiz · 5 questions · Dev tools$/ }).filter({ visible: true }).first().waitFor();
+    await page.getByPlaceholder('Search titles, descriptions and tags').filter({ visible: true }).fill('');
   });
 
   await step('an exported item names its group', async () => {
+    await home();
+    await button('Dev tools. 2 items').click();
     await h.open('Git in ten minutes');
     await top('More actions').click();
     const file = await download(() => sheetItem('Export').click());
@@ -75,7 +85,7 @@ const { start } = require('./harness');
     await seen('No groups yet');
     await home();
     await visibleText('Git in ten minutes').first().waitFor();
-    if (await button('All groups').count()) throw new Error('group chips shown with no groups');
+    if (await page.getByRole('button', { name: /^Dev tools\./ }).count()) throw new Error('a deleted folder is still shown');
   });
 
   await step('importing a group file brings the group back, keeping both copies', async () => {
@@ -92,7 +102,7 @@ const { start } = require('./harness');
     await visibleText('Git in ten minutes (copy)').first().waitFor();
     // The library is filtered to the imported group: ungrouped items are not listed.
     await h.gone('How to study so it sticks');
-    if ((await button('Dev tools').getAttribute('aria-pressed')) !== 'true') throw new Error('the group chip is not selected');
+    await page.getByRole('heading').filter({ hasText: 'Dev tools' }).or(page.getByText('Dev tools', { exact: true })).filter({ visible: true }).first().waitFor();
     await back().catch(() => {});
   });
 

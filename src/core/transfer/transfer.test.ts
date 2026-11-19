@@ -2,7 +2,7 @@ import { type Course, type Lesson, parseDocument } from '../schema';
 import { sampleCourseInput, sampleDeckInput, sampleInputs, sampleQuizInput } from '../templates/samples';
 import { extractJson } from './extract';
 import { appendLesson, asCopy, backupFile, documentFile, groupFile, lessonFile, lessonText, readImport } from './files';
-import { CREATE_KINDS, buildFixPrompt, buildPrompt, defaultRequest, example, promptFileName } from './prompt';
+import { CREATE_KINDS, PROMPT_QUESTION_TYPES, buildFixPrompt, buildPrompt, defaultRequest, example, promptFileName } from './prompt';
 import { repairImport, slugify } from './repair';
 
 function clone<T>(value: T): T {
@@ -240,7 +240,7 @@ describe('files', () => {
     const outcome = readImport(JSON.stringify(backup));
     if (!outcome.ok || outcome.kind !== 'backup') throw new Error(JSON.stringify(outcome));
     expect(outcome.backup.items[0]).toMatchObject({ source: 'imported', deletedAt: null, marks: [], attempts: [], lastLesson: null });
-    expect(backupFile(outcome.backup).name).toBe('anki-backup-2023-11-14.json');
+    expect(backupFile(outcome.backup).name).toBe('kiwa-backup-2023-11-14.json');
 
     const broken = clone(backup) as any;
     broken.items[0].document.cards[2].back = '';
@@ -257,6 +257,22 @@ describe('buildPrompt', () => {
         expect(outcome).toMatchObject({ ok: true, fixes: [] });
       }
     }
+  });
+
+  it('has an example question of every type that imports', () => {
+    for (const type of [...PROMPT_QUESTION_TYPES, 'flashcard'] as const) {
+      const kind = type === 'flashcard' ? 'deck' : 'quiz';
+      expect([type, readImport(JSON.stringify(example(kind, false, [type]))).ok]).toEqual([type, true]);
+    }
+  });
+
+  it('shows and allows only the chosen question types', () => {
+    const prompt = buildPrompt({ ...defaultRequest, kind: 'lesson', topic: 'x', questionTypes: ['essay'] });
+    const [rules, rest] = prompt.split('## Example');
+    expect(rules).toContain('is of type "essay"');
+    expect(rules).not.toContain('Mix them');
+    expect(rest).toContain('"type": "essay"');
+    for (const other of ['single_choice', 'multiple_choice', 'true_false', 'cloze', 'matching']) expect(rest).not.toContain(`"${other}"`);
   });
 
   it('asks for SVG pictures only when they are wanted', () => {
@@ -351,6 +367,15 @@ describe('buildPrompt with choices left to the model', () => {
     expect(course).toContain('Choose how many lessons it needs');
     expect(course).toContain('2 to 8 questions, as many as the lesson needs');
     expect(course).toContain('`finalExam` in mode "exam" with 5 to 15 new questions');
+  });
+
+  it('leaves only the chosen numbers to the model', () => {
+    const prompt = buildPrompt({ ...defaultRequest, topic: 'x', lessons: 4, questions: 6, auto: { lessons: true } });
+    expect(prompt).toContain('Choose how many lessons it needs');
+    expect(prompt).toContain('holding 6 questions');
+    const fixedLessons = buildPrompt({ ...defaultRequest, topic: 'x', lessons: 4, auto: { questions: true } });
+    expect(fixedLessons).toContain('a course of 4 lessons');
+    expect(fixedLessons).toContain('2 to 8 questions, as many as the lesson needs');
   });
 
   it('never asks for a level field in a lesson file', () => {

@@ -76,7 +76,12 @@
   .langs { display: flex; padding: 3px; border-radius: 999px; background: var(--sunk); }
   .langs button { border: 0; background: transparent; color: var(--muted); font: 600 0.8125rem/1 var(--body); padding: 8px 11px; border-radius: 999px; cursor: pointer; letter-spacing: 0.04em; }
   .langs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+  .themes { display: flex; padding: 3px; border-radius: 999px; background: var(--sunk); }
+  .themes button { border: 0; background: transparent; color: var(--muted); width: 34px; height: 30px; border-radius: 999px; cursor: pointer; display: grid; place-items: center; }
+  .themes button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+  .themes svg { width: 16px; height: 16px; }
   @media (max-width: 720px) { .nav { display: none; } .langs { margin-left: auto; } }
+  @media (max-width: 400px) { .brand b { display: none; } .top .wrap { gap: 10px; } }
 
   /* Hero */
   .hero { padding-block: clamp(40px, 7vw, 96px) clamp(48px, 7vw, 88px); overflow: hidden; }
@@ -91,9 +96,10 @@
   .btn.primary { background: var(--accent); color: var(--on-accent); }
   .btn.ghost { color: var(--ink); background: var(--surface); border: 1px solid var(--line); }
   .btn:hover { transform: translateY(-2px); }
-  .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; margin-top: 38px; padding: 0; list-style: none; max-width: 30em; }
-  .facts li { display: flex; gap: 10px; align-items: baseline; font-size: var(--step--1); color: var(--muted); }
-  .facts strong { font-family: var(--display); font-weight: 700; color: var(--ink); font-size: var(--step-0); white-space: nowrap; }
+  .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; margin-top: 38px; padding: 0; list-style: none; max-width: 34em; }
+  .facts li { display: grid; gap: 2px; font-size: var(--step--1); color: var(--muted); line-height: 1.45; }
+  .facts strong { font-family: var(--display); font-weight: 700; color: var(--ink); font-size: var(--step-1); line-height: 1.2; }
+  @media (max-width: 420px) { .facts { grid-template-columns: 1fr; } }
 
   .stage { position: relative; display: flex; justify-content: center; align-items: flex-end; min-height: 520px; }
   .stage::before { content: ""; position: absolute; width: 92%; aspect-ratio: 1; border-radius: 50%; border: 38px solid var(--accent-soft); top: 50%; left: 50%; transform: translate(-50%, -50%); }
@@ -155,24 +161,45 @@
   .gallery { padding-block: clamp(56px, 8vw, 110px); background: var(--sunk); }
   .gallery h2 { font-size: var(--step-3); }
   .gallery .lead { margin-top: 12px; }
-  .strip { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(170px, 22vw, 230px); gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 30px max(16px, calc((100vw - 1160px) / 2 + 16px)) 26px; scrollbar-width: thin; }
-  .strip figure { margin: 0; scroll-snap-align: start; display: grid; gap: 12px; }
+  /* Swiper's own layout rules, inlined: the page may not load outside stylesheets. */
+  .swiper { margin-left: auto; margin-right: auto; position: relative; overflow: hidden; list-style: none; padding: 0; z-index: 1; display: block; }
+  .swiper-wrapper { position: relative; width: 100%; height: 100%; z-index: 1; display: flex; transition-property: transform; box-sizing: content-box; }
+  .swiper-slide { flex-shrink: 0; width: 100%; height: 100%; position: relative; transition-property: transform; display: block; }
+  .strip { padding-block: 30px 10px; cursor: grab; }
+  .strip.marquee .swiper-wrapper { transition-timing-function: linear !important; }
+  .strip .swiper-slide { width: clamp(170px, 22vw, 230px); }
+  .strip figure { margin: 0; display: grid; gap: 12px; }
   .strip figure .phone { border-width: 7px; border-radius: 28px; }
-  .strip figcaption { font-size: var(--step--1); color: var(--muted); }
+  .strip figcaption { font-size: var(--step--1); color: var(--muted); line-height: 1.45; }
   .strip figcaption b { display: block; color: var(--ink); font-weight: 600; }
-  .strip-nav { display: flex; gap: 8px; margin-top: 18px; }
-  .strip-nav button { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 1.1rem; cursor: pointer; }
-  .gallery .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  /* Without the script the strip still scrolls by hand. */
+  .strip:not(.swiper-initialized) .swiper-wrapper { overflow-x: auto; gap: 22px; padding-inline: max(16px, calc((100vw - 1160px) / 2 + 16px)); }
 
   /* Privacy */
   .privacy { padding-block: clamp(56px, 8vw, 100px); }
-  .privacy .wrap { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 40px; align-items: start; }
+  .privacy .wrap { display: grid; gap: 28px; }
   .privacy h2 { font-size: var(--step-3); }
   .trust { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .trust div { padding: 20px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); }
   .trust b { display: block; font-family: var(--display); font-size: var(--step-0); line-height: 1.25; margin-bottom: 8px; }
   .trust p { font-size: var(--step--1); color: var(--muted); }
-  @media (max-width: 860px) { .privacy .wrap, .trust { grid-template-columns: 1fr; } }
+  @media (max-width: 860px) { .trust { grid-template-columns: 1fr; } }
+
+  /* Q&A */
+  .faq { padding-block: clamp(56px, 8vw, 100px); border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent); }
+  .faq .wrap { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(28px, 5vw, 64px); align-items: start; }
+  .faq h2 { font-size: var(--step-3); margin-top: 12px; }
+  .faq-head > p { color: var(--muted); margin-top: 14px; max-width: 26em; }
+  .faq-head .issues { margin-top: 22px; }
+  .faq-list { display: grid; gap: 10px; }
+  .faq details { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+  .faq summary { list-style: none; cursor: pointer; padding: 18px 54px 18px 20px; font-weight: 600; position: relative; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: ""; position: absolute; right: 22px; top: 50%; width: 10px; height: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-70%) rotate(45deg); transition: transform 0.25s; }
+  .faq details[open] summary::after { transform: translateY(-30%) rotate(225deg); }
+  .faq details p { padding: 0 20px 18px; color: var(--muted); max-width: 40em; }
+  .faq details p a { font-weight: 600; }
+  @media (max-width: 860px) { .faq .wrap { grid-template-columns: 1fr; } }
 
   footer { padding-block: 36px 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--step--1); }
   footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; }
@@ -191,7 +218,7 @@
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .stage .phone, .row .shots, .row .copy { animation: none !important; }
-    .btn { transition: none; }
+    .btn, .faq summary::after { transition: none; }
   }
 </style>
 
@@ -206,7 +233,13 @@
       <a href="#learn" data-k="nav.learn">Learn</a>
       <a href="#remember" data-k="nav.remember">Remember</a>
       <a href="#screens" data-k="nav.screens">Screens</a>
+      <a href="#faq" data-k="nav.faq">Q&amp;A</a>
     </nav>
+    <div class="themes" role="group" aria-label="Theme">
+      <button type="button" id="theme-system" data-mode="system" aria-pressed="true" aria-label="Same as device"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5"/><path d="M5.5 14h5" stroke-linecap="round"/></svg></button>
+      <button type="button" id="theme-light" data-mode="light" aria-pressed="false" aria-label="Light"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3 3l1.1 1.1M11.9 11.9 13 13M3 13l1.1-1.1M11.9 4.1 13 3"/></svg></button>
+      <button type="button" id="theme-dark" data-mode="dark" aria-pressed="false" aria-label="Dark"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.6 10.4A6 6 0 0 1 5.6 2.4a6 6 0 1 0 8 8z"/></svg></button>
+    </div>
     <div class="langs" role="group" aria-label="Language">
       <button type="button" id="lang-en" data-lang="en" aria-pressed="true">EN</button>
       <button type="button" id="lang-uz" data-lang="uz" aria-pressed="false">UZ</button>
@@ -347,17 +380,23 @@
   </section>
 
   <section class="gallery" id="screens" aria-labelledby="screens-title">
-    <div class="wrap head">
-      <div>
-        <h2 id="screens-title" data-k="screens.title">Every screen</h2>
-        <p class="lead" data-k="screens.lead">Real screenshots of the app. They follow the language you pick above and your light or dark setting.</p>
-      </div>
-      <div class="strip-nav">
-        <button type="button" id="strip-prev" aria-label="Previous screens">←</button>
-        <button type="button" id="strip-next" aria-label="Next screens">→</button>
-      </div>
+    <div class="wrap">
+      <h2 id="screens-title" data-k="screens.title">Every screen</h2>
+      <p class="lead" data-k="screens.lead">Real screenshots of the app. They follow the language you pick above and your light or dark setting.</p>
     </div>
-    <div class="strip" id="strip" tabindex="0" aria-label="Screenshots"></div>
+    <div class="strip swiper" id="strip" aria-label="Screenshots"><div class="swiper-wrapper" id="strip-track"></div></div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <div class="wrap">
+      <div class="faq-head">
+        <span class="kicker" data-k="faq.kicker">Q&amp;A</span>
+        <h2 id="faq-title" data-k="faq.title">Questions</h2>
+        <p data-k="faq.lead">Something else on your mind, or found a bug? Open an issue on GitHub.</p>
+        <a class="btn ghost issues" data-issues href="https://github.com/handsomestranger56-prog/anki/issues" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4.1.5-.2.5-.4v-1.4c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.2 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.4 7.4 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg><span data-k="faq.issues">Report an issue</span></a>
+      </div>
+      <div class="faq-list" id="faq-list"></div>
+    </div>
   </section>
 
   <section class="privacy" id="privacy">
@@ -378,12 +417,15 @@
 <footer>
   <div class="wrap">
     <span><b>KIWA</b> · <span data-k="foot.name">Keep Improving With AI</span></span>
-    <span data-k="foot.built">Built with Expo and React Native. In development, 2026.</span>
+    <span><span data-k="foot.built">Built with Expo and React Native. In development, 2026.</span> · <a data-issues href="https://github.com/handsomestranger56-prog/anki/issues" target="_blank" rel="noopener" data-k="faq.issues">Report an issue</a></span>
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.js"></script>
 <script>
 (() => {
+  /** Where people report problems. One place, so it is easy to change when the repository moves. */
+  const ISSUES_URL = 'https://github.com/handsomestranger56-prog/anki/issues';
   const SHOTS = ['library', 'course', 'lesson', 'quiz', 'result', 'flashcard', 'create', 'outline', 'models', 'review', 'focus', 'settings', 'welcome'];
   const T = {
     en: {
@@ -426,6 +468,17 @@
       'priv.t1': 'No account', 'priv.p1': 'Content, results and settings are stored on the device. Nothing leaves it unless you share it.',
       'priv.t2': 'Keys locked away', 'priv.p2': "API keys sit in the phone's secure storage and go only to the provider you chose. Never in a backup or export.",
       'priv.t3': 'Works without AI', 'priv.p3': 'Prompt for AI needs no key at all, and every course can be written or edited by hand.',
+      'nav.faq': 'Q&A', 'faq.kicker': 'Q&A', 'faq.title': 'Questions', 'faq.lead': 'Something else on your mind, or found a bug? Open an issue on GitHub.', 'faq.issues': 'Report an issue',
+      faq: [
+        ['When can I install KIWA?', 'KIWA is still being built and is not in the App Store or Google Play yet. Follow the project on GitHub to hear when it is.'],
+        ['Do I need an API key?', 'No. "Prompt for AI" writes a request you paste into any chatbot, free plans included, and you import the reply. A key from Claude, Gemini, OpenAI or a compatible service only adds Generate, Check with AI and Explain deeper.'],
+        ['Which AI providers work?', 'Claude, Gemini and any service with the OpenAI API: OpenAI, Grok, OpenRouter, DeepSeek, Mistral, or a local Ollama server. You can add several and pick the model for each run.'],
+        ['What happens to my data?', 'It stays on your phone. There is no account and no server. API keys sit in the secure storage of the phone and are sent only to the provider you chose.'],
+        ['Does it work offline?', 'Studying, reviews, focus rounds and editing all work offline. Only the AI features need a connection.'],
+        ['Can I use my own notes?', 'Yes. Paste notes or an article into the create form and the course is built from them. You can also import and export courses, lessons, quizzes, flashcards and whole groups as files.'],
+        ['Which languages does it speak?', 'The app is in English, Uzbek and Russian. Courses can be written in any language the AI knows.'],
+      ],
+      themes: { system: 'Same as device', light: 'Light', dark: 'Dark', group: 'Theme' },
       'foot.name': 'Keep Improving With AI', 'foot.built': 'Built with Expo and React Native. In development, 2026.',
       captions: {
         library: ['Library', 'Courses, quizzes and flashcards, sorted into groups'], course: ['Course', 'Lessons with progress and bookmarks'],
@@ -436,7 +489,7 @@
         focus: ['Focus', 'Pomodoro rounds with a focus view'], settings: ['Settings', 'Language, AI providers and reminders'],
         welcome: ['Welcome', 'First launch in your language'],
       },
-      prev: 'Previous screens', next: 'Next screens', review: 'Review intervals', sections: 'Sections', language: 'Language', screenshots: 'Screenshots',
+      review: 'Review intervals', sections: 'Sections', language: 'Language', screenshots: 'Screenshots',
     },
     uz: {
       'nav.create': 'Yaratish', 'nav.learn': 'Oʻrganish', 'nav.remember': 'Takrorlash', 'nav.screens': 'Ekranlar',
@@ -478,6 +531,17 @@
       'priv.t1': 'Akkaunt shart emas', 'priv.p1': 'Materiallar, natijalar va sozlamalar qurilmada saqlanadi. Oʻzingiz ulashmaguningizcha hech narsa chiqmaydi.',
       'priv.t2': 'Kalitlar himoyada', 'priv.p2': 'API kalitlari telefonning himoyalangan xotirasida turadi va faqat siz tanlagan provayderga yuboriladi. Zaxira yoki eksportga hech qachon kirmaydi.',
       'priv.t3': 'SIsiz ham ishlaydi', 'priv.p3': 'SI uchun soʻrov kalitsiz ishlaydi, har bir kursni qoʻlda yozish yoki tahrirlash mumkin.',
+      'nav.faq': 'Savol-javob', 'faq.kicker': 'Savol-javob', 'faq.title': 'Savollar', 'faq.lead': 'Boshqa savolingiz bormi yoki xato topdingizmi? GitHubʼda murojaat qoldiring.', 'faq.issues': 'Xato haqida xabar berish',
+      faq: [
+        ['KIWAni qachon oʻrnatish mumkin?', 'KIWA hali ishlab chiqilmoqda va App Store yoki Google Playʼda hozircha yoʻq. Chiqqanini bilish uchun loyihani GitHubʼda kuzatib boring.'],
+        ['API kalit kerakmi?', 'Yoʻq. “SI uchun soʻrov” istalgan chatbotga, jumladan bepul tariflarga ham joylanadigan soʻrov tayyorlaydi, siz esa javobni import qilasiz. Claude, Gemini, OpenAI yoki mos xizmat kaliti faqat Yaratish, SI bilan tekshirish va Batafsil tushuntirishni qoʻshadi.'],
+        ['Qaysi SI provayderlari ishlaydi?', 'Claude, Gemini va OpenAI API ga ega istalgan xizmat: OpenAI, Grok, OpenRouter, DeepSeek, Mistral yoki mahalliy Ollama serveri. Bir nechtasini qoʻshib, har safar modelni tanlashingiz mumkin.'],
+        ['Maʼlumotlarim nima boʻladi?', 'Ular telefoningizda qoladi. Akkaunt ham, server ham yoʻq. API kalitlari telefonning himoyalangan xotirasida turadi va faqat siz tanlagan provayderga yuboriladi.'],
+        ['Internetsiz ishlaydimi?', 'Oʻqish, takrorlash, diqqat davralari va tahrirlash internetsiz ishlaydi. Faqat SI imkoniyatlariga internet kerak.'],
+        ['Oʻz qaydlarimdan foydalansam boʻladimi?', 'Ha. Qaydlar yoki maqolani yaratish shakliga joylang, kurs ulardan tuziladi. Kurslar, darslar, testlar, kartochkalar va butun guruhlarni fayl sifatida import va eksport ham qilish mumkin.'],
+        ['Qaysi tillarda ishlaydi?', 'Ilova ingliz, oʻzbek va rus tillarida. Kurslar esa SI biladigan istalgan tilda yozilishi mumkin.'],
+      ],
+      themes: { system: 'Qurilmadagidek', light: 'Yorugʻ', dark: 'Qorongʻi', group: 'Mavzu' },
       'foot.name': 'Keep Improving With AI', 'foot.built': 'Expo va React Native bilan yaratilgan. Ishlab chiqilmoqda, 2026.',
       captions: {
         library: ['Kutubxona', 'Guruhlarga ajratilgan kurslar, testlar va kartochkalar'], course: ['Kurs', 'Jarayon va xatchoʻplar bilan darslar'],
@@ -488,7 +552,7 @@
         focus: ['Diqqat', 'Diqqat rejimi bilan Pomodoro davralari'], settings: ['Sozlamalar', 'Til, SI provayderlari va eslatmalar'],
         welcome: ['Xush kelibsiz', 'Birinchi ishga tushirish oʻz tilingizda'],
       },
-      prev: 'Oldingi ekranlar', next: 'Keyingi ekranlar', review: 'Takrorlash oraliqlari', sections: 'Boʻlimlar', language: 'Til', screenshots: 'Skrinshotlar',
+      review: 'Takrorlash oraliqlari', sections: 'Boʻlimlar', language: 'Til', screenshots: 'Skrinshotlar',
     },
     ru: {
       'nav.create': 'Создание', 'nav.learn': 'Обучение', 'nav.remember': 'Повторение', 'nav.screens': 'Экраны',
@@ -530,6 +594,17 @@
       'priv.t1': 'Без аккаунта', 'priv.p1': 'Материалы, результаты и настройки хранятся на устройстве. Ничего не уходит, пока вы сами не поделитесь.',
       'priv.t2': 'Ключи под замком', 'priv.p2': 'API-ключи лежат в защищённом хранилище телефона и отправляются только выбранному провайдеру. Никогда не попадают в копии и экспорт.',
       'priv.t3': 'Работает и без ИИ', 'priv.p3': 'Запрос для ИИ не требует ключа, а любой курс можно написать или отредактировать вручную.',
+      'nav.faq': 'Вопросы', 'faq.kicker': 'Вопросы и ответы', 'faq.title': 'Вопросы', 'faq.lead': 'Остался вопрос или нашли ошибку? Создайте issue на GitHub.', 'faq.issues': 'Сообщить о проблеме',
+      faq: [
+        ['Когда можно установить KIWA?', 'KIWA ещё в разработке, в App Store и Google Play приложения пока нет. Следите за проектом на GitHub, чтобы узнать о выходе.'],
+        ['Нужен ли API-ключ?', 'Нет. «Запрос для ИИ» готовит текст, который можно вставить в любой чат-бот, в том числе бесплатный, а ответ затем импортировать. Ключ Claude, Gemini, OpenAI или совместимого сервиса лишь добавляет генерацию, проверку с ИИ и подробные объяснения.'],
+        ['Какие ИИ-провайдеры поддерживаются?', 'Claude, Gemini и любой сервис с API OpenAI: OpenAI, Grok, OpenRouter, DeepSeek, Mistral или локальный сервер Ollama. Можно добавить несколько и выбирать модель для каждого запуска.'],
+        ['Что происходит с моими данными?', 'Они остаются на телефоне. Нет ни аккаунта, ни сервера. API-ключи хранятся в защищённом хранилище телефона и отправляются только выбранному провайдеру.'],
+        ['Работает ли без интернета?', 'Учёба, повторение, фокус-раунды и редактирование работают офлайн. Интернет нужен только для функций ИИ.'],
+        ['Можно ли использовать свои заметки?', 'Да. Вставьте заметки или статью в форму создания, и курс будет построен по ним. Курсы, уроки, тесты, карточки и целые группы можно импортировать и экспортировать файлами.'],
+        ['На каких языках работает?', 'Приложение на английском, узбекском и русском. Курсы можно создавать на любом языке, который знает ИИ.'],
+      ],
+      themes: { system: 'Как на устройстве', light: 'Светлая', dark: 'Тёмная', group: 'Тема' },
       'foot.name': 'Keep Improving With AI', 'foot.built': 'Создано на Expo и React Native. В разработке, 2026.',
       captions: {
         library: ['Библиотека', 'Курсы, тесты и карточки, разложенные по группам'], course: ['Курс', 'Уроки с прогрессом и закладками'],
@@ -540,7 +615,7 @@
         focus: ['Фокус', 'Раунды Pomodoro с режимом фокуса'], settings: ['Настройки', 'Язык, ИИ-провайдеры и напоминания'],
         welcome: ['Добро пожаловать', 'Первый запуск на вашем языке'],
       },
-      prev: 'Предыдущие экраны', next: 'Следующие экраны', review: 'Интервалы повторения', sections: 'Разделы', language: 'Язык', screenshots: 'Скриншоты',
+      review: 'Интервалы повторения', sections: 'Разделы', language: 'Язык', screenshots: 'Скриншоты',
     },
   };
 
@@ -560,7 +635,32 @@
   const src = (name) => `screens/${lang}/${theme()}/${name}.webp`;
 
   const strip = document.getElementById('strip');
-  strip.innerHTML = SHOTS.map((name) => `<figure><div class="phone"><img data-shot="${name}" src="${src(name)}" alt="" width="390" height="844" loading="lazy"></div><figcaption><b data-cap="${name}"></b><span data-capd="${name}"></span></figcaption></figure>`).join('');
+  document.getElementById('strip-track').innerHTML = SHOTS.map((name) => `<div class="swiper-slide"><figure><div class="phone"><img data-shot="${name}" src="${src(name)}" alt="" width="390" height="844"></div><figcaption><b data-cap="${name}"></b><span data-capd="${name}"></span></figcaption></figure></div>`).join('');
+  document.querySelectorAll('[data-issues]').forEach((link) => link.setAttribute('href', ISSUES_URL));
+
+  // Q&A: native disclosure elements, so they work with a keyboard and a screen reader as they are.
+  const faqList = document.getElementById('faq-list');
+  const renderFaq = (items) => {
+    const open = [...faqList.querySelectorAll('details')].map((node) => node.open);
+    faqList.innerHTML = items.map(([question, answer], index) => `<details${open[index] ? ' open' : ''}><summary>${question}</summary><p>${answer}</p></details>`).join('');
+  };
+
+  // Theme: the viewer's choice is kept; "same as device" follows the system setting.
+  const THEME_KEY = 'kiwa.theme';
+  const readTheme = () => { try { return localStorage.getItem(THEME_KEY); } catch { return null; } };
+  const applyTheme = (mode) => {
+    if (mode === 'light' || mode === 'dark') root.dataset.theme = mode;
+    else delete root.dataset.theme;
+    document.querySelectorAll('.themes button').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.mode === (mode || 'system'))));
+  };
+  document.querySelectorAll('.themes button').forEach((button) =>
+    button.addEventListener('click', () => {
+      try { localStorage.setItem(THEME_KEY, button.dataset.mode); } catch { /* not kept */ }
+      applyTheme(button.dataset.mode);
+    }),
+  );
+  const savedTheme = readTheme();
+  if (savedTheme === 'light' || savedTheme === 'dark') applyTheme(savedTheme);
 
   function paint() {
     const t = T[lang];
@@ -581,9 +681,10 @@
     document.querySelectorAll('[data-cap]').forEach((node) => { node.textContent = t.captions[node.dataset.cap][0]; });
     document.querySelectorAll('[data-capd]').forEach((node) => { node.textContent = t.captions[node.dataset.capd][1]; });
     document.querySelectorAll('.langs button').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.lang === lang)));
-    document.getElementById('strip-prev').setAttribute('aria-label', t.prev);
-    document.getElementById('strip-next').setAttribute('aria-label', t.next);
     strip.setAttribute('aria-label', t.screenshots);
+    renderFaq(t.faq);
+    document.querySelector('.themes').setAttribute('aria-label', t.themes.group);
+    document.querySelectorAll('.themes button').forEach((button) => button.setAttribute('aria-label', t.themes[button.dataset.mode]));
     document.querySelector('.rhythm').setAttribute('aria-label', t.review);
     document.querySelector('.nav').setAttribute('aria-label', t.sections);
     document.querySelector('.langs').setAttribute('aria-label', t.language);
@@ -596,12 +697,30 @@
       paint();
     }),
   );
-  const page = () => Math.max(200, strip.clientWidth * 0.8);
-  document.getElementById('strip-prev').addEventListener('click', () => strip.scrollBy({ left: -page(), behavior: 'smooth' }));
-  document.getElementById('strip-next').addEventListener('click', () => strip.scrollBy({ left: page(), behavior: 'smooth' }));
   media.addEventListener('change', paint);
   new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
   paint();
+
+  // The gallery glides on its own in a loop, pauses under the pointer, and can be dragged.
+  // With reduced motion it stays still and moves only when dragged.
+  if (window.Swiper) {
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!still) strip.classList.add('marquee');
+    new window.Swiper(strip, {
+      slidesPerView: 'auto',
+      spaceBetween: 22,
+      loop: true,
+      loopAdditionalSlides: 4,
+      grabCursor: true,
+      freeMode: { enabled: true, momentum: true },
+      slidesOffsetBefore: 16,
+      speed: still ? 400 : 6000,
+      autoplay: still ? false : { delay: 0, disableOnInteraction: false, pauseOnMouseEnter: true },
+      a11y: { enabled: true },
+    });
+    // Images copied by the loop pick up later language or theme changes too.
+    paint();
+  }
 })();
 </script>
 

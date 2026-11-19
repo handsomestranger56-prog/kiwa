@@ -1,6 +1,13 @@
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type TextInputProps, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  type TextInputProps,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { type IconName, Icon } from './icon';
 import { AppText } from './text';
@@ -42,7 +49,8 @@ export function Button({ label, onPress, kind = 'primary', icon, disabled }: But
         styles.button,
         { backgroundColor: look.background, borderColor: look.border },
         (pressed || disabled) && styles.dimmed,
-      ]}>
+      ]}
+    >
       {icon ? <Icon name={icon} size={18} color={look.text} /> : null}
       <AppText variant="bodyStrong" color={look.text}>
         {label}
@@ -60,7 +68,13 @@ type IconButtonProps = {
 };
 
 /** A square button that shows only an icon. `label` is read by screen readers. */
-export function IconButton({ icon, label, onPress, color = 'textSecondary', selected }: IconButtonProps) {
+export function IconButton({
+  icon,
+  label,
+  onPress,
+  color = 'textSecondary',
+  selected,
+}: IconButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -68,7 +82,8 @@ export function IconButton({ icon, label, onPress, color = 'textSecondary', sele
       {...pressedState(selected)}
       hitSlop={4}
       onPress={onPress}
-      style={({ pressed }) => [styles.iconButton, pressed && styles.dimmed]}>
+      style={({ pressed }) => [styles.iconButton, pressed && styles.dimmed]}
+    >
       <Icon name={icon} color={color} />
     </Pressable>
   );
@@ -90,7 +105,8 @@ export function Chip({ label, selected, onPress }: ChipProps) {
           borderColor: selected ? colors.accent : colors.border,
         },
         pressed && styles.dimmed,
-      ]}>
+      ]}
+    >
       <AppText variant="small" color={selected ? 'onAccent' : 'text'} style={styles.chipText}>
         {label}
       </AppText>
@@ -117,31 +133,74 @@ export function Tag({ label, tone = 'neutral' }: TagProps) {
   );
 }
 
-type StepperProps = { label: string; value: number; min: number; max: number; step?: number; onChange: (value: number) => void };
+type StepperProps = {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  onChange: (value: number) => void;
+  /** Greyed out and fixed, for a number something else decides. */
+  disabled?: boolean;
+  /** Shown just before the number, such as a toggle that disables it. */
+  accessory?: ReactNode;
+};
 
 /** A number with minus and plus buttons, for small counts. */
-export function Stepper({ label, value, min, max, step = 1, onChange }: StepperProps) {
+export function Stepper({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  onChange,
+  disabled,
+  accessory,
+}: StepperProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   return (
-    <View style={styles.stepper}>
-      <AppText style={styles.stepperLabel}>{label}</AppText>
-      <View style={[styles.stepperBox, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-        <IconButton
-          icon="minus"
-          label={t('common.fewer', { label })}
-          color={value <= min ? 'border' : 'text'}
-          onPress={() => onChange(Math.max(min, value - step))}
-        />
-        <AppText variant="bodyStrong" style={styles.stepperValue} accessibilityLabel={`${label}: ${value}`}>
-          {value}
-        </AppText>
-        <IconButton
-          icon="add"
-          label={t('common.more', { label })}
-          color={value >= max ? 'border' : 'text'}
-          onPress={() => onChange(Math.min(max, value + step))}
-        />
+    // With a toggle beside the number, the label gets its own line so long labels never squeeze.
+    <View style={accessory ? styles.stepperStacked : styles.stepper}>
+      <AppText style={accessory ? null : styles.stepperLabel}>{label}</AppText>
+      <View style={accessory ? styles.stepperControls : styles.stepperInline}>
+        {accessory}
+        <View
+          aria-disabled={disabled}
+          style={[
+            styles.stepperBox,
+            {
+              borderColor: colors.border,
+              backgroundColor: disabled ? colors.surfaceAlt : colors.surface,
+            },
+            disabled && styles.stepperOff,
+          ]}
+        >
+          <IconButton
+            icon="minus"
+            label={t('common.fewer', { label })}
+            color={disabled || value <= min ? 'border' : 'text'}
+            onPress={() => {
+              if (!disabled) onChange(Math.max(min, value - step));
+            }}
+          />
+          <AppText
+            variant="bodyStrong"
+            color={disabled ? 'textSecondary' : 'text'}
+            style={styles.stepperValue}
+            accessibilityLabel={`${label}: ${value}`}
+          >
+            {value}
+          </AppText>
+          <IconButton
+            icon="add"
+            label={t('common.more', { label })}
+            color={disabled || value >= max ? 'border' : 'text'}
+            onPress={() => {
+              if (!disabled) onChange(Math.min(max, value + step));
+            }}
+          />
+        </View>
       </View>
     </View>
   );
@@ -157,7 +216,8 @@ export function TextField({ leading, trailing, style, onFocus, onBlur, ...rest }
       style={[
         styles.field,
         { backgroundColor: colors.surface, borderColor: focused ? colors.accent : colors.border },
-      ]}>
+      ]}
+    >
       {leading}
       <TextInput
         placeholderTextColor={colors.textSecondary}
@@ -208,7 +268,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipText: { fontWeight: '500' },
-  tag: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm, alignSelf: 'flex-start' },
+  tag: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+    alignSelf: 'flex-start',
+  },
   field: {
     minHeight: MIN_TOUCH + 4,
     borderWidth: 1,
@@ -219,8 +284,27 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   input: { flex: 1, fontSize: 16, paddingVertical: spacing.sm, minWidth: 0 },
-  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   stepperLabel: { flex: 1, minWidth: 0 },
-  stepperBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: radius.md },
+  stepperBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: radius.md,
+  },
   stepperValue: { minWidth: 36, textAlign: 'center', fontVariant: ['tabular-nums'] },
+  stepperOff: { opacity: 0.55 },
+  stepperStacked: { gap: spacing.sm },
+  stepperControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  stepperInline: { flexDirection: 'row', alignItems: 'center' },
 });

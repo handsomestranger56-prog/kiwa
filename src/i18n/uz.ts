@@ -109,6 +109,7 @@ export const uz: Translation = {
     level: 'Daraja',
     size: 'Hajm',
     auto: 'SI tanlasin',
+    autoShort: 'SI tanlaydi',
     autoLevelHint: 'SI darajani mavzu, auditoriya va qaydlaringizga qarab tanlaydi.',
     autoSizeHint: {
       course: 'Nechta dars va savol boʻlishini SI mavzu va qaydlaringizga qarab hal qiladi. Qisqa boʻlishi uchun mavzuga “qisqacha” deb yozing.',
@@ -116,7 +117,6 @@ export const uz: Translation = {
       quiz: 'Nechta savol boʻlishini SI mavzu va qaydlaringizga qarab hal qiladi.',
       deck: 'Nechta kartochka boʻlishini SI mavzu va qaydlaringizga qarab hal qiladi.',
     },
-    setSize: 'Hajmni belgilash',
     lessons: 'Darslar',
     questionsPerLesson: 'Har bir darsdagi savollar',
     questions: 'Savollar',

@@ -10,6 +10,7 @@ import {
 } from '../schema';
 import { lessonFileSchema } from './files';
 import type { JsonProblem } from './files';
+import { EXAMPLE_QUESTIONS, restrictQuestionTypes } from './question-types';
 import { LESSON_FORMAT } from './repair';
 
 export type CreateKind = 'course' | 'lesson' | 'quiz' | 'deck';
@@ -44,7 +45,9 @@ export type CreateRequest = {
   questions: number;
   /** Cards in a deck. */
   cards: number;
-  /** The model decides how many lessons, questions or cards, within LIMITS. Ignores the numbers above. */
+  /** Numbers left to the model, each within LIMITS. The matching number above is then ignored. */
+  auto?: { lessons?: boolean; questions?: boolean; cards?: boolean };
+  /** Older requests: every number left to the model. Read through `isAuto`. */
   autoSize?: boolean;
   /** Lessons may include SVG pictures. Missing in requests saved before pictures existed: off. */
   pictures?: boolean;
@@ -71,6 +74,11 @@ export const defaultRequest: CreateRequest = {
 };
 
 export const LIMITS = { lessons: [1, 20], questions: [1, 30], cards: [5, 100] } as const;
+
+/** Whether the model picks this number. */
+export function isAuto(request: Pick<CreateRequest, 'auto' | 'autoSize'>, field: 'lessons' | 'questions' | 'cards'): boolean {
+  return request.auto?.[field] ?? request.autoSize ?? false;
+}
 
 /** Questions in each lesson's practice when the model picks the size. */
 const AUTO_LESSON_QUESTIONS = [2, 8] as const;
@@ -108,8 +116,8 @@ export function buildPrompt(request: CreateRequest): string {
     request.source?.trim() ? source(request.source) : null,
     writingRules(request),
     formatRules(request, types),
-    `## Example\n\nThis shows the shape only. Write your own content.\n\n${fence(JSON.stringify(example(request.kind, request.pictures), null, 2))}`,
-    `## JSON Schema\n\nYour reply must be valid against this schema.\n\n${fence(JSON.stringify(schemaFor(request.kind)))}`,
+    `## Example\n\nThis shows the shape only. Write your own content.\n\n${fence(JSON.stringify(example(request.kind, request.pictures, types), null, 2))}`,
+    `## JSON Schema\n\nYour reply must be valid against this schema.\n\n${fence(JSON.stringify(schemaFor(request.kind, types)))}`,
     'Reply with the JSON object only. Start with `{` and end with `}`.',
   ];
   return `${sections.filter(Boolean).join('\n\n')}\n`;
@@ -124,22 +132,26 @@ export function promptFileName(request: CreateRequest): string {
   return `${slug || request.kind}.prompt.md`;
 }
 
+/** The question types a request allows: flashcards for a deck, otherwise the ticked types. */
+export function allowedTypes(request: CreateRequest): QuestionType[] {
+  return request.kind === 'deck' ? ['flashcard'] : effectiveTypes(request);
+}
+
 function effectiveTypes(request: CreateRequest): QuestionType[] {
   const chosen = request.questionTypes.filter((type) => type !== 'flashcard');
   return chosen.length > 0 ? chosen : ['single_choice'];
 }
 
 function task(request: CreateRequest): string {
-  const auto = request.autoSize;
   const what = {
-    course: auto
+    course: isAuto(request, 'lessons')
       ? `a course. Choose how many lessons it needs, from ${LIMITS.lessons[0]} to ${LIMITS.lessons[1]}: few for a narrow topic or a request for something brief, more for a broad one`
       : `a course of ${request.lessons} ${plural(request.lessons, 'lesson')}`,
     lesson: 'one lesson',
-    quiz: auto
+    quiz: isAuto(request, 'questions')
       ? `a quiz. Choose how many questions it needs, from ${LIMITS.questions[0]} to ${LIMITS.questions[1]}, to fit the topic and any request for something brief or thorough`
       : `a quiz of ${request.questions} ${plural(request.questions, 'question')}`,
-    deck: auto
+    deck: isAuto(request, 'cards')
       ? `a set of flashcards. Choose how many cards it needs, from ${LIMITS.cards[0]} to ${LIMITS.cards[1]}, to fit the topic and any request for something brief or thorough`
       : `a set of ${request.cards} flashcards`,
   }[request.kind];
@@ -180,7 +192,7 @@ function source(text: string): string {
 
 function writingRules(request: CreateRequest): string {
   const rules: string[] = [];
-  const perLesson = request.autoSize
+  const perLesson = isAuto(request, 'questions')
     ? `${AUTO_LESSON_QUESTIONS[0]} to ${AUTO_LESSON_QUESTIONS[1]} questions, as many as the lesson needs,`
     : `${request.questions} ${plural(request.questions, 'question')}`;
 
@@ -199,7 +211,7 @@ function writingRules(request: CreateRequest): string {
     }
   }
   if (request.kind === 'course') {
-    const examSize = examSizeText(request.autoSize ? null : request.lessons);
+    const examSize = examSizeText(isAuto(request, 'lessons') ? null : request.lessons);
     rules.push(
       'Order the lessons so each one builds on the ones before it.',
       `Add a \`finalExam\` in mode "exam" with ${examSize} new questions drawn from across the whole course.`,
@@ -211,11 +223,16 @@ function writingRules(request: CreateRequest): string {
   if (request.kind === 'deck') {
     rules.push('One fact per card. The front asks, the back answers in a few words.', 'Do not write cards whose answer is yes or no.');
   } else {
+    const types = effectiveTypes(request);
     rules.push(
-      'Every question has an `explanation` that says why the right answer is right.',
-      'Wrong options must be plausible. Do not use "all of the above" or "none of the above".',
-      'Mix the allowed question types instead of using only one.',
+      types.length === 1
+        ? `Every question, in every lesson and exam, is of type "${types[0]}". Do not use any other type.`
+        : `Use only these question types: ${types.map((type) => `"${type}"`).join(', ')}. Mix them instead of using only one, and do not use any other type.`,
     );
+    if (types.some((type) => type !== 'essay')) rules.push('Every question has an `explanation` that says why the right answer is right.');
+    if (types.some((type) => type === 'single_choice' || type === 'multiple_choice')) {
+      rules.push('Wrong options must be plausible. Do not use "all of the above" or "none of the above".');
+    }
   }
   return `## How to write it\n\n${rules.map((rule) => `- ${rule}`).join('\n')}`;
 }
@@ -242,9 +259,16 @@ function formatRules(request: CreateRequest, types: QuestionType[]): string {
   return `## Format\n\n${rules.map((rule) => `- ${rule}`).join('\n')}\n\n${typeHeading}\n\n${typeRules}`;
 }
 
-function schemaFor(kind: CreateKind): Record<string, unknown> {
-  if (kind === 'lesson') return z.toJSONSchema(lessonFileSchema, { io: 'input' }) as Record<string, unknown>;
-  return documentJsonSchema(kind);
+/** The schema for one kind of file, allowing only the question types asked for. */
+export function schemaFor(kind: CreateKind, types: readonly QuestionType[]): Record<string, unknown> {
+  const full = kind === 'lesson' ? (z.toJSONSchema(lessonFileSchema, { io: 'input' }) as Record<string, unknown>) : documentJsonSchema(kind);
+  return restrictQuestionTypes(full, types);
+}
+
+/** Example questions of the allowed types, with ids, at most `count` of them. */
+function exampleQuestions(types: readonly QuestionType[], prefix: string, count: number) {
+  const chosen = types.length > 0 ? types : (['single_choice'] as QuestionType[]);
+  return Array.from({ length: Math.min(count, chosen.length) }, (_, index) => ({ id: `${prefix}-q${index + 1}`, ...EXAMPLE_QUESTIONS[chosen[index]] }));
 }
 
 /** The longest SVG picture asked for, in characters. The app accepts up to SVG_MAX_LENGTH. */
@@ -257,36 +281,31 @@ const examplePicture = {
   caption: 'Boiling point at sea level and at 3000 m.',
 };
 
-const exampleLesson = {
-  id: 'boiling-point',
-  title: 'Why water boils sooner on a mountain',
-  summary: 'Lower air pressure lowers the boiling point.',
-  minutes: 3,
-  blocks: [
-    { type: 'text', markdown: 'Water boils when its vapour pressure equals the pressure of the air above it. Higher up there is **less air**, so that happens at a lower temperature.' },
-    { type: 'callout', tone: 'tip', markdown: 'At 3000 m water boils at about 90 °C, so pasta takes longer.' },
-  ],
-  assessments: [
-    {
-      id: 'boiling-point-practice',
-      mode: 'practice',
-      questions: [
-        {
-          id: 'boiling-point-q1',
-          type: 'single_choice',
-          prompt: 'What happens to the boiling point of water as you climb?',
-          options: ['It rises', 'It falls', 'It stays the same'],
-          answer: 1,
-          explanation: 'Less air pressure means water reaches boiling at a lower temperature.',
-        },
-      ],
-    },
-  ],
-};
+function exampleLesson(types: readonly QuestionType[]) {
+  return {
+    id: 'boiling-point',
+    title: 'Why water boils sooner on a mountain',
+    summary: 'Lower air pressure lowers the boiling point.',
+    minutes: 3,
+    blocks: [
+      { type: 'text', markdown: 'Water boils when its vapour pressure equals the pressure of the air above it. Higher up there is **less air**, so that happens at a lower temperature.' },
+      { type: 'callout', tone: 'tip', markdown: 'At 3000 m water boils at about 90 °C, so pasta takes longer.' },
+    ],
+    assessments: [{ id: 'boiling-point-practice', mode: 'practice', questions: exampleQuestions(types, 'boiling-point', 2) }],
+  };
+}
 
-/** A small valid file of each kind. Tests check that every example really imports. */
-export function example(kind: CreateKind, pictures = false): Record<string, unknown> {
-  const lesson = pictures ? { ...exampleLesson, blocks: [...exampleLesson.blocks, examplePicture] } : exampleLesson;
+/** The question types examples use when none are given: the defaults of the create form. */
+const EXAMPLE_TYPES: QuestionType[] = ['single_choice', 'cloze', 'true_false'];
+
+/**
+ * A small valid file of each kind, using only the given question types.
+ * Tests check that every example really imports.
+ */
+export function example(kind: CreateKind, pictures = false, types: readonly QuestionType[] = EXAMPLE_TYPES): Record<string, unknown> {
+  const questionTypes = types.filter((type) => type !== 'flashcard');
+  const base = exampleLesson(questionTypes);
+  const lesson = pictures ? { ...base, blocks: [...base.blocks, examplePicture] } : base;
   switch (kind) {
     case 'course':
       return {
@@ -298,13 +317,7 @@ export function example(kind: CreateKind, pictures = false): Record<string, unkn
         level: 'beginner',
         tags: ['physics'],
         lessons: [lesson],
-        finalExam: {
-          id: 'final',
-          mode: 'exam',
-          questions: [
-            { id: 'final-q1', type: 'true_false', prompt: 'Water boils at a lower temperature at high altitude.', answer: true, explanation: 'There is less air pressure higher up.' },
-          ],
-        },
+        finalExam: { id: 'final', mode: 'exam', questions: exampleQuestions([...questionTypes].reverse(), 'final', 1) },
       };
     case 'lesson':
       return { format: LESSON_FORMAT, lesson };
@@ -316,23 +329,7 @@ export function example(kind: CreateKind, pictures = false): Record<string, unkn
         language: 'en',
         level: 'beginner',
         tags: ['physics'],
-        assessment: {
-          id: 'boiling-quiz-main',
-          mode: 'practice',
-          questions: [
-            {
-              id: 'boiling-quiz-q1',
-              type: 'cloze',
-              prompt: 'Complete the sentence.',
-              text: 'At high altitude the air pressure is {{1}}, so water boils at a {{2}} temperature.',
-              gaps: [
-                { id: '1', accepted: ['lower', 'less'] },
-                { id: '2', accepted: ['lower'], options: ['lower', 'higher'] },
-              ],
-              explanation: 'Boiling starts when vapour pressure matches the surrounding pressure.',
-            },
-          ],
-        },
+        assessment: { id: 'boiling-quiz-main', mode: 'practice', questions: exampleQuestions(questionTypes, 'boiling-quiz', 2) },
       };
     case 'deck':
       return {
@@ -342,7 +339,7 @@ export function example(kind: CreateKind, pictures = false): Record<string, unkn
         language: 'en',
         level: 'beginner',
         tags: ['physics'],
-        cards: [{ id: 'card-1', type: 'flashcard', prompt: 'Boiling point of water at sea level', back: '100 °C' }],
+        cards: [{ id: 'card-1', ...EXAMPLE_QUESTIONS.flashcard }],
       };
   }
 }
