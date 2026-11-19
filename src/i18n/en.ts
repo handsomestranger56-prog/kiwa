@@ -247,6 +247,7 @@ export const en = {
     emptyCourse: 'This course has no lessons yet.',
     addLesson: 'Add a lesson with AI',
     emptyQuiz: 'This quiz has no questions yet.',
+    addQuestions: 'Add questions',
     emptyDeck: 'This set has no cards yet.',
     minutes: '{{count}} min',
     passMark: 'Pass mark {{percent}}%',

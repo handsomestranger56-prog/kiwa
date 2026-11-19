@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ComponentRef, type ReactNode, type Ref, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   type TextInputProps,
@@ -206,7 +206,7 @@ export function Stepper({
   );
 }
 
-type FieldProps = TextInputProps & { leading?: ReactNode; trailing?: ReactNode };
+type FieldProps = TextInputProps & { leading?: ReactNode; trailing?: ReactNode; ref?: Ref<ComponentRef<typeof TextInput>> };
 
 export function TextField({ leading, trailing, style, onFocus, onBlur, ...rest }: FieldProps) {
   const { colors } = useTheme();
@@ -222,7 +222,7 @@ export function TextField({ leading, trailing, style, onFocus, onBlur, ...rest }
       <TextInput
         placeholderTextColor={colors.textSecondary}
         selectionColor={colors.accent}
-        style={[styles.input, webInput, { color: colors.text }, style]}
+        style={[styles.input, webInput, rest.multiline && styles.multiline, { color: colors.text }, style]}
         onFocus={(event) => {
           setFocused(true);
           onFocus?.(event);
@@ -284,6 +284,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   input: { flex: 1, fontSize: 16, paddingVertical: spacing.sm, minWidth: 0 },
+  // Android centres the text of a tall field unless told otherwise; start at the top as on iOS.
+  multiline: { textAlignVertical: 'top', alignSelf: 'stretch' },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',

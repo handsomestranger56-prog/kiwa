@@ -252,6 +252,7 @@ export const uz: Translation = {
     emptyCourse: 'Bu kursda hali darslar yoʻq.',
     addLesson: 'SI bilan dars qoʻshish',
     emptyQuiz: 'Bu testda hali savollar yoʻq.',
+    addQuestions: 'Savol qoʻshish',
     emptyDeck: 'Bu toʻplamda hali kartochkalar yoʻq.',
     minutes: '{{count}} daq',
     passMark: 'Oʻtish bali {{percent}}%',

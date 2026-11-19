@@ -183,7 +183,10 @@ function ProviderForm({ provider, hasKey }: FormProps) {
           <TextField value={label} onChangeText={setLabel} accessibilityLabel={t('providers.label')} maxLength={60} />
         </Field>
 
-        <Field label={t('providers.key')} hint={kind === 'openai' ? t('providers.keyOptional') : t('providers.keyHint')}>
+        <Field
+          label={t('providers.key')}
+          // "Required" only while there is no key: not once one is typed, nor next to a saved one.
+          hint={kind === 'openai' ? t('providers.keyOptional') : replacingKey && !key.trim() ? t('providers.keyHint') : undefined}>
           {replacingKey ? (
             <TextField
               value={key}

@@ -273,6 +273,7 @@ export const ru: Translation = {
     emptyCourse: 'В этом курсе пока нет уроков.',
     addLesson: 'Добавить урок с ИИ',
     emptyQuiz: 'В этом тесте пока нет вопросов.',
+    addQuestions: 'Добавить вопросы',
     emptyDeck: 'В этом наборе пока нет карточек.',
     minutes: '{{count}} мин',
     passMark: 'Проходной балл {{percent}}%',

@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { backupFile } from '@/core/transfer/files';
 import { useData, useQuery } from '@/data/provider';
@@ -25,8 +25,13 @@ export default function SettingsScreen() {
   const name = useQuery('settings:name', ({ settings }) => settings.get('profile.name'));
   const [backupNote, setBackupNote] = useState<{ ok: boolean; text: string } | null>(null);
 
+  // Writing the file and opening the share sheet takes a few seconds on a phone, so show it is working.
+  const [backingUp, setBackingUp] = useState(false);
+
   const backUp = () => {
+    if (backingUp) return;
     setBackupNote(null);
+    setBackingUp(true);
     backups
       .create()
       .then(async (backup) => {
@@ -35,7 +40,8 @@ export default function SettingsScreen() {
         if (result === 'unavailable') setBackupNote({ ok: false, text: t('errors.generic') });
         else if (result === 'downloaded') setBackupNote({ ok: true, text: t('settings.backedUp', { name: file.name }) });
       })
-      .catch(() => setBackupNote({ ok: false, text: t('errors.generic') }));
+      .catch(() => setBackupNote({ ok: false, text: t('errors.generic') }))
+      .finally(() => setBackingUp(false));
   };
 
   const rows: { key: string; icon: IconName; label: string; onPress: () => void }[] = [
@@ -84,7 +90,11 @@ export default function SettingsScreen() {
               ]}>
               <Icon name={row.icon} color="textSecondary" />
               <AppText style={styles.rowText}>{row.label}</AppText>
-              <Icon name="chevron" size={18} color="textSecondary" />
+              {row.key === 'backup' && backingUp ? (
+                <ActivityIndicator size="small" color={colors.accent} accessibilityLabel={t('common.loading')} />
+              ) : (
+                <Icon name="chevron" size={18} color="textSecondary" />
+              )}
             </Pressable>
           ))}
           {backupNote ? (
