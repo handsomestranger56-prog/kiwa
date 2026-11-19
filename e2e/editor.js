@@ -86,6 +86,22 @@ const { start } = require('./harness');
     await seen('No questions yet.');
   });
 
+  await step('leaving a question with typed changes asks first', async () => {
+    await button('Add question').click();
+    await sheetItem('Single choice').click();
+    await field('Question').fill('Typed but not saved');
+    // The header's back arrow is named after the screen it returns to.
+    await page.getByRole('link', { name: /, back$/ }).locator('visible=true').last().click();
+    await seen('Discard your changes?');
+    await shot('unsaved');
+    await button('Keep editing').click();
+    if ((await field('Question').inputValue()) !== 'Typed but not saved') throw new Error('typed text lost after Keep editing');
+    await page.getByRole('link', { name: /, back$/ }).locator('visible=true').last().click();
+    await seen('Discard your changes?');
+    await button('Discard').click();
+    await seen('No questions yet.');
+  });
+
   await step('add matching, ordering and sorting questions', async () => {
     await addQuestion('Matching pairs', 'Match each volcano to its country.', async () => {
       await field('Left 1').fill('Etna');

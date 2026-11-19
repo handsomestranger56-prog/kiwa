@@ -30,8 +30,14 @@ const { mockAi, MOCK_OPENAI_URL } = require('./mock-ai');
     await seen('The key was not accepted.');
   });
 
-  await step('Claude: detect models with a good key, tick one, save', async () => {
+  await step('a typed key must be tested before saving', async () => {
     await field('API key').fill('sk-ant-good-123');
+    await seen('Now test the key to see its models.');
+    await button('Save').click();
+    await seen('Test the key with “Test and detect models” before saving.');
+  });
+
+  await step('Claude: detect models with a good key, tick one, save', async () => {
     await button('Test and detect models').click();
     await seen('Connected. Found 2 models. 2 can write courses and quizzes.');
     await seen('Claude Haiku 5.5');
