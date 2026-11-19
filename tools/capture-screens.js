@@ -52,6 +52,54 @@ async function mockGemini(page, outline) {
   });
 }
 
+const TAB_ICONS = {
+  library: '<path d="M5 4h3v16H5zM10 4h3v16h-3zM15.2 5.2l2.8-.9 4 15-2.8.9z" fill="currentColor"/>',
+  review: '<path d="M12 5a7 7 0 0 1 6.7 5h-2.4l3.3 4 3.3-4h-2.2A9 9 0 1 0 21 13h-2a7 7 0 1 1-7-8z" fill="currentColor"/>',
+  focus: '<path d="M9 2h6v2H9zM12 6a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm-1 2v5l4 2 .9-1.7-2.9-1.5V10z" fill="currentColor"/>',
+  settings: '<path d="M10.3 2h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9L2 13.7v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="currentColor" fill-rule="evenodd"/>',
+};
+
+/**
+ * Makes the web build look like the phone: a status bar on top, and on the four tab screens the
+ * floating tab bar iOS draws, in place of the web build's own tab bar.
+ */
+async function phoneFrame(page, theme, tabs, active) {
+  await page.evaluate(
+    ({ theme, tabs, active, icons }) => {
+      const dark = theme === 'dark';
+      const ink = dark ? '#ffffff' : '#000000';
+      const style = document.createElement('style');
+      style.id = 'kiwa-phone';
+      style.textContent = `
+        #root { position: fixed !important; inset: 50px 0 0 0 !important; height: auto !important; }
+        [class*="nativeTabsContainer"] [class*="navigationMenuRoot"] { display: none !important; }
+        .kiwa-status { position: fixed; z-index: 99; inset: 0 0 auto; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 40px; font: 600 16px -apple-system, 'SF Pro Text', Inter, system-ui, sans-serif; color: ${ink}; background: ${dark ? '#0F141B' : '#F2F4F7'}; }
+        .kiwa-status svg { display: block; }
+        .kiwa-tabs { position: fixed; z-index: 99; left: 22px; right: 22px; bottom: 26px; height: 64px; border-radius: 32px; display: flex; padding: 4px; gap: 2px;
+          background: ${dark ? 'rgba(40,46,56,.72)' : 'rgba(255,255,255,.72)'}; backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6);
+          box-shadow: 0 10px 30px rgba(0,0,0,${dark ? '.55' : '.16'}), inset 0 0 0 .5px rgba(${dark ? '255,255,255,.18' : '0,0,0,.08'}); }
+        .kiwa-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 28px; font: 600 10.5px -apple-system, Inter, system-ui, sans-serif; color: ${dark ? '#98A4B5' : '#586475'}; }
+        .kiwa-tab.on { color: ${dark ? '#4CC3CF' : '#0A6E7A'}; background: ${dark ? 'rgba(255,255,255,.1)' : 'rgba(10,110,122,.1)'}; }
+        .kiwa-tab svg { width: 24px; height: 24px; }`;
+      document.head.appendChild(style);
+      const status = document.createElement('div');
+      status.className = 'kiwa-status';
+      status.innerHTML = `<span>9:41</span><span style="display:flex;gap:6px;align-items:center">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="${ink}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="${ink}"><path d="M8 2.2c2.4 0 4.6.9 6.2 2.5l1.3-1.4A10.6 10.6 0 0 0 8 .3 10.6 10.6 0 0 0 .5 3.3l1.3 1.4A8.7 8.7 0 0 1 8 2.2zm0 3.7c1.4 0 2.7.5 3.6 1.4l1.3-1.4A7 7 0 0 0 8 4 7 7 0 0 0 3.1 5.9l1.3 1.4C5.3 6.4 6.6 5.9 8 5.9zM8 9.6c.5 0 .9.2 1.2.5L8 11.6l-1.2-1.5c.3-.3.7-.5 1.2-.5z"/></svg>
+        <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="${ink}" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2" fill="${ink}"/><rect x="24.5" y="4.5" width="1.5" height="4" rx=".75" fill="${ink}" opacity=".4"/></svg></span>`;
+      document.body.appendChild(status);
+      if (active) {
+        const bar = document.createElement('div');
+        bar.className = 'kiwa-tabs';
+        bar.innerHTML = tabs.map((tab) => `<div class="kiwa-tab${tab.key === active ? ' on' : ''}"><svg viewBox="0 0 24 24">${icons[tab.key]}</svg>${tab.label}</div>`).join('');
+        document.body.appendChild(bar);
+      }
+    },
+    { theme, tabs, active, icons: TAB_ICONS },
+  );
+}
+
 async function capture(lang, theme) {
   const strings = loadStrings(lang);
   const i18n = i18next.createInstance();
@@ -66,6 +114,9 @@ async function capture(lang, theme) {
   fs.mkdirSync(dir, { recursive: true });
   const shot = async (name) => {
     await page.waitForTimeout(400);
+    await page.evaluate(() => document.querySelectorAll('.kiwa-status, .kiwa-tabs, #kiwa-phone').forEach((node) => node.remove()));
+    await phoneFrame(page, theme, tabs, TAB_OF[name] ?? null);
+    await page.waitForTimeout(150);
     await page.screenshot({ path: path.join(dir, `${name}.png`) });
   };
   const button = (name, nth) => {
@@ -79,13 +130,18 @@ async function capture(lang, theme) {
     await page.waitForLoadState('networkidle');
   };
   await mockGemini(page, copy.outline);
+  await page.addInitScript(() => {
+    globalThis.__KIWA_PHONE_FRAME__ = true;
+  });
+  const tabs = ['library', 'review', 'focus', 'settings'].map((key) => ({ key, label: t(`tabs.${key}`) }));
+  const TAB_OF = { library: 'library', review: 'review', focus: 'focus', settings: 'settings' };
 
   await step('welcome', async () => {
     await visit('/');
     await button(t('welcome.start')).waitFor();
     await shot('welcome');
     await button(t('welcome.start')).click();
-    await page.getByRole('tab', { name: t('tabs.library') }).waitFor();
+    await page.getByRole('button', { name: t('library.new'), exact: true }).filter({ visible: true }).first().waitFor();
   });
 
   await step('import the showcase group', async () => {
@@ -95,6 +151,9 @@ async function capture(lang, theme) {
     await button(t('import.addAll', { count: 3 })).click();
     await page.waitForURL(/group=/);
     await text(copy.course).waitFor();
+    // The top of the library: the new folder, then the items in no folder.
+    await visit('/');
+    await text(copy.group).waitFor();
     await shot('library');
   });
 
@@ -138,8 +197,8 @@ async function capture(lang, theme) {
   await step('create with AI', async () => {
     await visit('/create');
     await field(t('create.topic')).fill(copy.topic);
-    await button(t('create.auto'), 0).click();
-    await button(t('create.auto'), 1).click();
+    await button(t('create.auto')).click();
+    await button(t('create.autoShort'), 0).click();
     await shot('create');
   });
 

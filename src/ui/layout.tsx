@@ -44,6 +44,9 @@ export function Loading({ delay = 250 }: { delay?: number }) {
 export function useTabScreenInsets(): { top: number; bottom: number } {
   const insets = useSafeAreaInsets();
   if (Platform.OS === 'web') {
+    // Screenshots for the project page draw a phone's status bar and floating tab bar over the web
+    // build (tools/capture-screens.js), so screens leave room for those instead of the web tab bar.
+    if ((globalThis as { __KIWA_PHONE_FRAME__?: boolean }).__KIWA_PHONE_FRAME__) return { top: spacing.lg, bottom: 110 };
     return { top: 80, bottom: spacing.xl };
   }
   const bar = Platform.OS === 'ios' ? 50 : 80;
