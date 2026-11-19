@@ -42,8 +42,11 @@ export default function ImportScreen() {
     (await library.list({ kind: 'course' })).map((item) => ({ id: item.id, title: item.title })),
   );
 
-  const fail = (error?: unknown) =>
+  const fail = (error?: unknown) => {
+    // The message on screen is generic, so keep the cause where a developer can find it.
+    if (!(error instanceof FileTooLargeError)) console.warn('Import failed', error);
     setMessage({ tone: 'danger', text: error instanceof FileTooLargeError ? t('import.tooLarge') : t('errors.generic') });
+  };
 
   const check = async (source: string) => {
     setMessage(null);

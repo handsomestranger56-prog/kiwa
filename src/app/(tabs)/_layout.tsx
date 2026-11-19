@@ -1,14 +1,19 @@
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useTranslation } from 'react-i18next';
 
+import { useAndroidKeyboardOpen } from '@/ui/layout';
 import { useTheme } from '@/ui/theme';
 
 export default function TabsLayout() {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  // On Android the bar would otherwise ride up on top of the keyboard and cover the field being typed in.
+  const keyboardOpen = useAndroidKeyboardOpen();
 
   return (
     <NativeTabs
+      hidden={keyboardOpen}
+      labelVisibilityMode="labeled"
       backgroundColor={colors.surface}
       indicatorColor={colors.accentSoft}
       tintColor={colors.accent}

@@ -12,7 +12,7 @@ import { LanguagePicker } from '@/features/settings/language';
 import { shareTextFile } from '@/platform/files';
 import { TextField } from '@/ui/controls';
 import { type IconName, Icon } from '@/ui/icon';
-import { Page, useTabScreenInsets } from '@/ui/layout';
+import { Page, StatusBarShade, useTabScreenInsets } from '@/ui/layout';
 import { AppText } from '@/ui/text';
 import { MIN_TOUCH, radius, spacing, useTheme } from '@/ui/theme';
 
@@ -106,6 +106,7 @@ export default function SettingsScreen() {
           </AppText>
         </View>
       </ScrollView>
+      <StatusBarShade />
     </Page>
   );
 }

@@ -6,7 +6,7 @@ import { dayKey, previousDay, streak } from '@/core/focus/days';
 import { localTime } from '@/core/focus/planner';
 import { useQuery } from '@/data/provider';
 import { Button } from '@/ui/controls';
-import { Page, useTabScreenInsets } from '@/ui/layout';
+import { Page, StatusBarShade, useTabScreenInsets } from '@/ui/layout';
 import { AppText } from '@/ui/text';
 import { radius, spacing, useTheme } from '@/ui/theme';
 
@@ -116,6 +116,7 @@ export default function ReviewScreen() {
           </View>
         ) : null}
       </ScrollView>
+      <StatusBarShade />
     </Page>
   );
 }

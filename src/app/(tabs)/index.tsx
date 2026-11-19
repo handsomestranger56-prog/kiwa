@@ -12,7 +12,7 @@ import { useItemActions } from '@/features/library/item-actions';
 import { FolderRow, ItemRow } from '@/features/library/item-row';
 import { Button, Chip, IconButton, TextField } from '@/ui/controls';
 import { Icon } from '@/ui/icon';
-import { EmptyState, Loading, Page, useTabScreenInsets } from '@/ui/layout';
+import { EmptyState, Loading, Page, StatusBarShade, useTabScreenInsets } from '@/ui/layout';
 import { Snackbar } from '@/ui/overlays';
 import { AppText } from '@/ui/text';
 import { MIN_TOUCH, spacing } from '@/ui/theme';
@@ -91,7 +91,8 @@ function Library() {
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <AppText variant="title" accessibilityRole="header">
+              {/* Shrinks to fit, so a long title ("Библиотека") never pushes the New button off screen. */}
+              <AppText variant="title" accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.titleText}>
                 {t('library.title')}
               </AppText>
               <View style={styles.titleButtons}>
@@ -181,6 +182,7 @@ function Library() {
       {actions.overlays}
       {create.overlays}
       <Snackbar message={actions.snackbar} onDismiss={actions.dismissSnackbar} bottomOffset={insets.bottom} />
+      <StatusBarShade />
     </Page>
   );
 }
@@ -197,7 +199,8 @@ const styles = StyleSheet.create({
   folderBar: { gap: spacing.xs, alignItems: 'flex-start' },
   folderTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'stretch' },
   grow: { flex: 1, minWidth: 0 },
-  titleButtons: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  titleText: { flexShrink: 1 },
+  titleButtons: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 },
   separator: { height: spacing.sm },
   trashLink: {
     minHeight: MIN_TOUCH,

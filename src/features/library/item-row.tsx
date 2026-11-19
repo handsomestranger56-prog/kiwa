@@ -36,7 +36,7 @@ export function ItemRow({ item, folder, onOpen, onToggleFavorite, onMore }: Prop
           <AppText variant="bodyStrong" numberOfLines={2}>
             {item.title}
           </AppText>
-          <AppText variant="small" color="textSecondary" numberOfLines={1}>
+          <AppText variant="small" color="textSecondary" numberOfLines={2}>
             {meta}
           </AppText>
           {item.completed || item.source === 'sample' ? (
@@ -80,7 +80,7 @@ export function FolderRow({ name, count, onOpen }: { name: string; count: number
           <AppText variant="bodyStrong" numberOfLines={2}>
             {name}
           </AppText>
-          <AppText variant="small" color="textSecondary" numberOfLines={1}>
+          <AppText variant="small" color="textSecondary" numberOfLines={2}>
             {meta}
           </AppText>
         </View>

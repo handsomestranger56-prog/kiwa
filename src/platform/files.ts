@@ -18,7 +18,9 @@ export class FileTooLargeError extends Error {
 
 /** Lets the user choose a file and returns its text. Resolves to null if they cancel. */
 export async function pickTextFile(): Promise<{ name: string; text: string } | null> {
-  const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, multiple: false });
+  // On Android, read the picker's content:// address directly. Its copy in the cache folder is refused
+  // in Expo Go ("Missing 'READ' permission"), and the file is read once, right away, so no copy is needed.
+  const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: Platform.OS !== 'android', multiple: false });
   if (result.canceled) return null;
 
   const asset = result.assets[0];
