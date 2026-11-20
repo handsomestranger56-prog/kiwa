@@ -6,7 +6,7 @@ import { timeLeft } from '@/core/focus/pomodoro';
 import { useQuery } from '@/data/provider';
 import { useFocus } from '@/features/focus/focus-provider';
 import { Button, Chip, Stepper } from '@/ui/controls';
-import { Page, useTabScreenInsets } from '@/ui/layout';
+import { Page, StatusBarShade, useTabScreenInsets } from '@/ui/layout';
 import { AppText } from '@/ui/text';
 import { radius, spacing, useTheme } from '@/ui/theme';
 
@@ -116,6 +116,7 @@ export default function FocusScreen() {
           </AppText>
         </View>
       </ScrollView>
+      <StatusBarShade />
     </Page>
   );
 }

@@ -55,6 +55,11 @@ const DEFAULT_LABEL: Record<ProviderKind, string> = { claude: 'Claude', gemini: 
 
 type FormProps = { provider: Provider | null; hasKey: boolean };
 
+/** Stands for the stored key in a check signature, since that key is read only when it is used. */
+const SAVED_KEY = '\u0000saved';
+/** What a successful check covered: the provider kind, its address and the key it used. */
+const checkSignature = (kind: ProviderKind, baseUrl: string, key: string) => [kind, baseUrl.trim(), key].join('\n');
+
 function ProviderForm({ provider, hasKey }: FormProps) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -73,6 +78,8 @@ function ProviderForm({ provider, hasKey }: FormProps) {
   const [problem, setProblem] = useState<string | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [showOthers, setShowOthers] = useState(false);
+  // A saved provider counts as checked as it was stored. A new one is checked by Test and detect.
+  const [checked, setChecked] = useState<string | null>(provider ? checkSignature(provider.kind, provider.baseUrl ?? '', hasKey ? SAVED_KEY : '') : null);
 
   const labelIsDefault = Object.values(DEFAULT_LABEL).includes(label) || OPENAI_COMPATIBLE_PRESETS.some((preset) => preset.label === label);
 
@@ -89,6 +96,8 @@ function ProviderForm({ provider, hasKey }: FormProps) {
   /** The key typed now, or the stored one when it is not being replaced. */
   const currentKey = async () => (replacingKey ? key.trim() : ((provider ? await readApiKey(provider.id) : null) ?? ''));
   const keyRequired = kind !== 'openai';
+  const signature = checkSignature(kind, baseUrl, replacingKey ? key.trim() : SAVED_KEY);
+  const needsCheck = signature !== checked;
 
   const detect = async () => {
     setStatus(null);
@@ -98,6 +107,7 @@ function ProviderForm({ provider, hasKey }: FormProps) {
       setStatus({ ok: false, text: t('providers.needKey') });
       return;
     }
+    const tested = signature;
     setTesting(true);
     try {
       const found = await listModels({ kind, apiKey, baseUrl: baseUrl.trim() || undefined });
@@ -107,6 +117,7 @@ function ProviderForm({ provider, hasKey }: FormProps) {
       const writers = groupModels(kind, found, baseUrl.trim() || null).find((entry) => entry.group === 'text')?.models ?? [];
       const kept = enabled.filter((model) => writers.some((entry) => entry.model.id === model));
       setEnabled(kept.length > 0 ? kept : writers.slice(0, 1).map((entry) => entry.model.id));
+      setChecked(tested);
       setStatus({ ok: true, text: `${t('providers.found', { count: found.length })} ${t('providers.writers', { count: writers.length })}` });
     } catch (error) {
       const kindOfError = error instanceof AiError ? error.kind : 'network';
@@ -121,6 +132,9 @@ function ProviderForm({ provider, hasKey }: FormProps) {
     if (!label.trim()) return setProblem(t('providers.needLabel'));
     if (kind === 'openai' && !/^https?:\/\//.test(baseUrl.trim())) return setProblem(t('providers.needUrl'));
     if (keyRequired && replacingKey && !key.trim()) return setProblem(t('providers.needKey'));
+    // Models come from the check, so a new key or address is tested before it is saved.
+    if (needsCheck) return setProblem(t('providers.needCheck'));
+    if (enabled.length === 0) return setProblem(t('providers.needModel'));
     try {
       const id = await providers.save({ id: provider?.id, kind, label, baseUrl: baseUrl.trim() || null, models, enabled });
       if (replacingKey) {
@@ -183,7 +197,18 @@ function ProviderForm({ provider, hasKey }: FormProps) {
           <TextField value={label} onChangeText={setLabel} accessibilityLabel={t('providers.label')} maxLength={60} />
         </Field>
 
-        <Field label={t('providers.key')} hint={kind === 'openai' ? t('providers.keyOptional') : t('providers.keyHint')}>
+        <Field
+          label={t('providers.key')}
+          // "Required" only while there is no key: not once one is typed, nor next to a saved one.
+          hint={
+            replacingKey && key.trim() && needsCheck
+              ? t('providers.keyCheckHint')
+              : kind === 'openai'
+                ? t('providers.keyOptional')
+                : replacingKey && !key.trim()
+                  ? t('providers.keyHint')
+                  : undefined
+          }>
           {replacingKey ? (
             <TextField
               value={key}

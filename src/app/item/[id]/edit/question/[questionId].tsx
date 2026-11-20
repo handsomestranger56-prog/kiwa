@@ -9,6 +9,7 @@ import { DECK_ASSESSMENT_ID, findAssessment } from '@/core/quiz/session';
 import { type LibraryDocument, type ParseIssue, type Question, QUESTION_TYPES } from '@/core/schema';
 import { SaveBar, useEditor } from '@/features/editor/parts';
 import { QuestionForm } from '@/features/editor/question-form';
+import { useUnsavedGuard } from '@/features/editor/unsaved-guard';
 import { Tag } from '@/ui/controls';
 import { EmptyState, Loading, Page } from '@/ui/layout';
 import { spacing } from '@/ui/theme';
@@ -53,6 +54,8 @@ function QuestionEditor({ document, assessmentId, existing, initial, save }: Pro
   const { t } = useTranslation();
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
+  const [start] = useState(() => JSON.stringify(initial));
+  const guard = useUnsavedGuard(JSON.stringify(draft) !== start);
   const [issues, setIssues] = useState<ParseIssue[]>([]);
   const [failed, setFailed] = useState(false);
 
@@ -67,7 +70,7 @@ function QuestionEditor({ document, assessmentId, existing, initial, save }: Pro
     save(putQuestion(document, assessmentId, result.question))
       .then((problems) => {
         setIssues(problems);
-        if (problems.length === 0) router.back();
+        if (problems.length === 0) guard.leave(() => router.back());
       })
       .catch(() => setFailed(true));
   };
@@ -85,6 +88,7 @@ function QuestionEditor({ document, assessmentId, existing, initial, save }: Pro
         />
       </ScrollView>
       <SaveBar onSave={saveQuestion} issues={issues} failed={failed} />
+      {guard.dialog}
     </>
   );
 }

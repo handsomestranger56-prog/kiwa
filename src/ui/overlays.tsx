@@ -1,6 +1,6 @@
-import { type ReactNode, useEffect, useEffectEvent, useState } from 'react';
+import { type ComponentRef, type ReactNode, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { type TextInput, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, TextField } from './controls';
@@ -144,7 +144,16 @@ export function PromptDialog(props: PromptProps) {
 
 function PromptForm(props: PromptProps) {
   const [value, setValue] = useState(props.initialValue ?? '');
+  const field = useRef<ComponentRef<typeof TextInput>>(null);
   const trimmed = value.trim();
+
+  // autoFocus inside a Modal focuses the field on Android without opening the keyboard, because the
+  // dialog's window is not ready yet. Focusing a moment later opens it.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const timer = setTimeout(() => field.current?.focus(), 150);
+    return () => clearTimeout(timer);
+  }, []);
   const submit = () => {
     if (!trimmed) return;
     props.onClose();
@@ -153,7 +162,8 @@ function PromptForm(props: PromptProps) {
   return (
     <>
       <TextField
-        autoFocus
+        ref={field}
+        autoFocus={Platform.OS !== 'android'}
         value={value}
         onChangeText={setValue}
         placeholder={props.placeholder}

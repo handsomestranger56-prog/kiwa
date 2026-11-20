@@ -8,7 +8,8 @@
     "scheme": "kiwa",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/kiwa.icon"
+      "icon": "./assets/kiwa.icon",
+      "bundleIdentifier": "com.kiwa.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.kiwa.app"
     },
     "web": {
       "output": "single",

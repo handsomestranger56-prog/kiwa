@@ -5,7 +5,7 @@ type ViewHandle = ComponentRef<typeof View>;
 
 type Registry = {
   register: (id: string, view: ViewHandle) => () => void;
-  /** The id of the drop zone under a point on the screen, if any. */
+  /** The id of the drop zone under a point in page coordinates, if any. */
   zoneAt: (x: number, y: number) => Promise<string | null>;
 };
 
@@ -27,7 +27,9 @@ export function DragArea({ children }: { children: ReactNode }) {
           [...zones.entries()].map(
             ([id, view]) =>
               new Promise<string | null>((resolve) => {
-                view.measureInWindow((left, top, width, height) => {
+                // measure() reports page coordinates, the same space as the gesture's moveX and moveY.
+                // measureInWindow() does not on Android: it is off by the status bar height there.
+                view.measure((_x, _y, width, height, left, top) => {
                   resolve(x >= left && x <= left + width && y >= top && y <= top + height ? id : null);
                 });
               }),

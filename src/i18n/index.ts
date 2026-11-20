@@ -3,6 +3,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 import { en } from './en';
+import { installPluralRules } from './plural-rules';
 import { ru } from './ru';
 import { uz } from './uz';
 
@@ -50,6 +51,9 @@ export function applyLanguage(choice: string | null): void {
   // eslint-disable-next-line import/no-named-as-default-member
   if (i18n.language !== next) void i18n.changeLanguage(next);
 }
+
+// Before init: i18next reads Intl.PluralRules to pick "5 вопросов" over "5 вопроса".
+installPluralRules();
 
 // Module scope so translations are ready before the first screen renders.
 // eslint-disable-next-line import/no-named-as-default-member

@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type ViewProps, ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { type ViewProps, ActivityIndicator, Keyboard, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from './icon';
@@ -53,6 +53,32 @@ export function useTabScreenInsets(): { top: number; bottom: number } {
   return { top: insets.top + spacing.lg, bottom: insets.bottom + bar + spacing.lg };
 }
 
+/**
+ * A strip in the page colour behind the phone's status bar. Tab screens draw edge to edge, so
+ * without it their content scrolls under the clock and icons. Put it last inside the Page.
+ */
+export function StatusBarShade() {
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  if (Platform.OS === 'web' || insets.top === 0) return null;
+  return <View pointerEvents="none" style={[styles.shade, { height: insets.top, backgroundColor: colors.background }]} />;
+}
+
+/** Whether the on-screen keyboard is open. Android only: elsewhere it is always false. */
+export function useAndroidKeyboardOpen(): boolean {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const shown = Keyboard.addListener('keyboardDidShow', () => setOpen(true));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setOpen(false));
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+  return open;
+}
+
 type EmptyProps = { icon: IconName; title: string; body: string; action?: ReactNode };
 
 export function EmptyState({ icon, title, body, action }: EmptyProps) {
@@ -77,6 +103,7 @@ export function Divider() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, alignItems: 'center' },
+  shade: { position: 'absolute', top: 0, left: 0, right: 0 },
   column: { flex: 1, width: '100%', maxWidth: MAX_CONTENT_WIDTH },
   empty: { alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xxl, paddingVertical: spacing.xxl * 2 },
   centered: { textAlign: 'center' },

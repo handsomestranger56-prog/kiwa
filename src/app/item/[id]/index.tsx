@@ -159,7 +159,21 @@ export default function ItemScreen() {
           </>
         ) : document.format === QUIZ_FORMAT ? (
           document.assessment.questions.length === 0 ? (
-            <AppText color="textSecondary">{t('item.emptyQuiz')}</AppText>
+            <View style={styles.section}>
+              <AppText color="textSecondary">{t('item.emptyQuiz')}</AppText>
+              <View style={styles.start}>
+                <Button
+                  icon="add"
+                  label={t('item.addQuestions')}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/item/[id]/edit/assessment/[assessmentId]',
+                      params: { id: item.id, assessmentId: document.assessment.id },
+                    })
+                  }
+                />
+              </View>
+            </View>
           ) : (
             <AssessmentCard itemId={item.id} assessment={document.assessment} record={records[document.assessment.id]} />
           )

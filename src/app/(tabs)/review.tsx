@@ -6,7 +6,7 @@ import { dayKey, previousDay, streak } from '@/core/focus/days';
 import { localTime } from '@/core/focus/planner';
 import { useQuery } from '@/data/provider';
 import { Button } from '@/ui/controls';
-import { Page, useTabScreenInsets } from '@/ui/layout';
+import { Page, StatusBarShade, useTabScreenInsets } from '@/ui/layout';
 import { AppText } from '@/ui/text';
 import { radius, spacing, useTheme } from '@/ui/theme';
 
@@ -53,7 +53,9 @@ export default function ReviewScreen() {
 
   const data = stats.data;
   const maxMinutes = Math.max(25, ...(data?.week.map((day) => day.minutes) ?? [0]));
-  const weekday = (key: string) => new Date(`${key}T12:00:00Z`).toLocaleDateString(i18n.language, { weekday: 'narrow', timeZone: 'UTC' });
+  // Short names ("пн", "Mon"), not single letters: one letter stands for two days in every app language.
+  const weekday = (key: string) =>
+    new Date(`${key}T12:00:00Z`).toLocaleDateString(i18n.language, { weekday: 'short', timeZone: 'UTC' }).replace(/\.$/, '');
 
   return (
     <Page>
@@ -100,7 +102,7 @@ export default function ReviewScreen() {
                       ]}
                     />
                   </View>
-                  <AppText variant="small" color="textSecondary">
+                  <AppText variant="small" color="textSecondary" numberOfLines={1}>
                     {weekday(day.key)}
                   </AppText>
                 </View>
@@ -116,6 +118,7 @@ export default function ReviewScreen() {
           </View>
         ) : null}
       </ScrollView>
+      <StatusBarShade />
     </Page>
   );
 }
