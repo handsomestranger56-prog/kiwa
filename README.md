@@ -99,6 +99,21 @@ Android) and `production` for the stores.
 npx eas-cli@latest build --profile preview --platform android
 ```
 
+### Android APK on GitHub
+
+The project page's **Download for Android** button links to
+`https://github.com/handsomestranger56-prog/kiwa/releases/latest/download/kiwa.apk`, the `kiwa.apk`
+asset of the newest release. To publish a version:
+
+1. Build the APK with the `preview` profile (above) and copy its download link from the build page on
+   expo.dev.
+2. In GitHub, open **Actions → Release Android APK → Run workflow**, paste the link and a tag such as
+   `v0.1.0`. The workflow checks that the file is an APK and creates the release with it.
+
+You can also create the release by hand on the Releases page: attach the file named exactly
+`kiwa.apk`, and leave **Set as a pre-release** off, because `latest` skips drafts and pre-releases.
+The link works for everyone only while the repository is public.
+
 Before a store build, decide and fill in:
 
 - **The app's name** is KIWA (Keep Improving With AI). Check the stores for clashes before release.

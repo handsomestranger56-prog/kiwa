@@ -1,0 +1,56 @@
+name: Release Android APK
+
+# Publishes an APK as the kiwa.apk asset of a GitHub release. The project page links to
+# releases/latest/download/kiwa.apk, so the newest release is what people download.
+#
+# Run it from the Actions tab: paste the APK link from the EAS build page (expo.dev, "Install" or
+# the download button) and a version tag such as v0.1.0.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag, for example v0.1.0
+        required: true
+      apk_url:
+        description: Download link of the APK built by EAS (preview profile)
+        required: true
+      notes:
+        description: What changed (optional)
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the APK
+        env:
+          APK_URL: ${{ inputs.apk_url }}
+        run: |
+          curl --fail --location --silent --show-error --output kiwa.apk "$APK_URL"
+          # An APK is a zip file: refuse an HTML page or an .aab by mistake.
+          if [ "$(head -c 2 kiwa.apk)" != "PK" ] || ! unzip -l kiwa.apk | grep -q 'AndroidManifest.xml'; then
+            echo "::error::The link did not return an APK. Use the preview build (APK), not the production .aab."
+            exit 1
+          fi
+          ls -l kiwa.apk
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          body="${NOTES:-Android build of KIWA.}
+
+          Install: download kiwa.apk on your phone, open it, and allow your browser or file manager to install apps when Android asks."
+          gh release create "$VERSION" kiwa.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "KIWA $VERSION" \
+            --notes "$body" \
+            --latest

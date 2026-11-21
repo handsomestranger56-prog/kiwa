@@ -96,6 +96,8 @@
   .btn.primary { background: var(--accent); color: var(--on-accent); }
   .btn.ghost { color: var(--ink); background: var(--surface); border: 1px solid var(--line); }
   .btn:hover { transform: translateY(-2px); }
+  .btn svg { flex: none; }
+  .get-note { margin-top: 12px; font-size: var(--step--1); color: var(--muted); }
   .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; margin-top: 38px; padding: 0; list-style: none; max-width: 34em; }
   .facts li { display: grid; gap: 2px; font-size: var(--step--1); color: var(--muted); line-height: 1.45; }
   .facts strong { font-family: var(--display); font-weight: 700; color: var(--ink); font-size: var(--step-1); line-height: 1.2; }
@@ -256,9 +258,10 @@
         <h1 data-k="hero.title" data-html>Keep improving <em>with AI</em></h1>
         <p class="lead" data-k="hero.lead">Make courses, quizzes and flashcards with any chatbot or your own API key. Study them in short lessons, and let the app bring back what you missed before you forget it.</p>
         <div class="actions">
-          <a class="btn primary" href="#screens" data-k="hero.cta1">See the app</a>
-          <a class="btn ghost" href="#create" data-k="hero.cta2">How it works</a>
+          <a class="btn primary" data-apk href="https://github.com/handsomestranger56-prog/kiwa/releases/latest/download/kiwa.apk"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M17.6 9.48 19.44 6.3a.38.38 0 0 0-.66-.38l-1.87 3.23a11.4 11.4 0 0 0-9.82 0L5.22 5.92a.38.38 0 0 0-.66.38L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/></svg><span data-k="hero.get">Download for Android</span></a>
+          <a class="btn ghost" href="#screens" data-k="hero.cta1">See the app</a>
         </div>
+        <p class="get-note" data-k="hero.getNote" data-html>Free APK from <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. Google Play and iPhone come later.</p>
         <ul class="facts">
           <li><strong>10</strong><span data-k="facts.types">question types, from multiple choice to drag and drop</span></li>
           <li><strong>3</strong><span data-k="facts.langs">languages: English, Oʻzbekcha, Русский</span></li>
@@ -393,7 +396,7 @@
         <span class="kicker" data-k="faq.kicker">Q&amp;A</span>
         <h2 id="faq-title" data-k="faq.title">Questions</h2>
         <p data-k="faq.lead">Something else on your mind, or found a bug? Open an issue on GitHub.</p>
-        <a class="btn ghost issues" data-issues href="https://github.com/handsomestranger56-prog/anki/issues" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4.1.5-.2.5-.4v-1.4c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.2 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.4 7.4 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg><span data-k="faq.issues">Report an issue</span></a>
+        <a class="btn ghost issues" data-issues href="https://github.com/handsomestranger56-prog/kiwa/issues" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4.1.5-.2.5-.4v-1.4c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.2 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.4 7.4 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg><span data-k="faq.issues">Report an issue</span></a>
       </div>
       <div class="faq-list" id="faq-list"></div>
     </div>
@@ -417,7 +420,7 @@
 <footer>
   <div class="wrap">
     <span><b>KIWA</b> · <span data-k="foot.name">Keep Improving With AI</span></span>
-    <span><span data-k="foot.built">Built with Expo and React Native. In development, 2026.</span> · <a data-issues href="https://github.com/handsomestranger56-prog/anki/issues" target="_blank" rel="noopener" data-k="faq.issues">Report an issue</a></span>
+    <span><span data-k="foot.built">Built with Expo and React Native. In development, 2026.</span> · <a data-apk href="https://github.com/handsomestranger56-prog/kiwa/releases/latest/download/kiwa.apk" data-k="foot.get">Download APK</a> · <a data-issues href="https://github.com/handsomestranger56-prog/kiwa/issues" target="_blank" rel="noopener" data-k="faq.issues">Report an issue</a></span>
   </div>
 </footer>
 
@@ -425,7 +428,10 @@
 <script>
 (() => {
   /** Where people report problems. One place, so it is easy to change when the repository moves. */
-  const ISSUES_URL = 'https://github.com/handsomestranger56-prog/anki/issues';
+  const ISSUES_URL = 'https://github.com/handsomestranger56-prog/kiwa/issues';
+  /** The Android app: the kiwa.apk asset of the newest GitHub release (see "Release" in the README). */
+  const RELEASES_URL = 'https://github.com/handsomestranger56-prog/kiwa/releases';
+  const APK_URL = `${RELEASES_URL}/latest/download/kiwa.apk`;
   const SHOTS = ['library', 'course', 'lesson', 'quiz', 'result', 'flashcard', 'create', 'outline', 'models', 'review', 'focus', 'settings', 'welcome'];
   const T = {
     en: {
@@ -433,7 +439,8 @@
       'hero.eyebrow': 'Study app for Android and iOS · in development',
       'hero.title': 'Keep improving <em>with AI</em>',
       'hero.lead': 'Make courses, quizzes and flashcards with any chatbot or your own API key. Study them in short lessons, and let the app bring back what you missed before you forget it.',
-      'hero.cta1': 'See the app', 'hero.cta2': 'How it works',
+      'hero.cta1': 'See the app', 'hero.get': 'Download for Android',
+      'hero.getNote': 'Free APK from <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. Google Play and iPhone come later.',
       'facts.types': 'question types, from multiple choice to drag and drop', 'facts.langs': 'languages: English, Oʻzbekcha, Русский',
       'facts.offlineBig': 'Offline', 'facts.offline': 'everything is stored on the phone', 'facts.keysBig': 'Your keys', 'facts.keys': 'Claude, Gemini, OpenAI and compatible',
       'create.kicker': 'Create', 'create.title': 'A course in minutes, written by the AI you already use',
@@ -470,7 +477,7 @@
       'priv.t3': 'Works without AI', 'priv.p3': 'Prompt for AI needs no key at all, and every course can be written or edited by hand.',
       'nav.faq': 'Q&A', 'faq.kicker': 'Q&A', 'faq.title': 'Questions', 'faq.lead': 'Something else on your mind, or found a bug? Open an issue on GitHub.', 'faq.issues': 'Report an issue',
       faq: [
-        ['When can I install KIWA?', 'KIWA is still being built and is not in the App Store or Google Play yet. Follow the project on GitHub to hear when it is.'],
+        ['How do I install KIWA?', 'On Android, tap <b>Download for Android</b> to get the APK from GitHub. Open the file, let your browser or file manager install apps when Android asks, then tap Install. New versions are published on <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. KIWA is not in Google Play or the App Store yet.'],
         ['Do I need an API key?', 'No. "Prompt for AI" writes a request you paste into any chatbot, free plans included, and you import the reply. A key from Claude, Gemini, OpenAI or a compatible service only adds Generate, Check with AI and Explain deeper.'],
         ['Which AI providers work?', 'Claude, Gemini and any service with the OpenAI API: OpenAI, Grok, OpenRouter, DeepSeek, Mistral, or a local Ollama server. You can add several and pick the model for each run.'],
         ['What happens to my data?', 'It stays on your phone. There is no account and no server. API keys sit in the secure storage of the phone and are sent only to the provider you chose.'],
@@ -479,7 +486,7 @@
         ['Which languages does it speak?', 'The app is in English, Uzbek and Russian. Courses can be written in any language the AI knows.'],
       ],
       themes: { system: 'Same as device', light: 'Light', dark: 'Dark', group: 'Theme' },
-      'foot.name': 'Keep Improving With AI', 'foot.built': 'Built with Expo and React Native. In development, 2026.',
+      'foot.name': 'Keep Improving With AI', 'foot.built': 'Built with Expo and React Native. In development, 2026.', 'foot.get': 'Download APK',
       captions: {
         library: ['Library', 'Courses, quizzes and flashcards, sorted into groups'], course: ['Course', 'Lessons with progress and bookmarks'],
         lesson: ['Lesson', 'Text, tips and an animated SVG diagram'], quiz: ['Drag and drop', 'Put steps in order, or use the arrows'],
@@ -496,7 +503,8 @@
       'hero.eyebrow': 'Android va iOS uchun oʻqish ilovasi · ishlab chiqilmoqda',
       'hero.title': 'SI bilan <em>tinmay oʻsing</em>',
       'hero.lead': 'Istalgan chatbot yoki oʻz API kalitingiz bilan kurslar, testlar va kartochkalar yarating. Ularni qisqa darslarda oʻrganing, ilova esa xato qilganlaringizni unutishingizdan oldin qaytaradi.',
-      'hero.cta1': 'Ilovani koʻrish', 'hero.cta2': 'Qanday ishlaydi',
+      'hero.cta1': 'Ilovani koʻrish', 'hero.get': 'Android uchun yuklab olish',
+      'hero.getNote': 'Bepul APK: <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. Google Play va iPhone keyinroq.',
       'facts.types': 'xil savol: bitta javobdan sudrab joylashgacha', 'facts.langs': 'til: English, Oʻzbekcha, Русский',
       'facts.offlineBig': 'Oflayn', 'facts.offline': 'hammasi telefonda saqlanadi', 'facts.keysBig': 'Oʻz kalitlaringiz', 'facts.keys': 'Claude, Gemini, OpenAI va mos xizmatlar',
       'create.kicker': 'Yaratish', 'create.title': 'Bir necha daqiqada kurs, siz foydalanadigan SI yozadi',
@@ -533,7 +541,7 @@
       'priv.t3': 'SIsiz ham ishlaydi', 'priv.p3': 'SI uchun soʻrov kalitsiz ishlaydi, har bir kursni qoʻlda yozish yoki tahrirlash mumkin.',
       'nav.faq': 'Savol-javob', 'faq.kicker': 'Savol-javob', 'faq.title': 'Savollar', 'faq.lead': 'Boshqa savolingiz bormi yoki xato topdingizmi? GitHubʼda murojaat qoldiring.', 'faq.issues': 'Xato haqida xabar berish',
       faq: [
-        ['KIWAni qachon oʻrnatish mumkin?', 'KIWA hali ishlab chiqilmoqda va App Store yoki Google Playʼda hozircha yoʻq. Chiqqanini bilish uchun loyihani GitHubʼda kuzatib boring.'],
+        ['KIWAni qanday oʻrnatsam boʻladi?', 'Androidʼda <b>Android uchun yuklab olish</b> tugmasini bosing, APK GitHubʼdan yuklanadi. Faylni oching, Android soʻraganda brauzer yoki fayl menejeriga ilova oʻrnatishga ruxsat bering va Oʻrnatish tugmasini bosing. Yangi versiyalar <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a> sahifasida chiqadi. KIWA hozircha Google Play va App Storeʼda yoʻq.'],
         ['API kalit kerakmi?', 'Yoʻq. “SI uchun soʻrov” istalgan chatbotga, jumladan bepul tariflarga ham joylanadigan soʻrov tayyorlaydi, siz esa javobni import qilasiz. Claude, Gemini, OpenAI yoki mos xizmat kaliti faqat Yaratish, SI bilan tekshirish va Batafsil tushuntirishni qoʻshadi.'],
         ['Qaysi SI provayderlari ishlaydi?', 'Claude, Gemini va OpenAI API ga ega istalgan xizmat: OpenAI, Grok, OpenRouter, DeepSeek, Mistral yoki mahalliy Ollama serveri. Bir nechtasini qoʻshib, har safar modelni tanlashingiz mumkin.'],
         ['Maʼlumotlarim nima boʻladi?', 'Ular telefoningizda qoladi. Akkaunt ham, server ham yoʻq. API kalitlari telefonning himoyalangan xotirasida turadi va faqat siz tanlagan provayderga yuboriladi.'],
@@ -542,7 +550,7 @@
         ['Qaysi tillarda ishlaydi?', 'Ilova ingliz, oʻzbek va rus tillarida. Kurslar esa SI biladigan istalgan tilda yozilishi mumkin.'],
       ],
       themes: { system: 'Qurilmadagidek', light: 'Yorugʻ', dark: 'Qorongʻi', group: 'Mavzu' },
-      'foot.name': 'Keep Improving With AI', 'foot.built': 'Expo va React Native bilan yaratilgan. Ishlab chiqilmoqda, 2026.',
+      'foot.name': 'Keep Improving With AI', 'foot.built': 'Expo va React Native bilan yaratilgan. Ishlab chiqilmoqda, 2026.', 'foot.get': 'APK yuklab olish',
       captions: {
         library: ['Kutubxona', 'Guruhlarga ajratilgan kurslar, testlar va kartochkalar'], course: ['Kurs', 'Jarayon va xatchoʻplar bilan darslar'],
         lesson: ['Dars', 'Matn, maslahat va animatsiyali SVG chizma'], quiz: ['Sudrab joylash', 'Bosqichlarni tartibga soling yoki strelkalardan foydalaning'],
@@ -559,7 +567,8 @@
       'hero.eyebrow': 'Приложение для учёбы на Android и iOS · в разработке',
       'hero.title': 'Учитесь лучше <em>с ИИ</em>',
       'hero.lead': 'Создавайте курсы, тесты и карточки с любым чат-ботом или своим API-ключом. Учите их короткими уроками, а приложение вернёт ошибки до того, как вы их забудете.',
-      'hero.cta1': 'Посмотреть приложение', 'hero.cta2': 'Как это работает',
+      'hero.cta1': 'Посмотреть приложение', 'hero.get': 'Скачать для Android',
+      'hero.getNote': 'Бесплатный APK на <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. Google Play и iPhone появятся позже.',
       'facts.types': 'типов вопросов: от выбора ответа до перетаскивания', 'facts.langs': 'языка: English, Oʻzbekcha, Русский',
       'facts.offlineBig': 'Офлайн', 'facts.offline': 'всё хранится на телефоне', 'facts.keysBig': 'Свои ключи', 'facts.keys': 'Claude, Gemini, OpenAI и совместимые',
       'create.kicker': 'Создание', 'create.title': 'Курс за несколько минут от ИИ, которым вы уже пользуетесь',
@@ -596,7 +605,7 @@
       'priv.t3': 'Работает и без ИИ', 'priv.p3': 'Запрос для ИИ не требует ключа, а любой курс можно написать или отредактировать вручную.',
       'nav.faq': 'Вопросы', 'faq.kicker': 'Вопросы и ответы', 'faq.title': 'Вопросы', 'faq.lead': 'Остался вопрос или нашли ошибку? Создайте issue на GitHub.', 'faq.issues': 'Сообщить о проблеме',
       faq: [
-        ['Когда можно установить KIWA?', 'KIWA ещё в разработке, в App Store и Google Play приложения пока нет. Следите за проектом на GitHub, чтобы узнать о выходе.'],
+        ['Как установить KIWA?', 'На Android нажмите <b>Скачать для Android</b>, и APK загрузится с GitHub. Откройте файл, разрешите браузеру или файловому менеджеру устанавливать приложения, когда Android спросит, и нажмите «Установить». Новые версии выходят на <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. В Google Play и App Store KIWA пока нет.'],
         ['Нужен ли API-ключ?', 'Нет. «Запрос для ИИ» готовит текст, который можно вставить в любой чат-бот, в том числе бесплатный, а ответ затем импортировать. Ключ Claude, Gemini, OpenAI или совместимого сервиса лишь добавляет генерацию, проверку с ИИ и подробные объяснения.'],
         ['Какие ИИ-провайдеры поддерживаются?', 'Claude, Gemini и любой сервис с API OpenAI: OpenAI, Grok, OpenRouter, DeepSeek, Mistral или локальный сервер Ollama. Можно добавить несколько и выбирать модель для каждого запуска.'],
         ['Что происходит с моими данными?', 'Они остаются на телефоне. Нет ни аккаунта, ни сервера. API-ключи хранятся в защищённом хранилище телефона и отправляются только выбранному провайдеру.'],
@@ -605,7 +614,7 @@
         ['На каких языках работает?', 'Приложение на английском, узбекском и русском. Курсы можно создавать на любом языке, который знает ИИ.'],
       ],
       themes: { system: 'Как на устройстве', light: 'Светлая', dark: 'Тёмная', group: 'Тема' },
-      'foot.name': 'Keep Improving With AI', 'foot.built': 'Создано на Expo и React Native. В разработке, 2026.',
+      'foot.name': 'Keep Improving With AI', 'foot.built': 'Создано на Expo и React Native. В разработке, 2026.', 'foot.get': 'Скачать APK',
       captions: {
         library: ['Библиотека', 'Курсы, тесты и карточки, разложенные по группам'], course: ['Курс', 'Уроки с прогрессом и закладками'],
         lesson: ['Урок', 'Текст, совет и анимированная SVG-схема'], quiz: ['Перетаскивание', 'Расставьте шаги по порядку или используйте стрелки'],
@@ -636,7 +645,12 @@
 
   const strip = document.getElementById('strip');
   document.getElementById('strip-track').innerHTML = SHOTS.map((name) => `<div class="swiper-slide"><figure><div class="phone"><img data-shot="${name}" src="${src(name)}" alt="" width="390" height="844"></div><figcaption><b data-cap="${name}"></b><span data-capd="${name}"></span></figcaption></figure></div>`).join('');
-  document.querySelectorAll('[data-issues]').forEach((link) => link.setAttribute('href', ISSUES_URL));
+  const links = () => {
+    document.querySelectorAll('[data-issues]').forEach((link) => link.setAttribute('href', ISSUES_URL));
+    document.querySelectorAll('[data-apk]').forEach((link) => link.setAttribute('href', APK_URL));
+    document.querySelectorAll('[data-releases]').forEach((link) => link.setAttribute('href', RELEASES_URL));
+  };
+  links();
 
   // Q&A: native disclosure elements, so they work with a keyboard and a screen reader as they are.
   const faqList = document.getElementById('faq-list');
@@ -683,6 +697,7 @@
     document.querySelectorAll('.langs button').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.lang === lang)));
     strip.setAttribute('aria-label', t.screenshots);
     renderFaq(t.faq);
+    links();
     document.querySelector('.themes').setAttribute('aria-label', t.themes.group);
     document.querySelectorAll('.themes button').forEach((button) => button.setAttribute('aria-label', t.themes[button.dataset.mode]));
     document.querySelector('.rhythm').setAttribute('aria-label', t.review);
