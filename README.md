@@ -92,23 +92,40 @@ queries that depend on it are checked together.
 
 ## Release
 
-Builds run on EAS. `eas.json` has two profiles: `preview` for installing on test phones (an APK on
-Android) and `production` for the stores.
+Builds run on EAS (project `1294d049-…` in `app.json`). `eas.json` has two profiles: `preview` for
+installing on test phones (an APK on Android) and `production` for the stores.
 
 ```bash
 npx eas-cli@latest build --profile preview --platform android
 ```
 
+Build numbers (Android `versionCode`) are kept on EAS (`appVersionSource: remote`) and go up by one
+with every build, so each new APK installs over the previous one. The `versionCode` in `app.json`
+only seeded that counter. The version people see is `version` in `app.json`; raise it before a
+release.
+
 ### Android APK on GitHub
 
 The project page's **Download for Android** button links to
 `https://github.com/handsomestranger56-prog/kiwa/releases/latest/download/kiwa.apk`, the `kiwa.apk`
-asset of the newest release. To publish a version:
+asset of the newest release. The **Release Android APK** workflow builds the APK on EAS and publishes
+that release. To publish a version:
 
-1. Build the APK with the `preview` profile (above) and copy its download link from the build page on
-   expo.dev.
-2. In GitHub, open **Actions → Release Android APK → Run workflow**, paste the link and a tag such as
-   `v0.1.0`. The workflow checks that the file is an APK and creates the release with it.
+1. Set `version` in `app.json` (for example `0.2.0`) and merge it to `main`.
+2. Push a matching tag: `git tag v0.2.0 && git push origin v0.2.0`. Or open
+   **Actions → Release Android APK → Run workflow** and type the tag there.
+
+The run starts an EAS build of the `preview` profile, waits for it (the free plan's queue can take a
+while), checks the file is an APK and creates the release with it. Each run uses one of the free
+plan's 15 Android builds a month, so it does not run on every push. To publish an APK you already
+built, paste its expo.dev download link in the workflow's **apk_url** box and no new build starts.
+
+One-time setup: the workflow signs in to EAS with an access token.
+
+1. On expo.dev, open **Account settings → Access tokens** and create a token (a robot user token is
+   best, since it can only build). Copy it.
+2. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**, name it
+   `EXPO_TOKEN` and paste the token.
 
 You can also create the release by hand on the Releases page: attach the file named exactly
 `kiwa.apk`, and leave **Set as a pre-release** off, because `latest` skips drafts and pre-releases.

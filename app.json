@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.kiwa.app"
+      "package": "com.kiwa.app",
+      "versionCode": 2
     },
     "web": {
       "output": "single",
@@ -39,6 +40,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1294d049-464c-4263-88fe-b1e5df9a8759"
+      }
     }
   }
 }
