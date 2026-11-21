@@ -4,6 +4,19 @@
  * Never returns the original order when there is more than one item.
  */
 export function stableShuffle(count: number, seed: string): number[] {
+  const order = seededOrder(count, seed);
+  if (count > 1 && order.every((value, index) => value === index)) {
+    order.push(order.shift() as number);
+  }
+  return order;
+}
+
+/**
+ * Positions 0 to count - 1 in an order that depends only on the seed. Unlike `stableShuffle`, the
+ * original order is as likely as any other, so with answer options every position is equally likely
+ * to hold the right one.
+ */
+export function seededOrder(count: number, seed: string): number[] {
   const order = Array.from({ length: count }, (_, index) => index);
   let state = hash(seed) || 1;
   const random = () => {
@@ -17,10 +30,6 @@ export function stableShuffle(count: number, seed: string): number[] {
   for (let index = count - 1; index > 0; index -= 1) {
     const other = Math.floor(random() * (index + 1));
     [order[index], order[other]] = [order[other], order[index]];
-  }
-
-  if (count > 1 && order.every((value, index) => value === index)) {
-    order.push(order.shift() as number);
   }
   return order;
 }

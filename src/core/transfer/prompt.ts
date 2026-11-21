@@ -232,7 +232,11 @@ function writingRules(request: CreateRequest): string {
     if (types.some((type) => type !== 'essay')) rules.push('Every question has an `explanation` that says why the right answer is right.');
     if (types.some((type) => type === 'single_choice' || type === 'multiple_choice')) {
       rules.push('Wrong options must be plausible. Do not use "all of the above" or "none of the above".');
+      rules.push(
+        'Vary where the correct option sits: across all the questions, put it first, second, third and last about equally often, never in the same place every time. Do not make it the longest or most detailed option.',
+      );
     }
+    if (types.includes('true_false')) rules.push('In `true_false` questions, make about half of the statements false.');
   }
   return `## How to write it\n\n${rules.map((rule) => `- ${rule}`).join('\n')}`;
 }

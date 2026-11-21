@@ -349,6 +349,13 @@ describe('buildPrompt', () => {
     expect(prompt).not.toContain('No code fence');
   });
 
+  it('asks for the right option in varied places and for false statements too', () => {
+    const prompt = buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x', questionTypes: ['single_choice', 'true_false'] });
+    expect(prompt).toContain('Vary where the correct option sits');
+    expect(prompt).toContain('make about half of the statements false');
+    expect(buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x', questionTypes: ['essay'] })).not.toContain('Vary where the correct option sits');
+  });
+
   it('lists only the chosen question types', () => {
     const prompt = buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x', questionTypes: ['true_false', 'essay'] });
     const rules = prompt.slice(prompt.indexOf('Use only these question types:'), prompt.indexOf('## Example'));

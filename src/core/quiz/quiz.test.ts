@@ -3,6 +3,7 @@ import { type Assessment, type Course, type Question, parseDocument } from '../s
 import { sampleCourseInput, sampleDeckInput, sampleQuizInput } from '../templates/samples';
 import { type Answer, answerFor, countWords, emptyAnswer, isAnswered, isSelfGraded } from './answers';
 import { grade, hasPassed, matchesAccepted, normalizeText, summarize } from './grading';
+import { seededOrder } from './shuffle';
 import {
   DECK_ASSESSMENT_ID,
   createSession,
@@ -310,5 +311,23 @@ describe('parseMarkdown', () => {
 
   it('returns nothing for empty text', () => {
     expect(parseMarkdown('  \n\n ')).toEqual([]);
+  });
+});
+
+describe('seededOrder', () => {
+  it('gives the same order for the same seed, and every position once', () => {
+    expect(seededOrder(5, 'q1')).toEqual(seededOrder(5, 'q1'));
+    expect([...seededOrder(5, 'q1')].sort()).toEqual([0, 1, 2, 3, 4]);
+    expect(seededOrder(1, 'q1')).toEqual([0]);
+  });
+
+  it('shows an option written first in every place about equally often', () => {
+    for (const count of [2, 3, 4]) {
+      const places = Array.from({ length: count }, () => 0);
+      for (let index = 0; index < 600; index += 1) {
+        places[seededOrder(count, `lesson-${index % 7}-q${index}`).indexOf(0)] += 1;
+      }
+      for (const times of places) expect(times / 600).toBeGreaterThan(0.6 / count);
+    }
   });
 });
