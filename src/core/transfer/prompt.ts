@@ -200,6 +200,7 @@ function writingRules(request: CreateRequest): string {
     rules.push(
       'Each lesson teaches one idea in 150 to 300 words of plain language, with at least one concrete example.',
       'Give each lesson a one-sentence `summary` and an estimate of reading time in `minutes`.',
+      `Build each lesson like a page of a good tutorial: several blocks in the order the explanation needs, such as text, ${request.pictures ? 'a picture, ' : ''}more text, a code sample if the topic has code, then a tip. Use as many \`text\`, \`code\` and \`callout\` blocks as the lesson needs, mixed in any order, each where it helps. Do not give every lesson the same pattern of blocks.`,
       `End each lesson with one assessment in mode "practice" holding ${perLesson} that test that lesson only.`,
     );
     if (request.pictures) {
@@ -294,7 +295,9 @@ function exampleLesson(types: readonly QuestionType[]) {
     minutes: 3,
     blocks: [
       { type: 'text', markdown: 'Water boils when its vapour pressure equals the pressure of the air above it. Higher up there is **less air**, so that happens at a lower temperature.' },
-      { type: 'callout', tone: 'tip', markdown: 'At 3000 m water boils at about 90 °C, so pasta takes longer.' },
+      { type: 'callout', tone: 'note', markdown: 'Vapour pressure is how strongly a liquid pushes out as gas. It grows as the liquid gets hotter.' },
+      { type: 'text', markdown: '## What it means for cooking\n\n- At sea level water boils at 100 °C.\n- At 3000 m it boils at about 90 °C.\n\nThe water is boiling, but it is cooler, so food cooks more slowly.' },
+      { type: 'callout', tone: 'tip', markdown: 'On a mountain, cook pasta a few minutes longer or use a pressure cooker.' },
     ],
     assessments: [{ id: 'boiling-point-practice', mode: 'practice', questions: exampleQuestions(types, 'boiling-point', 2) }],
   };
@@ -310,7 +313,8 @@ const EXAMPLE_TYPES: QuestionType[] = ['single_choice', 'cloze', 'true_false'];
 export function example(kind: CreateKind, pictures = false, types: readonly QuestionType[] = EXAMPLE_TYPES): Record<string, unknown> {
   const questionTypes = types.filter((type) => type !== 'flashcard');
   const base = exampleLesson(questionTypes);
-  const lesson = pictures ? { ...base, blocks: [...base.blocks, examplePicture] } : base;
+  // The picture goes between the blocks, where it explains, not at the end.
+  const lesson = pictures ? { ...base, blocks: [base.blocks[0], examplePicture, ...base.blocks.slice(1)] } : base;
   switch (kind) {
     case 'course':
       return {

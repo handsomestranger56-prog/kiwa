@@ -356,6 +356,13 @@ describe('buildPrompt', () => {
     expect(buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x', questionTypes: ['essay'] })).not.toContain('Vary where the correct option sits');
   });
 
+  it('asks for lessons built from several mixed blocks, as the example shows', () => {
+    const prompt = buildPrompt({ ...defaultRequest, topic: 'x', pictures: true });
+    expect(prompt).toContain('Build each lesson like a page of a good tutorial');
+    const lesson = (example('course', true) as { lessons: { blocks: { type: string }[] }[] }).lessons[0];
+    expect(lesson.blocks.map((block) => block.type)).toEqual(['text', 'svg', 'callout', 'text', 'callout']);
+  });
+
   it('lists only the chosen question types', () => {
     const prompt = buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x', questionTypes: ['true_false', 'essay'] });
     const rules = prompt.slice(prompt.indexOf('Use only these question types:'), prompt.indexOf('## Example'));
