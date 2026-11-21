@@ -118,7 +118,7 @@ export function buildPrompt(request: CreateRequest): string {
     formatRules(request, types),
     `## Example\n\nThis shows the shape only. Write your own content.\n\n${fence(JSON.stringify(example(request.kind, request.pictures, types), null, 2))}`,
     `## JSON Schema\n\nYour reply must be valid against this schema.\n\n${fence(JSON.stringify(schemaFor(request.kind, types)))}`,
-    'Reply with the JSON object only. Start with `{` and end with `}`.',
+    'Reply with the JSON object only, inside one ```json code block.',
   ];
   return `${sections.filter(Boolean).join('\n\n')}\n`;
 }
@@ -240,7 +240,8 @@ function writingRules(request: CreateRequest): string {
 function formatRules(request: CreateRequest, types: QuestionType[]): string {
   const format = request.kind === 'lesson' ? LESSON_FORMAT : formatByKind[request.kind];
   const rules = [
-    'Reply with one JSON object and nothing else. No code fence, no introduction, no closing remarks.',
+    // A code block keeps chat apps from showing the JSON as Markdown, which can change it when it is copied.
+    'Reply with one JSON object and nothing else, inside one ```json code block. No introduction, no closing remarks.',
     `Set \`format\` to "${format}".`,
     'Every `id` is short, uses lowercase letters, digits and hyphens, and is unique within the whole file.',
     'Text fields may use only this Markdown: paragraphs, `#` to `###` headings, `-` and `1.` lists, `**bold**`, `*italic*`, `` `code` `` and `[links](https://...)`. No tables, no HTML.',
@@ -367,7 +368,7 @@ export function buildFixPrompt(problem: { stage: 'json'; problem: JsonProblem; d
     '',
     'When you reply:',
     '',
-    '- Send one JSON object and nothing else. No code fence and no commentary.',
+    '- Send one JSON object and nothing else, inside one ```json code block. No commentary.',
     '- Keep everything that was already correct exactly as it was.',
     '- Positions in `answer` and `answers` count from 0.',
     '- Every `id` must be unique within the file.',

@@ -281,8 +281,8 @@ function CreateFlow({ courses, initial, initialCourseId }: FlowProps) {
       </ScrollView>
 
       <View style={[styles.bar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <Button kind="secondary" icon="file" label={t('create.promptForAi')} disabled={!ready} onPress={() => void makePrompt()} />
-        <Button icon="ai" label={t('create.generate')} disabled={!ready || !model} onPress={() => void startGenerating()} />
+        <Button grow kind="secondary" icon="file" label={t('create.promptForAi')} disabled={!ready} onPress={() => void makePrompt()} />
+        <Button grow icon="ai" label={t('create.generate')} disabled={!ready || !model} onPress={() => void startGenerating()} />
       </View>
     </>
   );
@@ -385,9 +385,10 @@ function PromptReady({ prompt, kind, courseId, onEdit }: PromptReadyProps) {
         </View>
       </ScrollView>
 
-      <View style={[styles.bar, styles.barSplit, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <Button kind="secondary" label={t('prompt.edit')} onPress={onEdit} />
+      <View style={[styles.bar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+        <Button grow kind="secondary" label={t('prompt.edit')} onPress={onEdit} />
         <Button
+          grow
           icon="importFile"
           label={t('prompt.importReply')}
           onPress={() => router.push({ pathname: '/import', params: courseId ? { course: courseId } : {} })}
@@ -403,15 +404,16 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   topic: { minHeight: 72, paddingTop: spacing.md },
   source: { minHeight: 120, paddingTop: spacing.md },
+  // The two buttons share a row when they fit and take a row each when they do not, as on a
+  // narrow phone in Russian or Uzbek.
   bar: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  barSplit: { justifyContent: 'space-between' },
   steps: { gap: spacing.md },
   step: { flexDirection: 'row', gap: spacing.md },
   stepNumber: { width: 20, textAlign: 'center' },

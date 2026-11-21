@@ -28,9 +28,11 @@ type ButtonProps = {
   kind?: 'primary' | 'secondary' | 'danger' | 'plain';
   icon?: IconName;
   disabled?: boolean;
+  /** Takes the free space in its row, as the buttons of a bottom bar do. */
+  grow?: boolean;
 };
 
-export function Button({ label, onPress, kind = 'primary', icon, disabled }: ButtonProps) {
+export function Button({ label, onPress, kind = 'primary', icon, disabled, grow }: ButtonProps) {
   const { colors } = useTheme();
   const look = {
     primary: { background: colors.accent, text: 'onAccent', border: colors.accent },
@@ -47,12 +49,13 @@ export function Button({ label, onPress, kind = 'primary', icon, disabled }: But
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        grow && styles.grow,
         { backgroundColor: look.background, borderColor: look.border },
         (pressed || disabled) && styles.dimmed,
       ]}
     >
       {icon ? <Icon name={icon} size={18} color={look.text} /> : null}
-      <AppText variant="bodyStrong" color={look.text}>
+      <AppText variant="bodyStrong" color={look.text} style={styles.buttonLabel}>
         {label}
       </AppText>
     </Pressable>
@@ -242,9 +245,14 @@ export function TextField({ leading, trailing, style, onFocus, onBlur, ...rest }
 const webInput = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null;
 
 const styles = StyleSheet.create({
+  // A button may shrink and wrap its label onto more lines, so that two buttons in a bar fit on a
+  // narrow phone in every language instead of running off the screen.
   button: {
+    flexShrink: 1,
+    maxWidth: '100%',
     minHeight: MIN_TOUCH,
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
     flexDirection: 'row',
@@ -252,6 +260,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
   },
+  buttonLabel: { flexShrink: 1, textAlign: 'center' },
+  grow: { flexGrow: 1 },
   iconButton: {
     width: MIN_TOUCH,
     height: MIN_TOUCH,
