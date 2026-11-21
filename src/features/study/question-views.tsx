@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { type Answer, type AnswerOf, ESSAY_RATINGS, FLASHCARD_RATINGS, answerFor, countWords } from '@/core/quiz/answers';
 import { clozeSegments } from '@/core/quiz/cloze';
 import { matchesAccepted } from '@/core/quiz/grading';
+import { seededOrder } from '@/core/quiz/shuffle';
 import type { Question } from '@/core/schema';
 import { Button, Chip, TextField } from '@/ui/controls';
 import { type IconName, Icon } from '@/ui/icon';
@@ -117,6 +118,19 @@ function OptionRow({ label, kind, selected, state, disabled, onPress }: OptionPr
   );
 }
 
+/**
+ * The order options are shown in: mixed, but the same each time a question is seen. Chatbots tend
+ * to write the right option first, which would give the answer away. Answers keep the written positions.
+ */
+function shownOrder(question: { id: string; options: readonly string[] }): number[] {
+  return seededOrder(question.options.length, question.id);
+}
+
+/** The items in the mixed order that `seed` gives, as for the options of a gap. */
+function shuffled<T>(items: readonly T[], seed: string): T[] {
+  return seededOrder(items.length, seed).map((index) => items[index]);
+}
+
 /** How an option looks once the right answer may be shown. */
 function revealedState(selected: boolean, correct: boolean): OptionState {
   if (selected) return correct ? 'right' : 'wrong';
@@ -126,7 +140,8 @@ function revealedState(selected: boolean, correct: boolean): OptionState {
 function SingleChoice({ question, answer, onChange, locked, revealed }: ViewProps<'single_choice'>) {
   return (
     <View accessibilityRole="radiogroup" style={styles.stack}>
-      {question.options.map((option, index) => {
+      {shownOrder(question).map((index) => {
+        const option = question.options[index];
         const selected = answer.choice === index;
         return (
           <OptionRow
@@ -157,7 +172,8 @@ function MultipleChoice({ question, answer, onChange, locked, revealed }: ViewPr
       <AppText variant="small" color="textSecondary">
         {t('study.selectAll')}
       </AppText>
-      {question.options.map((option, index) => {
+      {shownOrder(question).map((index) => {
+        const option = question.options[index];
         const selected = answer.choices.includes(index);
         return (
           <OptionRow
@@ -255,7 +271,7 @@ function Cloze({ question, answer, onChange, locked, revealed }: ViewProps<'cloz
             </AppText>
             {gap.options ? (
               <View style={styles.chips}>
-                {gap.options.map((option) => (
+                {shuffled(gap.options, `${question.id}:${gap.id}`).map((option) => (
                   <Chip
                     key={option}
                     label={option}

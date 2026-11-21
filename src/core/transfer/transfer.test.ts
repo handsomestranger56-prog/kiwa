@@ -34,11 +34,50 @@ describe('extractJson', () => {
     expect(extractJson('﻿{"a":1}')).toMatchObject({ ok: true });
   });
 
+  it('reads JSON that was escaped into a string', () => {
+    const json = JSON.stringify({ format: 'deck/1', note: 'say "hi"\nnow', svg: '<svg a="1"/>' }, null, 2);
+    const escaped = JSON.stringify(json);
+    expect(extractJson(escaped)).toEqual({ ok: true, value: JSON.parse(json) });
+    expect(extractJson(escaped.slice(1, -1))).toEqual({ ok: true, value: JSON.parse(json) });
+    expect(extractJson(`Here it is:\n${escaped.slice(1, -1)}`)).toEqual({ ok: true, value: JSON.parse(json) });
+  });
+
+  it('undoes Markdown escapes that copying a reply can add', () => {
+    const json = JSON.stringify({ tags: ['a_b', 'c'], text: '**bold** - [link](https://x.y) # 1.', n: -2 }, null, 2);
+    const escaped = json.replace(/[[\]_*#\-]/g, (char) => `\\${char}`);
+    expect(escaped).toContain('"tags": \\[');
+    expect(extractJson(escaped)).toEqual({ ok: true, value: JSON.parse(json) });
+  });
+
+  it('keeps the character of an escape JSON does not have', () => {
+    expect(extractJson(String.raw`{"title": "O\'zbek tili", "path": "C:\Users\\me"}`)).toEqual({
+      ok: true,
+      value: { title: "O'zbek tili", path: 'C:Users\\me' },
+    });
+  });
+
+  it('reads line breaks inside strings and non-breaking spaces between tokens', () => {
+    expect(extractJson('{\n\u00A0\u00A0"a": "one\ntwo",\u200B\n\u00A0\u00A0"b": [1,\u00A02]\n}')).toEqual({ ok: true, value: { a: 'one\ntwo', b: [1, 2] } });
+  });
+
+  it('reads a whole course after a chat app escaped it for Markdown', () => {
+    const json = JSON.stringify(sampleCourseInput, null, 2);
+    const escaped = json.replace(/[[\]_*#\-]/g, (char) => `\\${char}`);
+    expect(readImport(escaped)).toEqual(readImport(json));
+    expect(readImport(escaped).ok).toBe(true);
+  });
+
+  it('does not repair a reply that parses as it is', () => {
+    expect(extractJson('{"a": "x\\\\_y"}')).toEqual({ ok: true, value: { a: 'x\\_y' } });
+  });
+
   it('says why nothing could be read', () => {
     expect(extractJson('   ')).toEqual({ ok: false, reason: 'empty' });
     expect(extractJson('I cannot help with that.')).toEqual({ ok: false, reason: 'noJson' });
     expect(extractJson('{"title": "Cut off", "lessons": [{"id": "a"')).toEqual({ ok: false, reason: 'cutOff' });
     expect(extractJson('{"a": tru}')).toMatchObject({ ok: false, reason: 'invalid' });
+    expect(extractJson('{"a": 1 "b": 2}')).toMatchObject({ ok: false, reason: 'invalid' });
+    expect(extractJson('{\\"a\\": 1 \\"b\\": 2}')).toMatchObject({ ok: false, reason: 'invalid' });
     expect(extractJson('[1, 2, 3]')).toEqual({ ok: false, reason: 'noJson' });
   });
 });
@@ -306,7 +345,22 @@ describe('buildPrompt', () => {
     expect(prompt).toContain('Set `format` to "course/1".');
     expect(prompt).toContain('"$schema"');
     expect(prompt).toContain('`finalExam` in mode "exam" with 8 new questions');
-    expect(prompt.trimEnd().endsWith('Start with `{` and end with `}`.')).toBe(true);
+    expect(prompt.trimEnd().endsWith('Reply with the JSON object only, inside one ```json code block.')).toBe(true);
+    expect(prompt).not.toContain('No code fence');
+  });
+
+  it('asks for the right option in varied places and for false statements too', () => {
+    const prompt = buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x', questionTypes: ['single_choice', 'true_false'] });
+    expect(prompt).toContain('Vary where the correct option sits');
+    expect(prompt).toContain('make about half of the statements false');
+    expect(buildPrompt({ ...defaultRequest, kind: 'quiz', topic: 'x', questionTypes: ['essay'] })).not.toContain('Vary where the correct option sits');
+  });
+
+  it('asks for lessons built from several mixed blocks, as the example shows', () => {
+    const prompt = buildPrompt({ ...defaultRequest, topic: 'x', pictures: true });
+    expect(prompt).toContain('Build each lesson like a page of a good tutorial');
+    const lesson = (example('course', true) as { lessons: { blocks: { type: string }[] }[] }).lessons[0];
+    expect(lesson.blocks.map((block) => block.type)).toEqual(['text', 'svg', 'callout', 'text', 'callout']);
   });
 
   it('lists only the chosen question types', () => {
@@ -439,7 +493,7 @@ describe('buildFixPrompt', () => {
     });
     expect(prompt).toContain('1. `lessons[0].assessments[0].questions[2].answer`: Answer 7 points past the last option (2).');
     expect(prompt).toContain('2. `(top level)`: Something general.');
-    expect(prompt).toContain('Send one JSON object and nothing else.');
+    expect(prompt).toContain('Send one JSON object and nothing else, inside one ```json code block.');
   });
 
   it('caps a very long list', () => {

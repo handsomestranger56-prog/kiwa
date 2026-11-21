@@ -54,7 +54,7 @@ const broken = JSON.stringify({ format: 'deck/1', id: 'bad-deck', title: 'Broken
     await button('Copy prompt').click();
     await seen('Copied to the clipboard.');
     const text = await clipboard();
-    for (const part of ['Write a quiz of 4 questions about:', 'The water cycle', 'Set `format` to "quiz/1".', '"$schema"', 'Reply with the JSON object only.']) {
+    for (const part of ['Write a quiz of 4 questions about:', 'The water cycle', 'Set `format` to "quiz/1".', '"$schema"', 'Reply with the JSON object only, inside one ```json code block.']) {
       if (!text.includes(part)) throw new Error(`prompt is missing: ${part}`);
     }
   });
@@ -125,7 +125,7 @@ const broken = JSON.stringify({ format: 'deck/1', id: 'bad-deck', title: 'Broken
     await button('Copy fix prompt').click();
     await seen('Copied');
     const text = await clipboard();
-    if (!text.includes('`cards[0].back`') || !text.includes('Send one JSON object and nothing else.')) throw new Error('fix prompt incomplete');
+    if (!text.includes('`cards[0].back`') || !text.includes('Send one JSON object and nothing else,')) throw new Error('fix prompt incomplete');
   });
 
   await step('import: a cut-off reply and plain prose are explained', async () => {

@@ -66,7 +66,7 @@ point at content by id, so replacing a course with a newer version keeps them.
 
 Everything that reads or writes a file lives in `src/core/transfer`:
 
-- `extract.ts` finds the JSON in a chatbot reply, with or without a code fence around it.
+- `extract.ts` finds the JSON in a chatbot reply, with or without a code fence around it, and undoes what copying from a chat app can do to it (JSON escaped into a string, Markdown escapes, non-breaking spaces).
 - `repair.ts` corrects common slips before validation (a missing `format`, missing or repeated
   ids, an answer written as text) and reports each correction so the user sees what changed.
 - `files.ts` reads imports and writes exports. Besides the three document formats there is

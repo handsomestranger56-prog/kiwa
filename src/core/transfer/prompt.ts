@@ -118,7 +118,7 @@ export function buildPrompt(request: CreateRequest): string {
     formatRules(request, types),
     `## Example\n\nThis shows the shape only. Write your own content.\n\n${fence(JSON.stringify(example(request.kind, request.pictures, types), null, 2))}`,
     `## JSON Schema\n\nYour reply must be valid against this schema.\n\n${fence(JSON.stringify(schemaFor(request.kind, types)))}`,
-    'Reply with the JSON object only. Start with `{` and end with `}`.',
+    'Reply with the JSON object only, inside one ```json code block.',
   ];
   return `${sections.filter(Boolean).join('\n\n')}\n`;
 }
@@ -200,6 +200,7 @@ function writingRules(request: CreateRequest): string {
     rules.push(
       'Each lesson teaches one idea in 150 to 300 words of plain language, with at least one concrete example.',
       'Give each lesson a one-sentence `summary` and an estimate of reading time in `minutes`.',
+      `Build each lesson like a page of a good tutorial: several blocks in the order the explanation needs, such as text, ${request.pictures ? 'a picture, ' : ''}more text, a code sample if the topic has code, then a tip. Use as many \`text\`, \`code\` and \`callout\` blocks as the lesson needs, mixed in any order, each where it helps. Do not give every lesson the same pattern of blocks.`,
       `End each lesson with one assessment in mode "practice" holding ${perLesson} that test that lesson only.`,
     );
     if (request.pictures) {
@@ -232,7 +233,11 @@ function writingRules(request: CreateRequest): string {
     if (types.some((type) => type !== 'essay')) rules.push('Every question has an `explanation` that says why the right answer is right.');
     if (types.some((type) => type === 'single_choice' || type === 'multiple_choice')) {
       rules.push('Wrong options must be plausible. Do not use "all of the above" or "none of the above".');
+      rules.push(
+        'Vary where the correct option sits: across all the questions, put it first, second, third and last about equally often, never in the same place every time. Do not make it the longest or most detailed option.',
+      );
     }
+    if (types.includes('true_false')) rules.push('In `true_false` questions, make about half of the statements false.');
   }
   return `## How to write it\n\n${rules.map((rule) => `- ${rule}`).join('\n')}`;
 }
@@ -240,7 +245,8 @@ function writingRules(request: CreateRequest): string {
 function formatRules(request: CreateRequest, types: QuestionType[]): string {
   const format = request.kind === 'lesson' ? LESSON_FORMAT : formatByKind[request.kind];
   const rules = [
-    'Reply with one JSON object and nothing else. No code fence, no introduction, no closing remarks.',
+    // A code block keeps chat apps from showing the JSON as Markdown, which can change it when it is copied.
+    'Reply with one JSON object and nothing else, inside one ```json code block. No introduction, no closing remarks.',
     `Set \`format\` to "${format}".`,
     'Every `id` is short, uses lowercase letters, digits and hyphens, and is unique within the whole file.',
     'Text fields may use only this Markdown: paragraphs, `#` to `###` headings, `-` and `1.` lists, `**bold**`, `*italic*`, `` `code` `` and `[links](https://...)`. No tables, no HTML.',
@@ -289,7 +295,9 @@ function exampleLesson(types: readonly QuestionType[]) {
     minutes: 3,
     blocks: [
       { type: 'text', markdown: 'Water boils when its vapour pressure equals the pressure of the air above it. Higher up there is **less air**, so that happens at a lower temperature.' },
-      { type: 'callout', tone: 'tip', markdown: 'At 3000 m water boils at about 90 °C, so pasta takes longer.' },
+      { type: 'callout', tone: 'note', markdown: 'Vapour pressure is how strongly a liquid pushes out as gas. It grows as the liquid gets hotter.' },
+      { type: 'text', markdown: '## What it means for cooking\n\n- At sea level water boils at 100 °C.\n- At 3000 m it boils at about 90 °C.\n\nThe water is boiling, but it is cooler, so food cooks more slowly.' },
+      { type: 'callout', tone: 'tip', markdown: 'On a mountain, cook pasta a few minutes longer or use a pressure cooker.' },
     ],
     assessments: [{ id: 'boiling-point-practice', mode: 'practice', questions: exampleQuestions(types, 'boiling-point', 2) }],
   };
@@ -305,7 +313,8 @@ const EXAMPLE_TYPES: QuestionType[] = ['single_choice', 'cloze', 'true_false'];
 export function example(kind: CreateKind, pictures = false, types: readonly QuestionType[] = EXAMPLE_TYPES): Record<string, unknown> {
   const questionTypes = types.filter((type) => type !== 'flashcard');
   const base = exampleLesson(questionTypes);
-  const lesson = pictures ? { ...base, blocks: [...base.blocks, examplePicture] } : base;
+  // The picture goes between the blocks, where it explains, not at the end.
+  const lesson = pictures ? { ...base, blocks: [base.blocks[0], examplePicture, ...base.blocks.slice(1)] } : base;
   switch (kind) {
     case 'course':
       return {
@@ -367,7 +376,7 @@ export function buildFixPrompt(problem: { stage: 'json'; problem: JsonProblem; d
     '',
     'When you reply:',
     '',
-    '- Send one JSON object and nothing else. No code fence and no commentary.',
+    '- Send one JSON object and nothing else, inside one ```json code block. No commentary.',
     '- Keep everything that was already correct exactly as it was.',
     '- Positions in `answer` and `answers` count from 0.',
     '- Every `id` must be unique within the file.',
