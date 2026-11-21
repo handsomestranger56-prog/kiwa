@@ -8,8 +8,9 @@ export const OPENAI_COMPATIBLE_PRESETS = [
   { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
   { label: 'Grok', baseUrl: 'https://api.x.ai/v1' },
   { label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
-  { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1' },
+  { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com' },
   { label: 'Mistral', baseUrl: 'https://api.mistral.ai/v1' },
+  { label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1' },
   { label: 'Ollama', baseUrl: 'http://localhost:11434/v1' },
 ] as const;
 
