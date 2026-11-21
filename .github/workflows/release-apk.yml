@@ -1,20 +1,36 @@
 name: Release Android APK
 
-# Publishes an APK as the kiwa.apk asset of a GitHub release. The project page links to
+# Builds the Android APK on EAS (the `preview` profile in eas.json) and publishes it as the
+# kiwa.apk asset of a GitHub release. The project page links to
 # releases/latest/download/kiwa.apk, so the newest release is what people download.
 #
-# Run it from the Actions tab: paste the APK link from the EAS build page (expo.dev, "Install" or
-# the download button) and a version tag such as v0.1.0.
+# It runs when:
+#   - a version tag is pushed:       git tag v0.2.0 && git push origin v0.2.0
+#   - you start it from the Actions tab (Run workflow) with a tag such as v0.2.0.
+#     Paste an EAS APK link in "apk_url" to publish an APK you already built instead of
+#     starting a new EAS build.
+#
+# Each run that builds uses one EAS Android build (the free plan has 15 a month), which is why it
+# does not run on every push. To build on every push to main as well, add under `on:`
+#   push:
+#     branches: [main]
+# and give those runs a tag of their own (for example v0.1.0-<run number>).
+#
+# Needs the repository secret EXPO_TOKEN (an access token from expo.dev). See "Release" in the
+# README.
 
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       version:
-        description: Release tag, for example v0.1.0
+        description: Release tag, for example v0.2.0
         required: true
       apk_url:
-        description: Download link of the APK built by EAS (preview profile)
-        required: true
+        description: Optional. Download link of an APK already built on EAS; leave empty to build a new one
+        required: false
+        default: ''
       notes:
         description: What changed (optional)
         required: false
@@ -23,13 +39,74 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-apk-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    # The free EAS plan uses a low-priority queue, so a build can wait a while before it starts.
+    timeout-minutes: 180
+    env:
+      VERSION: ${{ inputs.version || github.ref_name }}
+      APK_URL: ${{ inputs.apk_url }}
     steps:
-      - name: Download the APK
+      - name: Check the tag
+        run: |
+          case "$VERSION" in
+            v[0-9]*) ;;
+            *) echo "::error::The release tag must look like v0.2.0, got '$VERSION'."; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v4
+
+      - name: Compare the tag with the app version
+        run: |
+          app_version="$(jq -r '.expo.version' app.json)"
+          if [ "v$app_version" != "$VERSION" ]; then
+            echo "::warning::app.json says version $app_version but the release is $VERSION. The app's About screen and Android settings show $app_version. Update \"version\" in app.json to match."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: ${{ !inputs.apk_url }}
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        if: ${{ !inputs.apk_url }}
+        run: npm ci
+
+      - name: Set up EAS
+        if: ${{ !inputs.apk_url }}
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build the APK on EAS
+        if: ${{ !inputs.apk_url }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::The EXPO_TOKEN secret is missing. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          eas build --platform android --profile preview --non-interactive --wait --json \
+            --message "GitHub release $VERSION" > build.json
+          build_id="$(jq -r '.[0].id' build.json)"
+          url="$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl // empty' build.json)"
+          if [ -z "$url" ]; then
+            echo "::error::EAS finished without a download link. See the build log on expo.dev."
+            cat build.json
+            exit 1
+          fi
+          echo "EAS build $build_id finished: $url"
+          echo "APK_URL=$url" >> "$GITHUB_ENV"
         env:
-          APK_URL: ${{ inputs.apk_url }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Download the APK
         run: |
           curl --fail --location --silent --show-error --output kiwa.apk "$APK_URL"
           # An APK is a zip file: refuse an HTML page or an .aab by mistake.
@@ -39,12 +116,16 @@ jobs:
           fi
           ls -l kiwa.apk
 
-      - name: Create the release
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
           NOTES: ${{ inputs.notes }}
         run: |
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            # The release already exists (made by hand, or this is a re-run): replace its APK.
+            gh release upload "$VERSION" kiwa.apk --repo "$GITHUB_REPOSITORY" --clobber
+            exit 0
+          fi
           body="${NOTES:-Android build of KIWA.}
 
           Install: download kiwa.apk on your phone, open it, and allow your browser or file manager to install apps when Android asks."
