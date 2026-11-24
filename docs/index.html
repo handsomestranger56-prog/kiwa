@@ -4,14 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
-</head>
-<body>
 <title>KIWA</title>
+<!-- Favicon: the app icon (assets/images), inline so the page works as a single file. -->
+<link rel="icon" type="image/png" sizes="48x48" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAFH0lEQVR4nNSaa0wcVRTH/3fZXXZpoQ8epSpS+yI1QUoVCBSKfaQ1Qo2B+qINbWw0WlMVaTSgH7Y0LY2KIWA1xdQaP7Q1MSYW2xoVWgWjbfhAH6EPobFGeZVHgcruzi57e+400N2FZWdh6Sy/ZDZzz5yZPefOOfeemTtaeKPQFGGwWbMYGG2IA+fRYCwKUwHnnXTtdg5c5Rw/WOyOany+v3e8U5jHIzuLIg3AbsbYK6SkhQqQIxL9VJrtjr2eHBntQEGB0WA3FDKGd6nXQxEIcN7LOdtjjtAfgMkkOR/SuOsahoxvk1clAWO8gLE5YLzM2C0VuB8Kcm6EvFlsIuP3UNgwBBhMBuuCktKt9nP19cPyEQeMO4tySOMzBDqMrdElpzeRE01yUxbSSBMiSS3UCsN0gPO+QQQ/jEpTv5wDRpv0wbQxXsDYLCOkYnkXO0wzjVpra0AlrRI4+getXRFao1bKnnbGCyhiQvThWRqKp2ehMqHBwUiKjUHs3Dk+nccZXtRSPC2HSoQZgvHJpmfwUtI9E5pvdiP/8FGc/6/N+wXIdg0NQ7OhEh/nbnQxXrA4MhzfvbZVviveELZrOOeqOZAdv2xMeXRYKJbHPABvCNs1NHl5d3UKmGU0yJsnlOSDsN2vVWaIXoe8pEQ893gClkRFyDH+T88t/HH9BipP1+NKx80RXbNkg4NqZo2HquVGT6+i//SbA2vjFqNqyyb59jsTNy9S3ralPoHT11pQXlOHv7t7cDj/BY/Gt/cP4FJrO5TgFwcK161CycYNXvVWL10kb+MxPAr1DpqhhEk78EZmmiLjx6PPbME731bLoaY0dIaZlAM5ifH4MCdrlFzEtgiX5s4ubHg0DgvCPSfkNdIRPX5RYci4M2EHRFwfzMsdJT/W0IhC6s1b1Kt3qUbawlhsTl5Byf0YZuj1svR/SULZz7+ivLYeVrsdE4XRQwzHBKjftQOJMQ+6yI5faMLmL4/Id2AsRNI+EjEX8ynRG/9txW2rhMkyoTuwfWXyKONrrzYj/6tjHo0XiGMtlKRi8xc+OyAmH/ekFSNG3qEjsA0N4X7jswPvrV+N2W4z6N5TNRiwWqEGPjkgev/VjBQXmQiHg3V/Qi18cuCtNRkw6nQusqLvT40b91ONYgf0QUF4fVWqi0zUNicuXoaaKHYgd0W8XJw5U17zG9RGsQPb05Jd2j008nzTcB5qo8iBpVQap9Js6oxIXEmFYdMdRQ6I2dMZu8OBKhVHHmc0SpTa+wZgsd2rV0Tvdw7cRiCguBZaFh2F3dnrcYGqxo9+OjOpAsyfKHZgJr0lSHhoPgxu84C/oAd0elLrxfUu3+okkQMdtM3zprhy0QJkLlmIqcRis6Hk5C++nNIh3swpepIQiTvVDI3zkD8mZDu9mUMj7SZ406298hea2joohKZmuUyEUBsNFj6VJWS7loP9SD5v9aYrLtvW149AQtiuMXP9Sc5VrMYmiFjBFLZrxCoHhd3XmGYw8KMjKzSDuuBdHHwA0wRh6+AQCsX+3Zm4zNRF0pcxDaDQcdDPNhwolSeMkVVKseqnS8kQY9iTCGC4gxdbPi39Yrjtsk5sO1t3RpucQS90+NpAWysWAw1n7H1LZel+Z3mQu6L9XN3vutTMS4zjKcoUVV69j4IW9KDRbLFU7KtyPxQ0lr79bN1lW0r6IS1jM6iZyBRWrf5G/tgDqDCDP2+v2Ncwlo73MBGf20jS0xRQ2ff1cxvwExYbP+7tc5s7AAAA///nByjKAAAABklEQVQDAGEc3rIaEJstAAAAAElFTkSuQmCC">
+<link rel="icon" type="image/svg+xml" sizes="any" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a6e7a'/%3E%3Cg transform='translate(2.49 4.01) scale(1.783)'%3E%3Cpath d='M8 21C11 13 14 11 16 11C19 11 20 15 24 9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='24' cy='9' r='2.6' fill='%23fff'/%3E%3Cpath d='M8 24H24' stroke='%23fff' stroke-width='2' stroke-linecap='round' opacity='.55'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<meta name="theme-color" content="#0a6e7a">
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="KIWA (Keep Improving With AI) is a study app: courses, quizzes and flashcards made with any chatbot or your own API key, studied in short lessons and reviewed before you forget.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@500;700&display=swap">
+</head>
+<body>
 <style>
   /* Layout: a hero, then the study loop (create, keys, learn, remember, organize) as alternating text-and-phone rows, a scrolling gallery, a privacy band. */
   :root {
@@ -97,6 +102,15 @@
   .btn.ghost { color: var(--ink); background: var(--surface); border: 1px solid var(--line); }
   .btn:hover { transform: translateY(-2px); }
   .btn svg { flex: none; }
+  /* iOS: not out yet, so a button that only shows its "In development" note (hover, keyboard focus, or a tap). */
+  .soon { position: relative; display: inline-flex; }
+  .soon .btn { font: inherit; font-weight: 600; cursor: default; }
+  .soon .btn:hover { transform: none; }
+  .tip { position: absolute; left: 50%; bottom: calc(100% + 10px); z-index: 5; white-space: nowrap; padding: 6px 12px; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: var(--step--1); font-weight: 600; line-height: 1.4; pointer-events: none; opacity: 0; visibility: hidden; transform: translate(-50%, 4px); transition: opacity 0.15s, transform 0.15s, visibility 0.15s; }
+  .tip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border: 6px solid transparent; border-top-color: var(--ink); }
+  .soon:hover .tip, .soon:focus-within .tip, .soon.open .tip { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+  /* Phones stack the buttons, so the note opens below the button rather than over Download for Android. */
+  @media (max-width: 560px) { .tip { bottom: auto; top: calc(100% + 10px); transform: translate(-50%, -4px); } .tip::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: var(--ink); } }
   .get-note { margin-top: 12px; font-size: var(--step--1); color: var(--muted); }
   .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; margin-top: 38px; padding: 0; list-style: none; max-width: 34em; }
   .facts li { display: grid; gap: 2px; font-size: var(--step--1); color: var(--muted); line-height: 1.45; }
@@ -220,7 +234,7 @@
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .stage .phone, .row .shots, .row .copy { animation: none !important; }
-    .btn, .faq summary::after { transition: none; }
+    .btn, .tip, .faq summary::after { transition: none; }
   }
 </style>
 
@@ -254,11 +268,12 @@
   <section class="hero">
     <div class="wrap">
       <div>
-        <span class="eyebrow" data-k="hero.eyebrow">Study app for Android and iOS · in development</span>
+        <span class="eyebrow" data-k="hero.eyebrow">Study app for Android and iOS</span>
         <h1 data-k="hero.title" data-html>Keep improving <em>with AI</em></h1>
         <p class="lead" data-k="hero.lead">Make courses, quizzes and flashcards with any chatbot or your own API key. Study them in short lessons, and let the app bring back what you missed before you forget it.</p>
         <div class="actions">
           <a class="btn primary" data-apk href="https://github.com/handsomestranger56-prog/kiwa/releases/latest/download/kiwa.apk"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M17.6 9.48 19.44 6.3a.38.38 0 0 0-.66-.38l-1.87 3.23a11.4 11.4 0 0 0-9.82 0L5.22 5.92a.38.38 0 0 0-.66.38L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/></svg><span data-k="hero.get">Download for Android</span></a>
+          <span class="soon"><button type="button" class="btn ghost" aria-disabled="true" aria-describedby="ios-soon"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg><span data-k="hero.ios">Download for iOS</span></button><span class="tip" id="ios-soon" role="tooltip" data-k="hero.iosSoon">In development</span></span>
           <a class="btn ghost" href="#screens" data-k="hero.cta1">See the app</a>
         </div>
         <p class="get-note" data-k="hero.getNote" data-html>Free APK from <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. Google Play and iPhone come later.</p>
@@ -436,10 +451,10 @@
   const T = {
     en: {
       'nav.create': 'Create', 'nav.learn': 'Learn', 'nav.remember': 'Remember', 'nav.screens': 'Screens',
-      'hero.eyebrow': 'Study app for Android and iOS · in development',
+      'hero.eyebrow': 'Study app for Android and iOS',
       'hero.title': 'Keep improving <em>with AI</em>',
       'hero.lead': 'Make courses, quizzes and flashcards with any chatbot or your own API key. Study them in short lessons, and let the app bring back what you missed before you forget it.',
-      'hero.cta1': 'See the app', 'hero.get': 'Download for Android',
+      'hero.cta1': 'See the app', 'hero.get': 'Download for Android', 'hero.ios': 'Download for iOS', 'hero.iosSoon': 'In development',
       'hero.getNote': 'Free APK from <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. Google Play and iPhone come later.',
       'facts.types': 'question types, from multiple choice to drag and drop', 'facts.langs': 'languages: English, Oʻzbekcha, Русский',
       'facts.offlineBig': 'Offline', 'facts.offline': 'everything is stored on the phone', 'facts.keysBig': 'Your keys', 'facts.keys': 'Claude, Gemini, OpenAI and compatible',
@@ -500,10 +515,10 @@
     },
     uz: {
       'nav.create': 'Yaratish', 'nav.learn': 'Oʻrganish', 'nav.remember': 'Takrorlash', 'nav.screens': 'Ekranlar',
-      'hero.eyebrow': 'Android va iOS uchun oʻqish ilovasi · ishlab chiqilmoqda',
+      'hero.eyebrow': 'Android va iOS uchun oʻqish ilovasi',
       'hero.title': 'SI bilan <em>tinmay oʻsing</em>',
       'hero.lead': 'Istalgan chatbot yoki oʻz API kalitingiz bilan kurslar, testlar va kartochkalar yarating. Ularni qisqa darslarda oʻrganing, ilova esa xato qilganlaringizni unutishingizdan oldin qaytaradi.',
-      'hero.cta1': 'Ilovani koʻrish', 'hero.get': 'Android uchun yuklab olish',
+      'hero.cta1': 'Ilovani koʻrish', 'hero.get': 'Android uchun yuklab olish', 'hero.ios': 'iOS uchun yuklab olish', 'hero.iosSoon': 'Ishlab chiqilmoqda',
       'hero.getNote': 'Bepul APK: <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. Google Play va iPhone keyinroq.',
       'facts.types': 'xil savol: bitta javobdan sudrab joylashgacha', 'facts.langs': 'til: English, Oʻzbekcha, Русский',
       'facts.offlineBig': 'Oflayn', 'facts.offline': 'hammasi telefonda saqlanadi', 'facts.keysBig': 'Oʻz kalitlaringiz', 'facts.keys': 'Claude, Gemini, OpenAI va mos xizmatlar',
@@ -564,10 +579,10 @@
     },
     ru: {
       'nav.create': 'Создание', 'nav.learn': 'Обучение', 'nav.remember': 'Повторение', 'nav.screens': 'Экраны',
-      'hero.eyebrow': 'Приложение для учёбы на Android и iOS · в разработке',
+      'hero.eyebrow': 'Приложение для учёбы на Android и iOS',
       'hero.title': 'Учитесь лучше <em>с ИИ</em>',
       'hero.lead': 'Создавайте курсы, тесты и карточки с любым чат-ботом или своим API-ключом. Учите их короткими уроками, а приложение вернёт ошибки до того, как вы их забудете.',
-      'hero.cta1': 'Посмотреть приложение', 'hero.get': 'Скачать для Android',
+      'hero.cta1': 'Посмотреть приложение', 'hero.get': 'Скачать для Android', 'hero.ios': 'Скачать для iOS', 'hero.iosSoon': 'В разработке',
       'hero.getNote': 'Бесплатный APK на <a data-releases href="https://github.com/handsomestranger56-prog/kiwa/releases" target="_blank" rel="noopener">GitHub Releases</a>. Google Play и iPhone появятся позже.',
       'facts.types': 'типов вопросов: от выбора ответа до перетаскивания', 'facts.langs': 'языка: English, Oʻzbekcha, Русский',
       'facts.offlineBig': 'Офлайн', 'facts.offline': 'всё хранится на телефоне', 'facts.keysBig': 'Свои ключи', 'facts.keys': 'Claude, Gemini, OpenAI и совместимые',
@@ -651,6 +666,18 @@
     document.querySelectorAll('[data-releases]').forEach((link) => link.setAttribute('href', RELEASES_URL));
   };
   links();
+
+  // iOS button: touch screens have no hover, so a tap shows the note for a moment; a tap elsewhere or Escape hides it.
+  const soon = document.querySelector('.soon');
+  let soonTimer;
+  const hideSoon = () => { clearTimeout(soonTimer); soon.classList.remove('open'); };
+  soon.querySelector('button').addEventListener('click', () => {
+    soon.classList.add('open');
+    clearTimeout(soonTimer);
+    soonTimer = setTimeout(hideSoon, 2500);
+  });
+  document.addEventListener('pointerdown', (event) => { if (!soon.contains(event.target)) hideSoon(); });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') hideSoon(); });
 
   // Q&A: native disclosure elements, so they work with a keyboard and a screen reader as they are.
   const faqList = document.getElementById('faq-list');
